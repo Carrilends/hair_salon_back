@@ -1,4 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Detail } from 'src/detail/entities/detail.entity';
+import { ImageManager } from 'src/images/images.entity';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity()
 export class Planne {
@@ -20,5 +29,10 @@ export class Planne {
   @Column('text')
   gender: string; // Man, woman, unisex, children
 
-  // Description
+  @OneToMany(() => ImageManager, (image) => image.planne, { cascade: true })
+  images?: ImageManager[];
+
+  @OneToOne(() => Detail, (detail) => detail.planne, { cascade: true })
+  @JoinColumn()
+  detail: Detail;
 }

@@ -1,4 +1,15 @@
-import { BeforeInsert, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Detail } from 'src/detail/entities/detail.entity';
+import { ImageManager } from 'src/images/images.entity';
+import {
+  BeforeInsert,
+  BeforeUpdate,
+  Column,
+  Entity,
+  JoinColumn,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 @Entity()
 export class Service {
@@ -26,15 +37,24 @@ export class Service {
   @Column('text', { unique: true })
   slug: string;
 
-  // Principal img
-  // examples key
+  @Column('text', { array: true, default: [] })
+  tags: string[];
 
-  // Detalle key
+  @OneToMany(() => ImageManager, (image) => image.service, { cascade: true })
+  images?: ImageManager[];
+
+  @OneToOne(() => Detail, (detail) => detail.service, { cascade: true })
+  @JoinColumn()
+  detail: Detail;
 
   @BeforeInsert()
-  checkSlugInsert(){
+  checkSlugInsert() {
     if (!this.slug) {
       this.slug = this.name.toLowerCase().replaceAll(' ', '_');
     }
+  }
+  @BeforeUpdate()
+  checkSlugUpdate() {
+    this.slug = this.slug.toLowerCase().replaceAll(' ', '_');
   }
 }

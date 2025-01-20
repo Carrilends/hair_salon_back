@@ -1,12 +1,16 @@
 import {
+  IsArray,
   IsBoolean,
   IsIn,
+  IsNotEmptyObject,
   IsNumber,
+  IsObject,
   IsOptional,
   IsPositive,
   IsString,
   MinLength,
 } from 'class-validator';
+import { ImageManager } from 'src/images/images.entity';
 
 export class CreateServiceDto {
   @IsString()
@@ -30,4 +34,17 @@ export class CreateServiceDto {
   @IsString()
   @IsOptional()
   slug?: string;
+
+  @IsString({ each: true })
+  @IsArray()
+  @IsOptional()
+  tags: string[];
+
+  @IsArray()
+  @IsOptional()
+  images?: ImageManager[];
+
+  @IsObject()
+  @IsNotEmptyObject()
+  detail: any;
 }

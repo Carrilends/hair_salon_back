@@ -1,4 +1,9 @@
-import { IsObject, IsString, MinLength } from 'class-validator';
+import {
+  IsNotEmptyObject,
+  IsObject,
+  IsString,
+  MinLength,
+} from 'class-validator';
 
 export class CreateDetailDto {
   @IsString()
@@ -6,5 +11,6 @@ export class CreateDetailDto {
   description: string;
 
   @IsObject()
+  @IsNotEmptyObject()
   specifications: any;
 }

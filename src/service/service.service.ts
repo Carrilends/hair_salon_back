@@ -24,7 +24,9 @@ export class ServiceService {
 
   async create(createServiceDto: CreateServiceDto) {
     try {
-      const product = this.serviceRepository.create(createServiceDto);
+      const product = this.serviceRepository.create({
+        ...createServiceDto,
+      });
       await this.serviceRepository.save(product);
       return product;
     } catch (error) {
@@ -35,22 +37,34 @@ export class ServiceService {
   findAll(pagination: PaginationDto) {
     const { limit = 10, offset = 0 } = pagination;
     return this.serviceRepository
-      .createQueryBuilder('service')
+      .createQueryBuilder('s')
+      .leftJoin('s.images', 'i')
+      .leftJoin('s.detail', 'd')
+      .select(['s', 'i', 'd'])
       .take(limit)
       .skip(offset)
       .getMany();
   }
 
   async findOne(term: string) {
-    const service = this.serviceRepository.createQueryBuilder('service');
+    const queryBuilder = this.serviceRepository
+      .createQueryBuilder('service')
+      .leftJoinAndSelect('service.images', 'i')
+      .leftJoinAndSelect('service.detail', 'd')
+      .select(['service', 'i', 'd']);
+    let service: Service; // = this.serviceRepository.createQueryBuilder('service');
+
     if (isUUID(term)) {
-      service.where('service.id = :id', { id: term });
+      service = await queryBuilder
+        .where('service.id = :id', { id: term })
+        .getOne();
     } else {
-      service.where('service.name ILIKE :name', { name: `%${term}%` });
+      // query.where('c.email ILIKE :search OR c.identification ILIKE :search', { search: searchPattern })
+      service = await queryBuilder
+        .where('service.name ILIKE :term or slug = :term', { term })
+        .getOne();
     }
 
-    await service.getOne();
-    console.log(await service.getOne());
     if (!service) {
       throw new NotFoundException(`Service with id ${service} not found`);
     }
@@ -58,8 +72,22 @@ export class ServiceService {
     return service;
   }
 
-  update(id: number, updateServiceDto: UpdateServiceDto) {
-    return `This action updates a #${id} service`;
+  async update(id: string, updateServiceDto: UpdateServiceDto) {
+    const service = await this.serviceRepository.preload({
+      id: id,
+      ...updateServiceDto,
+    });
+
+    if (!service) {
+      throw new NotFoundException(`Service with id ${id} not found`);
+    }
+
+    try {
+      await this.serviceRepository.save(service);
+      return service;
+    } catch (error) {
+      this.handleException(error);
+    }
   }
 
   remove(id: string) {

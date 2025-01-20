@@ -6,6 +6,7 @@ import { TypeModule } from './type/type.module';
 import { DetailModule } from './detail/detail.module';
 import { PlannesModule } from './plannes/plannes.module';
 import { CommonModule } from './common/common.module';
+import { ImagesModule } from './images/images.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { CommonModule } from './common/common.module';
     DetailModule,
     PlannesModule,
     CommonModule,
+    ImagesModule,
   ],
 })
 export class AppModule {}

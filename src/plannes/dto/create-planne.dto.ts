@@ -1,4 +1,11 @@
-import { IsArray, IsIn, IsString, MinLength } from 'class-validator';
+import {
+  IsArray,
+  IsIn,
+  IsOptional,
+  IsString,
+  MinLength,
+} from 'class-validator';
+import { ImageManager } from 'src/images/images.entity';
 
 export class CreatePlanneDto {
   @IsString()
@@ -11,4 +18,8 @@ export class CreatePlanneDto {
 
   @IsIn(['men', 'women', 'unisex', 'kid'])
   gender: string;
+
+  @IsArray()
+  @IsOptional()
+  images?: ImageManager[];
 }
