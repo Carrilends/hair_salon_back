@@ -1,15 +1,16 @@
+import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
   IsIn,
-  IsNotEmptyObject,
   IsNumber,
-  IsObject,
   IsOptional,
   IsPositive,
   IsString,
   MinLength,
+  ValidateNested,
 } from 'class-validator';
+import { CreateDetailDto } from 'src/detail/dto/create-detail.dto';
 import { ImageManager } from 'src/images/images.entity';
 
 export class CreateServiceDto {
@@ -44,7 +45,7 @@ export class CreateServiceDto {
   @IsOptional()
   images?: ImageManager[];
 
-  @IsObject()
-  @IsNotEmptyObject()
-  detail: any;
+  @ValidateNested()
+  @Type(() => CreateDetailDto)
+  detail: CreateDetailDto;
 }
