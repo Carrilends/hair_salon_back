@@ -32,7 +32,7 @@ export class ImagesController {
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateImagelDto: UpdateImagelDto) {
-    return this.imageService.update(+id, updateImagelDto);
+    return this.imageService.update(id, updateImagelDto);
   }
 
   @Delete(':id')

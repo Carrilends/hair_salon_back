@@ -12,6 +12,7 @@ import { Repository } from 'typeorm';
 import { Service } from './entities/service.entity';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { isUUID } from 'class-validator';
+import { ImagesService } from 'src/images/images.service';
 
 @Injectable()
 export class ServiceService {
@@ -20,6 +21,7 @@ export class ServiceService {
   constructor(
     @InjectRepository(Service)
     private readonly serviceRepository: Repository<Service>,
+    private readonly imagesService: ImagesService,
   ) {}
 
   async create(createServiceDto: CreateServiceDto) {
@@ -73,10 +75,32 @@ export class ServiceService {
   }
 
   async update(id: string, updateServiceDto: UpdateServiceDto) {
+    const { images, deleteImages, updateImages, ...rest } = updateServiceDto;
     const service = await this.serviceRepository.preload({
       id: id,
-      ...updateServiceDto,
+      ...rest,
     });
+
+    if (images) {
+      images.forEach(async (image) => {
+        this.imagesService.createFromService({
+          isPrincipal: image.isPrincipal,
+          url: image.url,
+          service: service.id,
+        });
+      });
+    }
+
+    if (deleteImages) {
+      const ids = deleteImages.map((image) => image.id);
+      this.imagesService.removeByExternalId(ids);
+    }
+
+    if (updateImages) {
+      updateImages.forEach(async (image) => {
+        this.imagesService.update(image.id, image);
+      });
+    }
 
     if (!service) {
       throw new NotFoundException(`Service with id ${id} not found`);

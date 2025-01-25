@@ -7,12 +7,16 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  IsUUID,
   MinLength,
   ValidateNested,
 } from 'class-validator';
 import { CreateDetailDto } from 'src/detail/dto/create-detail.dto';
 import { ImageManager } from 'src/images/images.entity';
-import { AtLeastOnePrincipalImage } from '../validators/customValidators';
+import {
+  AlreadyExistOnePrincipal,
+  AtLeastOnePrincipalImage,
+} from '../validators/customValidators';
 
 export class CreateServiceDto {
   @IsString()
@@ -42,10 +46,17 @@ export class CreateServiceDto {
   @IsOptional()
   tags: string[];
 
+  @IsUUID()
+  @IsOptional()
+  externalId?: string;
+
   @IsArray()
   @IsOptional()
   @AtLeastOnePrincipalImage({
     message: 'At least one image must be principal',
+  })
+  @AlreadyExistOnePrincipal({
+    message: 'Already exist one principal image',
   })
   images?: ImageManager[];
 
