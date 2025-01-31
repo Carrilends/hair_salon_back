@@ -13,7 +13,9 @@ export class ImageManager {
   @Column('boolean', { default: false })
   isPrincipal: boolean;
 
-  @ManyToOne(() => Service, (service) => service.images)
+  @ManyToOne(() => Service, (service) => service.images, {
+    onDelete: 'CASCADE',
+  })
   service: Service;
 
   @ManyToOne(() => Planne, (planne) => planne.images)

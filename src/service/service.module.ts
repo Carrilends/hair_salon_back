@@ -2,10 +2,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Module } from '@nestjs/common';
 import { ServiceService } from './service.service';
 import { ServiceController } from './service.controller';
-import { Service } from './entities/service.entity';
 import { ImagesService } from 'src/images/images.service';
-import { ImageManager } from 'src/images/images.entity';
 import { AlreadyExistOnePrincipalConstraint } from './validators/customValidators';
+import { Detail } from 'src/detail/entities/detail.entity';
+import { ImageManager } from 'src/images/images.entity';
+import { Service } from './entities/service.entity';
 
 @Module({
   controllers: [ServiceController],
@@ -14,6 +15,6 @@ import { AlreadyExistOnePrincipalConstraint } from './validators/customValidator
     ImagesService,
     AlreadyExistOnePrincipalConstraint,
   ],
-  imports: [TypeOrmModule.forFeature([Service, ImageManager])],
+  imports: [TypeOrmModule.forFeature([Service, ImageManager, Detail])],
 })
 export class ServiceModule {}

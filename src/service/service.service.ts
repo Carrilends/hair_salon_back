@@ -13,7 +13,9 @@ import { Service } from './entities/service.entity';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { isUUID } from 'class-validator';
 import { ImagesService } from 'src/images/images.service';
+import { Detail } from 'src/detail/entities/detail.entity';
 
+// TODO: Continua con la edicion del detalle
 @Injectable()
 export class ServiceService {
   private readonly looger = new Logger('ServiceService');
@@ -21,6 +23,8 @@ export class ServiceService {
   constructor(
     @InjectRepository(Service)
     private readonly serviceRepository: Repository<Service>,
+    @InjectRepository(Detail)
+    private readonly detailRepository: Repository<Detail>,
     private readonly imagesService: ImagesService,
   ) {}
 
@@ -81,7 +85,7 @@ export class ServiceService {
       ...rest,
     });
 
-    if (images) {
+    if (images && images?.length) {
       images.forEach(async (image) => {
         this.imagesService.createFromService({
           isPrincipal: image.isPrincipal,
@@ -91,15 +95,19 @@ export class ServiceService {
       });
     }
 
-    if (deleteImages) {
+    if (deleteImages?.length && deleteImages) {
       const ids = deleteImages.map((image) => image.id);
       this.imagesService.removeByExternalId(ids);
     }
 
-    if (updateImages) {
+    if (updateImages?.length && updateImages) {
       updateImages.forEach(async (image) => {
         this.imagesService.update(image.id, image);
       });
+    }
+
+    if (rest.detail) {
+      await this.detailRepository.update(rest.detail.id, rest.detail);
     }
 
     if (!service) {
@@ -114,8 +122,14 @@ export class ServiceService {
     }
   }
 
-  remove(id: string) {
-    return this.serviceRepository.delete(id);
+  async remove(id: string) {
+    const serviceWithRelations = await this.serviceRepository.findOne({
+      where: { id },
+      relations: ['detail'],
+    });
+    await this.serviceRepository.delete(id);
+    await this.detailRepository.delete(serviceWithRelations.detail.id);
+    return 'deleted';
   }
 
   private handleException(error: any) {

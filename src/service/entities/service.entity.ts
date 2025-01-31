@@ -43,8 +43,13 @@ export class Service {
   @OneToMany(() => ImageManager, (image) => image.service, { cascade: true })
   images?: ImageManager[];
 
-  @OneToOne(() => Detail, (detail) => detail.service, { cascade: true })
-  @JoinColumn()
+  @Column({ name: 'detail_id' })
+  detailId: string;
+
+  @OneToOne(() => Detail, (detail) => detail.service, {
+    cascade: true,
+  })
+  @JoinColumn({ name: 'detail_id' })
   detail: Detail;
 
   @BeforeInsert()
@@ -58,3 +63,5 @@ export class Service {
     this.slug = this.slug.toLowerCase().replaceAll(' ', '_');
   }
 }
+
+// https://www.youtube.com/watch?v=_q5-EnV7M_Y
