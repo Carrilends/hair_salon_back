@@ -7,6 +7,8 @@ import { DetailModule } from './detail/detail.module';
 import { PlannesModule } from './plannes/plannes.module';
 import { CommonModule } from './common/common.module';
 import { ImagesModule } from './images/images.module';
+import { FilesModule } from './files/files.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -27,6 +29,8 @@ import { ImagesModule } from './images/images.module';
     PlannesModule,
     CommonModule,
     ImagesModule,
+    FilesModule,
+    AuthModule,
   ],
 })
 export class AppModule {}

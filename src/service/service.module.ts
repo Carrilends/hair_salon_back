@@ -8,6 +8,8 @@ import { Detail } from 'src/detail/entities/detail.entity';
 import { ImageManager } from 'src/images/images.entity';
 import { Service } from './entities/service.entity';
 
+import { AuthModule } from 'src/auth/auth.module';
+
 @Module({
   controllers: [ServiceController],
   providers: [
@@ -15,6 +17,9 @@ import { Service } from './entities/service.entity';
     ImagesService,
     AlreadyExistOnePrincipalConstraint,
   ],
-  imports: [TypeOrmModule.forFeature([Service, ImageManager, Detail])],
+  imports: [
+    TypeOrmModule.forFeature([Service, ImageManager, Detail]),
+    AuthModule,
+  ],
 })
 export class ServiceModule {}
