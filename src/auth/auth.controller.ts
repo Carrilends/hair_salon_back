@@ -28,7 +28,7 @@ export class AuthController {
     return this.authService.login(loginUserDto);
   }
 
-  // @RoleProtected( ValidRoles.admin )
+  // @Auth( ValidRoles.admin )
   /* @Get()
   findAll() {
     return this.authService.findAll();
