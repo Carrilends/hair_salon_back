@@ -11,4 +11,9 @@ export class PaginationDto {
   @Min(0)
   @Type(() => Number)
   offset?: number;
+
+  @IsOptional()
+  @IsPositive()
+  @Type(() => Number)
+  page?: number;
 }

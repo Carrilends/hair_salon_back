@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayUnique,
   IsArray,
   IsBoolean,
   IsIn,
@@ -44,6 +45,7 @@ export class CreateServiceDto {
   @IsString({ each: true })
   @IsArray()
   @IsOptional()
+  @ArrayUnique()
   tags: string[];
 
   @IsUUID()

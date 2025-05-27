@@ -41,15 +41,18 @@ export class ServiceService {
   }
 
   findAll(pagination: PaginationDto) {
-    const { limit = 10, offset = 0 } = pagination;
+    const { limit = 10, page = 1 } = pagination;
+    const take = limit;
+    const skip = (page - 1) * limit;
     return this.serviceRepository
       .createQueryBuilder('s')
       .leftJoin('s.images', 'i')
       .leftJoin('s.detail', 'd')
       .select(['s', 'i', 'd'])
-      .take(limit)
-      .skip(offset)
-      .getMany();
+      .orderBy('s.name', 'DESC')
+      .take(take)
+      .skip(skip)
+      .getManyAndCount();
   }
 
   async findOne(term: string) {

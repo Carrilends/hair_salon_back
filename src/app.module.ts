@@ -9,6 +9,7 @@ import { CommonModule } from './common/common.module';
 import { ImagesModule } from './images/images.module';
 import { FilesModule } from './files/files.module';
 import { AuthModule } from './auth/auth.module';
+import { TagsModule } from './tags/tags.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { AuthModule } from './auth/auth.module';
     ImagesModule,
     FilesModule,
     AuthModule,
+    TagsModule,
   ],
 })
 export class AppModule {}

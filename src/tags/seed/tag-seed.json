@@ -1,0 +1,61 @@
+[
+  {
+    "name": "Cabello",
+    "children": [
+      { "name": "Corte" },
+      { "name": "Peinados" },
+      { "name": "Trenzas" },
+      { "name": "Alisado" },
+      { "name": "Hidratación" },
+      { "name": "Keratina" },
+      { "name": "Coloración" }
+    ]
+  },
+  {
+    "name": "Uñas",
+    "children": [
+      { "name": "Manicure" },
+      { "name": "Pedicure" },
+      { "name": "Acrílicas" },
+      { "name": "En gel" },
+      { "name": "Decoración" }
+    ]
+  },
+  {
+    "name": "Maquillaje",
+    "children": [
+      { "name": "Día" },
+      { "name": "Noche" },
+      { "name": "Social" },
+      { "name": "Novia" }
+    ]
+  },
+  {
+    "name": "Depilación",
+    "children": [
+      { "name": "Cera fría" },
+      { "name": "Cera caliente" },
+      { "name": "Facial" },
+      { "name": "Corporal" }
+    ]
+  },
+  {
+    "name": "Cejas y pestañas",
+    "children": [
+      { "name": "Diseño de cejas" },
+      { "name": "Tinte" },
+      { "name": "Lifting de pestañas" },
+      { "name": "Extensiones" }
+    ]
+  },
+  {
+    "name": "Género",
+    "children": [
+      { "name": "Masculino" },
+      { "name": "Femenino" },
+      { "name": "Unisex" },
+      { "name": "Niños" },
+      { "name": "Adultos" }
+    ]
+  }
+]
