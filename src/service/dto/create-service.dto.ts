@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMinSize,
   ArrayUnique,
   IsArray,
   IsBoolean,
@@ -44,9 +45,9 @@ export class CreateServiceDto {
 
   @IsString({ each: true })
   @IsArray()
-  @IsOptional()
   @ArrayUnique()
-  tags: string[];
+  @ArrayMinSize(1)
+  tags!: string[];
 
   @IsUUID()
   @IsOptional()

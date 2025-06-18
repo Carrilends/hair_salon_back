@@ -8,11 +8,13 @@ import {
   Delete,
   Query,
   ParseUUIDPipe,
+  ForbiddenException,
 } from '@nestjs/common';
 import { ServiceService } from './service.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { FilterServiceDto } from './dto/filter-service.dto';
 
 @Controller('service')
 export class ServiceController {
@@ -26,6 +28,11 @@ export class ServiceController {
   @Get()
   findAll(@Query() paginationDto: PaginationDto) {
     return this.serviceService.findAll(paginationDto);
+  }
+
+  @Post('search')
+  search(@Body() filterDto: FilterServiceDto) {
+    return this.serviceService.search(filterDto);
   }
 
   @Get(':term')
@@ -44,5 +51,14 @@ export class ServiceController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.serviceService.remove(id);
+  }
+
+  @Post('seed')
+  seed() {
+    // 🔐 Protege el seed
+    if (process.env.NODE_ENV !== 'development') {
+      throw new ForbiddenException('Seed can only be run in development');
+    }
+    return this.serviceService.seed();
   }
 }

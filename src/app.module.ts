@@ -10,6 +10,7 @@ import { ImagesModule } from './images/images.module';
 import { FilesModule } from './files/files.module';
 import { AuthModule } from './auth/auth.module';
 import { TagsModule } from './tags/tags.module';
+import { SharedInfoModule } from './shared/shared-info.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { TagsModule } from './tags/tags.module';
     FilesModule,
     AuthModule,
     TagsModule,
+    SharedInfoModule,
   ],
 })
 export class AppModule {}

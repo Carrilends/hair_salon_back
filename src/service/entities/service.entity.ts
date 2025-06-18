@@ -1,11 +1,14 @@
 import { Detail } from 'src/detail/entities/detail.entity';
 import { ImageManager } from 'src/images/images.entity';
+import { Tag } from 'src/tags/entities/tag.entity';
 import {
   BeforeInsert,
   BeforeUpdate,
   Column,
   Entity,
   JoinColumn,
+  JoinTable,
+  ManyToMany,
   OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
@@ -37,8 +40,9 @@ export class Service {
   @Column('text', { unique: true })
   slug: string;
 
-  @Column('text', { array: true, default: [] })
-  tags: string[];
+  @ManyToMany(() => Tag, (tag) => tag.services)
+  @JoinTable()
+  tags: Tag[];
 
   @OneToMany(() => ImageManager, (image) => image.service, { cascade: true })
   images?: ImageManager[];

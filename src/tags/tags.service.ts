@@ -51,6 +51,23 @@ export class TagsService {
     });
   }
 
+  async findByIds(ids: string[]): Promise<Tag[]> {
+    if (!ids || ids.length === 0) {
+      throw new BadRequestException('No tag IDs provided');
+    }
+
+    const tags = await this.tagRepository
+      .createQueryBuilder('tag')
+      .where('tag.id IN (:...ids)', { ids })
+      .getMany();
+
+    if (tags.length === 0) {
+      throw new NotFoundException(`No tags found for the provided IDs`);
+    }
+
+    return tags;
+  }
+
   async findOne(id: string): Promise<Tag> {
     const tag = await this.tagRepository.findOne({
       where: { id },

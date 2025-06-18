@@ -1,9 +1,11 @@
+import { Service } from 'src/service/entities/service.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
   OneToMany,
+  ManyToMany,
 } from 'typeorm';
 
 @Entity()
@@ -16,6 +18,9 @@ export class Tag {
     unique: true,
   })
   name: string;
+
+  @ManyToMany(() => Service, (service) => service.tags)
+  services: Service[];
 
   @ManyToOne(() => Tag, (tag) => tag.children, { nullable: true })
   parent: Tag;
