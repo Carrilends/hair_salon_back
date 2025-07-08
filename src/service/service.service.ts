@@ -8,9 +8,8 @@ import {
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository, type SelectQueryBuilder } from 'typeorm';
+import { /* In, */ Repository, type SelectQueryBuilder } from 'typeorm';
 import { Service } from './entities/service.entity';
-import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { isUUID } from 'class-validator';
 import { ImagesService } from 'src/images/images.service';
 import { Detail } from 'src/detail/entities/detail.entity';
@@ -48,21 +47,6 @@ export class ServiceService {
     }
   }
 
-  findAll(pagination: PaginationDto) {
-    const { limit = 10, page = 1 } = pagination;
-    const take = limit;
-    const skip = (page - 1) * limit;
-    return this.serviceRepository
-      .createQueryBuilder('s')
-      .leftJoin('s.images', 'i')
-      .leftJoin('s.detail', 'd')
-      .select(['s', 'i', 'd'])
-      .orderBy('s.name', 'DESC')
-      .take(take)
-      .skip(skip)
-      .getManyAndCount();
-  }
-
   async search(filterDto: FilterServiceDto) {
     const { limit = 10, page = 1 } = filterDto;
     const take = limit;
@@ -70,27 +54,19 @@ export class ServiceService {
 
     const qb = this.serviceRepository
       .createQueryBuilder('s')
-      .leftJoin('s.tags', 't');
+      .leftJoinAndSelect('s.tags', 'tags')
+      .leftJoinAndSelect('s.images', 'i')
+      .leftJoinAndSelect('s.detail', 'd');
 
     this.applyFilters(qb, filterDto);
 
-    qb.groupBy('s.id').orderBy('s.name', 'DESC').take(take).skip(skip);
+    const [services, total] = await qb
+      .orderBy('s.name', 'DESC')
+      .skip(skip)
+      .take(take)
+      .getManyAndCount();
 
-    // 1. Obtén solo los IDs de los servicios filtrados
-    const services = await qb.select('s.id', 'id').getRawMany();
-    const serviceIds = services.map((s) => s.id);
-    const total = services.length;
-
-    if (serviceIds.length === 0) return [[], 0];
-
-    // 3. Carga los servicios completos con sus relaciones
-    const servicesWithRelations = await this.serviceRepository.find({
-      where: { id: In(serviceIds) },
-      relations: ['images', 'detail', 'tags'],
-      order: { name: 'DESC' },
-    });
-
-    return [servicesWithRelations, total];
+    return [services, total];
   }
 
   async findOne(term: string) {
@@ -184,21 +160,32 @@ export class ServiceService {
     const { name, selectedGenres, includePriceRange, selectedServicesIDs } =
       filterDto;
 
-    const commonTags = selectedGenres.concat(selectedServicesIDs);
+    const commonTags = [
+      ...(selectedGenres || []),
+      ...(selectedServicesIDs || []),
+    ];
 
     if (name) {
       qb.where('s.name ILIKE :name', {
-        name: `%${name.toLocaleLowerCase()}%`,
+        name: `%${name.toLowerCase()}%`,
       });
     }
 
     if (commonTags.length) {
-      qb.andWhere('t.id IN (:...ids)', { ids: commonTags }).having(
-        'COUNT(DISTINCT t.id) = :count',
-        {
-          count: commonTags.length,
-        },
-      );
+      qb.andWhere((subQb) => {
+        const subQuery = subQb
+          .subQuery()
+          .from('service_tags_tag', 'st') // 👈 tabla pivot generada por TypeORM
+          .select('st.serviceId')
+          .where('st.tagId IN (:...ids)', { ids: commonTags })
+          .groupBy('st.serviceId')
+          .having('COUNT(DISTINCT st.tagId) = :count', {
+            count: commonTags.length,
+          })
+          .getQuery();
+
+        return 's.id IN ' + subQuery;
+      });
     }
 
     if (includePriceRange && filterDto.prices) {

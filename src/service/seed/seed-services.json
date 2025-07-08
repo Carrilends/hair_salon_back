@@ -1,9 +1,9 @@
 [
   {
-    "name": "Caesar CutCaesar Cut  1",
+    "name": "Taper CutQuiff  0",
     "gender": "",
     "type": "",
-    "price": 152,
+    "price": 88,
     "images": [
       {
         "url": "https://google.com/",
@@ -15,320 +15,15 @@
       }
     ],
     "tags": [
-      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
-      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "PompadourUndercut  2",
-    "gender": "",
-    "type": "",
-    "price": 102,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
-      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
-      "07814cc8-31ef-482e-86ca-54b5564d31fb",
-      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
-      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
-      "c70984ca-88a0-489a-bc1a-e696b136401f",
-      "b047458d-ed43-40b4-97f0-8cd083ff7430",
-      "ab181436-55f8-41ef-a391-fa424bf864ef",
-      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
-      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
       "566e5981-8055-43d3-a957-e9efb91ca791",
       "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
       "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
-      "c70984ca-88a0-489a-bc1a-e696b136401f"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "Caesar CutQuiff  4",
-    "gender": "",
-    "type": "",
-    "price": 113,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "5908787e-de56-4e6d-a840-c65d02781587",
-      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
-      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
-      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
-      "aaa850a3-adb5-4d1e-8133-012e56227951",
-      "505c78f7-a46e-4408-bf4e-2547ccb12134",
-      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
-      "5908787e-de56-4e6d-a840-c65d02781587",
-      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
-      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "566e5981-8055-43d3-a957-e9efb91ca791",
       "c70984ca-88a0-489a-bc1a-e696b136401f",
-      "5908787e-de56-4e6d-a840-c65d02781587"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "French CropFade  6",
-    "gender": "",
-    "type": "",
-    "price": 49,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
-      "f2198591-6cbd-48da-b356-6e17e21953ec",
-      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
-      "505c78f7-a46e-4408-bf4e-2547ccb12134",
-      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "19c52563-f81c-4c7d-a7db-56be7303f767",
       "b047458d-ed43-40b4-97f0-8cd083ff7430",
-      "5908787e-de56-4e6d-a840-c65d02781587"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "QuiffFrench Crop  12",
-    "gender": "",
-    "type": "",
-    "price": 185,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
-      "505c78f7-a46e-4408-bf4e-2547ccb12134",
-      "d19e04fe-dbdb-457c-a847-30f530182fa3",
-      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
-      "f2198591-6cbd-48da-b356-6e17e21953ec",
-      "d19e04fe-dbdb-457c-a847-30f530182fa3",
-      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
-      "19c52563-f81c-4c7d-a7db-56be7303f767",
-      "864fa6fd-159a-49bd-a03e-58b99c952bb8"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "Buzz CutCaesar Cut  13",
-    "gender": "",
-    "type": "",
-    "price": 45,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "ad556322-79bb-4311-8950-3f13dbc423d7",
-      "251c7b81-27e7-4404-a5ce-d613aff954c4",
-      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
-      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
-      "07814cc8-31ef-482e-86ca-54b5564d31fb"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "QuiffPompadour  20",
-    "gender": "",
-    "type": "",
-    "price": 105,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "19c52563-f81c-4c7d-a7db-56be7303f767",
-      "d19e04fe-dbdb-457c-a847-30f530182fa3",
-      "230268ef-572d-4892-8303-ee11a4cc1800",
-      "364c1d67-61a6-4866-867c-62e8df75d92f",
-      "aaa850a3-adb5-4d1e-8133-012e56227951",
-      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
-      "c70984ca-88a0-489a-bc1a-e696b136401f",
-      "251c7b81-27e7-4404-a5ce-d613aff954c4",
-      "07814cc8-31ef-482e-86ca-54b5564d31fb",
-      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
-      "4e62da80-daa1-4187-8bf7-cf739ffa3f91"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "Crew CutQuiff  23",
-    "gender": "",
-    "type": "",
-    "price": 65,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
-      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
-      "364c1d67-61a6-4866-867c-62e8df75d92f",
-      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
-      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
-      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
-      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
-      "d19e04fe-dbdb-457c-a847-30f530182fa3",
-      "364c1d67-61a6-4866-867c-62e8df75d92f",
       "bad019b1-cd2e-4af3-8559-e38c40aaa2ac"
     ],
     "detail": {
@@ -350,10 +45,10 @@
     }
   },
   {
-    "name": "PompadourIvy League  27",
+    "name": "Buzz CutFrench Crop  1",
     "gender": "",
     "type": "",
-    "price": 139,
+    "price": 165,
     "images": [
       {
         "url": "https://google.com/",
@@ -365,404 +60,15 @@
       }
     ],
     "tags": [
-      "364c1d67-61a6-4866-867c-62e8df75d92f",
-      "aaa850a3-adb5-4d1e-8133-012e56227951",
-      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
-      "364c1d67-61a6-4866-867c-62e8df75d92f",
-      "ab181436-55f8-41ef-a391-fa424bf864ef",
-      "5908787e-de56-4e6d-a840-c65d02781587",
-      "f2198591-6cbd-48da-b356-6e17e21953ec"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "Quiff  30",
-    "gender": "",
-    "type": "",
-    "price": 172,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
-      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
-      "230268ef-572d-4892-8303-ee11a4cc1800",
-      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
-      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
-      "f2198591-6cbd-48da-b356-6e17e21953ec",
-      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
-      "b047458d-ed43-40b4-97f0-8cd083ff7430",
-      "505c78f7-a46e-4408-bf4e-2547ccb12134",
-      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
-      "f2198591-6cbd-48da-b356-6e17e21953ec",
-      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
-      "ad556322-79bb-4311-8950-3f13dbc423d7"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "FadeQuiff  31",
-    "gender": "",
-    "type": "",
-    "price": 31,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "d19e04fe-dbdb-457c-a847-30f530182fa3",
-      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
+      "c1f624d4-0ccd-43e2-bf05-ccd9eac88135",
       "8f22821a-8e2b-435f-87b8-c63a1b83c711",
-      "f2198591-6cbd-48da-b356-6e17e21953ec",
-      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "Crew CutCrew Cut  34",
-    "gender": "",
-    "type": "",
-    "price": 8,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "07814cc8-31ef-482e-86ca-54b5564d31fb",
-      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
-      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
       "19c52563-f81c-4c7d-a7db-56be7303f767",
       "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
-      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
-      "07814cc8-31ef-482e-86ca-54b5564d31fb",
-      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "566e5981-8055-43d3-a957-e9efb91ca791",
       "ab181436-55f8-41ef-a391-fa424bf864ef",
-      "8f22821a-8e2b-435f-87b8-c63a1b83c711"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "Taper CutPompadour  35",
-    "gender": "",
-    "type": "",
-    "price": 138,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "aaa850a3-adb5-4d1e-8133-012e56227951",
       "c70984ca-88a0-489a-bc1a-e696b136401f",
-      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
-      "b047458d-ed43-40b4-97f0-8cd083ff7430",
-      "ad556322-79bb-4311-8950-3f13dbc423d7"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "Crew CutTaper Cut  40",
-    "gender": "",
-    "type": "",
-    "price": 184,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
-      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
-      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
-      "ad556322-79bb-4311-8950-3f13dbc423d7",
-      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
-      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
-      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "Taper CutCaesar Cut  42",
-    "gender": "",
-    "type": "",
-    "price": 148,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
-      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
-      "aaa850a3-adb5-4d1e-8133-012e56227951",
-      "ad556322-79bb-4311-8950-3f13dbc423d7",
-      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
-      "46d7b6b7-961d-426d-8843-384eaa5ec1a5"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "Crew CutCaesar Cut  44",
-    "gender": "",
-    "type": "",
-    "price": 77,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "ad556322-79bb-4311-8950-3f13dbc423d7",
-      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
-      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
-      "251c7b81-27e7-4404-a5ce-d613aff954c4",
-      "ab181436-55f8-41ef-a391-fa424bf864ef",
-      "ad556322-79bb-4311-8950-3f13dbc423d7",
-      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
-      "07814cc8-31ef-482e-86ca-54b5564d31fb",
-      "d19e04fe-dbdb-457c-a847-30f530182fa3",
-      "f2198591-6cbd-48da-b356-6e17e21953ec",
-      "b047458d-ed43-40b4-97f0-8cd083ff7430",
-      "07814cc8-31ef-482e-86ca-54b5564d31fb",
-      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
-      "794fd425-6d4a-4ba7-96b0-5598b5c12e83"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "French Crop  45",
-    "gender": "",
-    "type": "",
-    "price": 154,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "b047458d-ed43-40b4-97f0-8cd083ff7430",
-      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
-      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
-      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
-      "f2198591-6cbd-48da-b356-6e17e21953ec",
-      "505c78f7-a46e-4408-bf4e-2547ccb12134"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "Caesar CutCrew Cut  46",
-    "gender": "",
-    "type": "",
-    "price": 113,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "ad556322-79bb-4311-8950-3f13dbc423d7",
-      "ad556322-79bb-4311-8950-3f13dbc423d7",
-      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
-      "364c1d67-61a6-4866-867c-62e8df75d92f",
-      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
-      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
-      "f2198591-6cbd-48da-b356-6e17e21953ec",
-      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
-      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
-      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
       "9c4b5532-08b8-43c4-90b2-f1f325b7e17b"
     ],
     "detail": {
@@ -784,10 +90,10 @@
     }
   },
   {
-    "name": "PompadourIvy League  49",
+    "name": "FadeTaper Cut  2",
     "gender": "",
     "type": "",
-    "price": 33,
+    "price": 110,
     "images": [
       {
         "url": "https://google.com/",
@@ -799,87 +105,15 @@
       }
     ],
     "tags": [
-      "ab181436-55f8-41ef-a391-fa424bf864ef",
-      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "5908787e-de56-4e6d-a840-c65d02781587",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
+      "566e5981-8055-43d3-a957-e9efb91ca791",
       "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
-      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
-      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
-      "5908787e-de56-4e6d-a840-c65d02781587"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "PompadourUndercut  55",
-    "gender": "",
-    "type": "",
-    "price": 54,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "251c7b81-27e7-4404-a5ce-d613aff954c4",
-      "c70984ca-88a0-489a-bc1a-e696b136401f"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "French CropFade  57",
-    "gender": "",
-    "type": "",
-    "price": 108,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
-      "230268ef-572d-4892-8303-ee11a4cc1800",
-      "ab181436-55f8-41ef-a391-fa424bf864ef",
       "d28f28f2-df1f-4e8f-bf7c-cb3396342657"
     ],
     "detail": {
@@ -901,10 +135,10 @@
     }
   },
   {
-    "name": "PompadourFrench Crop  58",
+    "name": "Crew CutCaesar Cut  4",
     "gender": "",
     "type": "",
-    "price": 144,
+    "price": 87,
     "images": [
       {
         "url": "https://google.com/",
@@ -916,62 +150,17 @@
       }
     ],
     "tags": [
-      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
-      "4210218e-c5a1-48a6-8b45-65c9ee1ec86f",
-      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
-      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
-      "ab181436-55f8-41ef-a391-fa424bf864ef",
-      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
-      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
-      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
-      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
-      "19c52563-f81c-4c7d-a7db-56be7303f767",
-      "505c78f7-a46e-4408-bf4e-2547ccb12134"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "Buzz CutPompadour  66",
-    "gender": "",
-    "type": "",
-    "price": 9,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
-      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
-      "aaa850a3-adb5-4d1e-8133-012e56227951",
-      "c70984ca-88a0-489a-bc1a-e696b136401f",
-      "364c1d67-61a6-4866-867c-62e8df75d92f",
-      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
-      "aaa850a3-adb5-4d1e-8133-012e56227951",
-      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "230268ef-572d-4892-8303-ee11a4cc1800",
       "5908787e-de56-4e6d-a840-c65d02781587",
-      "230268ef-572d-4892-8303-ee11a4cc1800"
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "19c52563-f81c-4c7d-a7db-56be7303f767",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac"
     ],
     "detail": {
       "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
@@ -992,10 +181,10 @@
     }
   },
   {
-    "name": "Taper CutIvy League  71",
+    "name": "PompadourIvy League  5",
     "gender": "",
     "type": "",
-    "price": 89,
+    "price": 91,
     "images": [
       {
         "url": "https://google.com/",
@@ -1007,9 +196,108 @@
       }
     ],
     "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "QuiffFrench Crop  6",
+    "gender": "",
+    "type": "",
+    "price": 48,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "aaa850a3-adb5-4d1e-8133-012e56227951",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
       "8f22821a-8e2b-435f-87b8-c63a1b83c711",
-      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
-      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "566e5981-8055-43d3-a957-e9efb91ca791",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "ad556322-79bb-4311-8950-3f13dbc423d7",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "19c52563-f81c-4c7d-a7db-56be7303f767",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Crew CutQuiff  8",
+    "gender": "",
+    "type": "",
+    "price": 185,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "c1f624d4-0ccd-43e2-bf05-ccd9eac88135",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "5908787e-de56-4e6d-a840-c65d02781587",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3",
+      "230268ef-572d-4892-8303-ee11a4cc1800",
       "8f22821a-8e2b-435f-87b8-c63a1b83c711"
     ],
     "detail": {
@@ -1031,10 +319,10 @@
     }
   },
   {
-    "name": "QuiffBuzz Cut  73",
+    "name": "French Crop  10",
     "gender": "",
     "type": "",
-    "price": 190,
+    "price": 14,
     "images": [
       {
         "url": "https://google.com/",
@@ -1046,135 +334,11 @@
       }
     ],
     "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "ad556322-79bb-4311-8950-3f13dbc423d7",
       "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
-      "505c78f7-a46e-4408-bf4e-2547ccb12134",
-      "505c78f7-a46e-4408-bf4e-2547ccb12134",
-      "c70984ca-88a0-489a-bc1a-e696b136401f",
-      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
       "364c1d67-61a6-4866-867c-62e8df75d92f",
-      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
-      "4210218e-c5a1-48a6-8b45-65c9ee1ec86f",
-      "5908787e-de56-4e6d-a840-c65d02781587"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "Caesar CutPompadour  76",
-    "gender": "",
-    "type": "",
-    "price": 61,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "566e5981-8055-43d3-a957-e9efb91ca791",
-      "505c78f7-a46e-4408-bf4e-2547ccb12134",
-      "230268ef-572d-4892-8303-ee11a4cc1800",
-      "07814cc8-31ef-482e-86ca-54b5564d31fb",
-      "364c1d67-61a6-4866-867c-62e8df75d92f",
-      "19c52563-f81c-4c7d-a7db-56be7303f767",
-      "505c78f7-a46e-4408-bf4e-2547ccb12134",
-      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
-      "b047458d-ed43-40b4-97f0-8cd083ff7430"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "PompadourTaper Cut  78",
-    "gender": "",
-    "type": "",
-    "price": 47,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
-      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
-      "19c52563-f81c-4c7d-a7db-56be7303f767",
-      "f2198591-6cbd-48da-b356-6e17e21953ec",
-      "f2198591-6cbd-48da-b356-6e17e21953ec",
-      "aaa850a3-adb5-4d1e-8133-012e56227951",
-      "ad556322-79bb-4311-8950-3f13dbc423d7"
-    ],
-    "detail": {
-      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
-      "specifications": {
-        "faceTypes": [
-          "Oval",
-          "Round",
-          "Square",
-          "Heart"
-        ],
-        "hairTypes": [
-          "Straight",
-          "Wavy",
-          "Curly",
-          "Coily"
-        ]
-      }
-    }
-  },
-  {
-    "name": "PompadourPompadour  84",
-    "gender": "",
-    "type": "",
-    "price": 175,
-    "images": [
-      {
-        "url": "https://google.com/",
-        "isPrincipal": true
-      },
-      {
-        "url": "https://google.com/",
-        "isPrincipal": false
-      }
-    ],
-    "tags": [
       "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8"
     ],
     "detail": {
@@ -1196,10 +360,10 @@
     }
   },
   {
-    "name": "Buzz CutUndercut  96",
+    "name": "Caesar CutCrew Cut  11",
     "gender": "",
     "type": "",
-    "price": 86,
+    "price": 146,
     "images": [
       {
         "url": "https://google.com/",
@@ -1211,19 +375,1207 @@
       }
     ],
     "tags": [
-      "07814cc8-31ef-482e-86ca-54b5564d31fb",
-      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "c70984ca-88a0-489a-bc1a-e696b136401f",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "19c52563-f81c-4c7d-a7db-56be7303f767",
+      "5908787e-de56-4e6d-a840-c65d02781587",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
       "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
-      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "c70984ca-88a0-489a-bc1a-e696b136401f",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "364c1d67-61a6-4866-867c-62e8df75d92f"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Ivy LeagueTaper Cut  12",
+    "gender": "",
+    "type": "",
+    "price": 135,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "aaa850a3-adb5-4d1e-8133-012e56227951",
+      "4210218e-c5a1-48a6-8b45-65c9ee1ec86f",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Buzz CutFrench Crop  16",
+    "gender": "",
+    "type": "",
+    "price": 60,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
       "d19e04fe-dbdb-457c-a847-30f530182fa3",
-      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
-      "07814cc8-31ef-482e-86ca-54b5564d31fb",
-      "f2198591-6cbd-48da-b356-6e17e21953ec",
-      "ad556322-79bb-4311-8950-3f13dbc423d7",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
       "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
-      "d19e04fe-dbdb-457c-a847-30f530182fa3",
-      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Ivy LeagueUndercut  17",
+    "gender": "",
+    "type": "",
+    "price": 48,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "ad556322-79bb-4311-8950-3f13dbc423d7",
+      "5908787e-de56-4e6d-a840-c65d02781587",
+      "19c52563-f81c-4c7d-a7db-56be7303f767",
+      "c70984ca-88a0-489a-bc1a-e696b136401f",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
       "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Buzz CutPompadour  18",
+    "gender": "",
+    "type": "",
+    "price": 46,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3",
+      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Taper CutIvy League  19",
+    "gender": "",
+    "type": "",
+    "price": 50,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Pompadour  21",
+    "gender": "",
+    "type": "",
+    "price": 186,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
+      "5908787e-de56-4e6d-a840-c65d02781587",
+      "aaa850a3-adb5-4d1e-8133-012e56227951"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "FadeQuiff  22",
+    "gender": "",
+    "type": "",
+    "price": 155,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "ad556322-79bb-4311-8950-3f13dbc423d7",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "FadeIvy League  23",
+    "gender": "",
+    "type": "",
+    "price": 41,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
+      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "ad556322-79bb-4311-8950-3f13dbc423d7",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "19c52563-f81c-4c7d-a7db-56be7303f767",
+      "5908787e-de56-4e6d-a840-c65d02781587"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Crew CutFrench Crop  24",
+    "gender": "",
+    "type": "",
+    "price": 112,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "f2198591-6cbd-48da-b356-6e17e21953ec"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Crew CutPompadour  26",
+    "gender": "",
+    "type": "",
+    "price": 136,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
+      "aaa850a3-adb5-4d1e-8133-012e56227951",
+      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "5908787e-de56-4e6d-a840-c65d02781587",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Taper CutFade  29",
+    "gender": "",
+    "type": "",
+    "price": 80,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "c70984ca-88a0-489a-bc1a-e696b136401f",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "19c52563-f81c-4c7d-a7db-56be7303f767",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
+      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Caesar CutCrew Cut  32",
+    "gender": "",
+    "type": "",
+    "price": 135,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "QuiffCrew Cut  33",
+    "gender": "",
+    "type": "",
+    "price": 83,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "ad556322-79bb-4311-8950-3f13dbc423d7",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "aaa850a3-adb5-4d1e-8133-012e56227951",
+      "4210218e-c5a1-48a6-8b45-65c9ee1ec86f",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "5908787e-de56-4e6d-a840-c65d02781587",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "ab181436-55f8-41ef-a391-fa424bf864ef"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Crew CutFrench Crop  35",
+    "gender": "",
+    "type": "",
+    "price": 147,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "c70984ca-88a0-489a-bc1a-e696b136401f",
+      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
+      "f2198591-6cbd-48da-b356-6e17e21953ec"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Crew CutTaper Cut  36",
+    "gender": "",
+    "type": "",
+    "price": 63,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "QuiffFrench Crop  37",
+    "gender": "",
+    "type": "",
+    "price": 90,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "566e5981-8055-43d3-a957-e9efb91ca791",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Caesar CutBuzz Cut  38",
+    "gender": "",
+    "type": "",
+    "price": 52,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "PompadourUndercut  39",
+    "gender": "",
+    "type": "",
+    "price": 188,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Buzz Cut  40",
+    "gender": "",
+    "type": "",
+    "price": 112,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "c1f624d4-0ccd-43e2-bf05-ccd9eac88135",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
+      "ad556322-79bb-4311-8950-3f13dbc423d7",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "5908787e-de56-4e6d-a840-c65d02781587"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "UndercutTaper Cut  41",
+    "gender": "",
+    "type": "",
+    "price": 103,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "19c52563-f81c-4c7d-a7db-56be7303f767",
+      "230268ef-572d-4892-8303-ee11a4cc1800",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "aaa850a3-adb5-4d1e-8133-012e56227951",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "UndercutQuiff  42",
+    "gender": "",
+    "type": "",
+    "price": 83,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "5908787e-de56-4e6d-a840-c65d02781587",
+      "aaa850a3-adb5-4d1e-8133-012e56227951",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
+      "364c1d67-61a6-4866-867c-62e8df75d92f"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Caesar CutFade  43",
+    "gender": "",
+    "type": "",
+    "price": 181,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "d28f28f2-df1f-4e8f-bf7c-cb3396342657"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Caesar CutPompadour  44",
+    "gender": "",
+    "type": "",
+    "price": 83,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "566e5981-8055-43d3-a957-e9efb91ca791",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Buzz CutFrench Crop  46",
+    "gender": "",
+    "type": "",
+    "price": 192,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "c1f624d4-0ccd-43e2-bf05-ccd9eac88135",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "230268ef-572d-4892-8303-ee11a4cc1800",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Taper CutTaper Cut  47",
+    "gender": "",
+    "type": "",
+    "price": 128,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "19c52563-f81c-4c7d-a7db-56be7303f767",
+      "19c52563-f81c-4c7d-a7db-56be7303f767",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "UndercutTaper Cut  48",
+    "gender": "",
+    "type": "",
+    "price": 88,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "aaa850a3-adb5-4d1e-8133-012e56227951",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "19c52563-f81c-4c7d-a7db-56be7303f767",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "aaa850a3-adb5-4d1e-8133-012e56227951",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "19c52563-f81c-4c7d-a7db-56be7303f767"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Caesar CutQuiff  49",
+    "gender": "",
+    "type": "",
+    "price": 109,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "c1f624d4-0ccd-43e2-bf05-ccd9eac88135",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "566e5981-8055-43d3-a957-e9efb91ca791",
+      "4210218e-c5a1-48a6-8b45-65c9ee1ec86f",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "c70984ca-88a0-489a-bc1a-e696b136401f",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "566e5981-8055-43d3-a957-e9efb91ca791",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
       "864fa6fd-159a-49bd-a03e-58b99c952bb8"
     ],
     "detail": {
@@ -1245,10 +1597,10 @@
     }
   },
   {
-    "name": "Caesar CutIvy League  98",
+    "name": "Crew CutFade  51",
     "gender": "",
     "type": "",
-    "price": 112,
+    "price": 50,
     "images": [
       {
         "url": "https://google.com/",
@@ -1260,8 +1612,1445 @@
       }
     ],
     "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "aaa850a3-adb5-4d1e-8133-012e56227951"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "QuiffBuzz Cut  53",
+    "gender": "",
+    "type": "",
+    "price": 21,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Caesar Cut  54",
+    "gender": "",
+    "type": "",
+    "price": 170,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "5908787e-de56-4e6d-a840-c65d02781587",
       "f2198591-6cbd-48da-b356-6e17e21953ec",
-      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d"
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134",
+      "ad556322-79bb-4311-8950-3f13dbc423d7",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "aaa850a3-adb5-4d1e-8133-012e56227951",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "French CropPompadour  55",
+    "gender": "",
+    "type": "",
+    "price": 143,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "5908787e-de56-4e6d-a840-c65d02781587",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
+      "aaa850a3-adb5-4d1e-8133-012e56227951",
+      "4210218e-c5a1-48a6-8b45-65c9ee1ec86f"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Ivy LeagueCrew Cut  56",
+    "gender": "",
+    "type": "",
+    "price": 53,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Crew CutQuiff  57",
+    "gender": "",
+    "type": "",
+    "price": 77,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
+      "ad556322-79bb-4311-8950-3f13dbc423d7",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "4210218e-c5a1-48a6-8b45-65c9ee1ec86f",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "UndercutBuzz Cut  61",
+    "gender": "",
+    "type": "",
+    "price": 62,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "5908787e-de56-4e6d-a840-c65d02781587",
+      "c70984ca-88a0-489a-bc1a-e696b136401f",
+      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
+      "230268ef-572d-4892-8303-ee11a4cc1800",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "7a3d8082-a23c-459a-a8c6-ccfb84b72b5d",
+      "ad556322-79bb-4311-8950-3f13dbc423d7",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "UndercutCrew Cut  62",
+    "gender": "",
+    "type": "",
+    "price": 195,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "c1f624d4-0ccd-43e2-bf05-ccd9eac88135",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134",
+      "aaa850a3-adb5-4d1e-8133-012e56227951",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
+      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "PompadourTaper Cut  63",
+    "gender": "",
+    "type": "",
+    "price": 47,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "FadeFrench Crop  64",
+    "gender": "",
+    "type": "",
+    "price": 30,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "4210218e-c5a1-48a6-8b45-65c9ee1ec86f",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "566e5981-8055-43d3-a957-e9efb91ca791",
+      "c70984ca-88a0-489a-bc1a-e696b136401f",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "French CropCaesar Cut  65",
+    "gender": "",
+    "type": "",
+    "price": 191,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
+      "19c52563-f81c-4c7d-a7db-56be7303f767",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "ad556322-79bb-4311-8950-3f13dbc423d7",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Taper CutQuiff  67",
+    "gender": "",
+    "type": "",
+    "price": 69,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "566e5981-8055-43d3-a957-e9efb91ca791"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "FadeBuzz Cut  68",
+    "gender": "",
+    "type": "",
+    "price": 193,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "566e5981-8055-43d3-a957-e9efb91ca791",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Quiff  70",
+    "gender": "",
+    "type": "",
+    "price": 105,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "9c4b5532-08b8-43c4-90b2-f1f325b7e17b",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134",
+      "19c52563-f81c-4c7d-a7db-56be7303f767"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Caesar CutQuiff  71",
+    "gender": "",
+    "type": "",
+    "price": 22,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "PompadourTaper Cut  74",
+    "gender": "",
+    "type": "",
+    "price": 16,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "566e5981-8055-43d3-a957-e9efb91ca791"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "French CropUndercut  75",
+    "gender": "",
+    "type": "",
+    "price": 18,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "c1f624d4-0ccd-43e2-bf05-ccd9eac88135",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "230268ef-572d-4892-8303-ee11a4cc1800",
+      "aaa850a3-adb5-4d1e-8133-012e56227951"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "PompadourBuzz Cut  76",
+    "gender": "",
+    "type": "",
+    "price": 95,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3",
+      "aaa850a3-adb5-4d1e-8133-012e56227951",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "230268ef-572d-4892-8303-ee11a4cc1800",
+      "4210218e-c5a1-48a6-8b45-65c9ee1ec86f",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "f2198591-6cbd-48da-b356-6e17e21953ec"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "PompadourCrew Cut  77",
+    "gender": "",
+    "type": "",
+    "price": 91,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
+      "230268ef-572d-4892-8303-ee11a4cc1800",
+      "ad556322-79bb-4311-8950-3f13dbc423d7",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "QuiffFade  78",
+    "gender": "",
+    "type": "",
+    "price": 38,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "5908787e-de56-4e6d-a840-c65d02781587",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "864fa6fd-159a-49bd-a03e-58b99c952bb8",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "ad556322-79bb-4311-8950-3f13dbc423d7",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Taper Cut  79",
+    "gender": "",
+    "type": "",
+    "price": 175,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "PompadourBuzz Cut  81",
+    "gender": "",
+    "type": "",
+    "price": 72,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "c1f624d4-0ccd-43e2-bf05-ccd9eac88135",
+      "19c52563-f81c-4c7d-a7db-56be7303f767",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3",
+      "566e5981-8055-43d3-a957-e9efb91ca791",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "19c52563-f81c-4c7d-a7db-56be7303f767",
+      "566e5981-8055-43d3-a957-e9efb91ca791",
+      "d19e04fe-dbdb-457c-a847-30f530182fa3",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "French CropQuiff  82",
+    "gender": "",
+    "type": "",
+    "price": 76,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "ad556322-79bb-4311-8950-3f13dbc423d7",
+      "ab181436-55f8-41ef-a391-fa424bf864ef",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Ivy LeagueBuzz Cut  83",
+    "gender": "",
+    "type": "",
+    "price": 131,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "364c1d67-61a6-4866-867c-62e8df75d92f",
+      "ab181436-55f8-41ef-a391-fa424bf864ef"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Buzz CutPompadour  84",
+    "gender": "",
+    "type": "",
+    "price": 93,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "c70984ca-88a0-489a-bc1a-e696b136401f",
+      "ad556322-79bb-4311-8950-3f13dbc423d7"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "QuiffCaesar Cut  85",
+    "gender": "",
+    "type": "",
+    "price": 186,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "c70984ca-88a0-489a-bc1a-e696b136401f",
+      "566e5981-8055-43d3-a957-e9efb91ca791",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "FadeQuiff  88",
+    "gender": "",
+    "type": "",
+    "price": 12,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "aaa850a3-adb5-4d1e-8133-012e56227951",
+      "d28f28f2-df1f-4e8f-bf7c-cb3396342657",
+      "19c52563-f81c-4c7d-a7db-56be7303f767"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Taper CutPompadour  89",
+    "gender": "",
+    "type": "",
+    "price": 37,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "ab181436-55f8-41ef-a391-fa424bf864ef"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "FadeUndercut  90",
+    "gender": "",
+    "type": "",
+    "price": 67,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "b6bde276-04a7-427b-abf5-8ceaa13f82e2",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134",
+      "4210218e-c5a1-48a6-8b45-65c9ee1ec86f",
+      "c70984ca-88a0-489a-bc1a-e696b136401f",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "ab181436-55f8-41ef-a391-fa424bf864ef"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Taper CutFrench Crop  92",
+    "gender": "",
+    "type": "",
+    "price": 189,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "c1f624d4-0ccd-43e2-bf05-ccd9eac88135",
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8",
+      "794fd425-6d4a-4ba7-96b0-5598b5c12e83",
+      "4e62da80-daa1-4187-8bf7-cf739ffa3f91",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "bad019b1-cd2e-4af3-8559-e38c40aaa2ac",
+      "b047458d-ed43-40b4-97f0-8cd083ff7430",
+      "2c94799c-9a73-4a7a-b9a3-26e154b4f7a8"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Crew CutFrench Crop  95",
+    "gender": "",
+    "type": "",
+    "price": 186,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "41d1765c-108a-4ae4-aec2-c4316981026b",
+      "c70984ca-88a0-489a-bc1a-e696b136401f"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "QuiffIvy League  96",
+    "gender": "",
+    "type": "",
+    "price": 177,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "559786d2-b1c1-4fb4-8b9c-8aa8f6eff063",
+      "07814cc8-31ef-482e-86ca-54b5564d31fb",
+      "c70984ca-88a0-489a-bc1a-e696b136401f",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "5908787e-de56-4e6d-a840-c65d02781587",
+      "230268ef-572d-4892-8303-ee11a4cc1800",
+      "46d7b6b7-961d-426d-8843-384eaa5ec1a5",
+      "251c7b81-27e7-4404-a5ce-d613aff954c4",
+      "8241b2a0-e40e-44e6-a8c0-ad271dc2ad57",
+      "505c78f7-a46e-4408-bf4e-2547ccb12134"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "FadeCrew Cut  97",
+    "gender": "",
+    "type": "",
+    "price": 73,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735"
+    ],
+    "detail": {
+      "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
+      "specifications": {
+        "faceTypes": [
+          "Oval",
+          "Round",
+          "Square",
+          "Heart"
+        ],
+        "hairTypes": [
+          "Straight",
+          "Wavy",
+          "Curly",
+          "Coily"
+        ]
+      }
+    }
+  },
+  {
+    "name": "Buzz CutFrench Crop  98",
+    "gender": "",
+    "type": "",
+    "price": 40,
+    "images": [
+      {
+        "url": "https://google.com/",
+        "isPrincipal": true
+      },
+      {
+        "url": "https://google.com/",
+        "isPrincipal": false
+      }
+    ],
+    "tags": [
+      "457c463c-723f-44db-88eb-d071ee1d9cc6",
+      "c1f624d4-0ccd-43e2-bf05-ccd9eac88135",
+      "79507e3c-4fb7-4fd9-8b0d-5ee37aeef735",
+      "4210218e-c5a1-48a6-8b45-65c9ee1ec86f",
+      "f2198591-6cbd-48da-b356-6e17e21953ec",
+      "8f22821a-8e2b-435f-87b8-c63a1b83c711",
+      "fb0be2a7-ceb5-4d24-a023-0e84d64c850f"
     ],
     "detail": {
       "description": "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industrys standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.",
