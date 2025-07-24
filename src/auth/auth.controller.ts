@@ -3,6 +3,7 @@ import {
   // Get,
   Post,
   Body,
+  Get,
   // Patch,
   // Param,
   // Delete,
@@ -10,9 +11,10 @@ import {
 import { AuthService } from './auth.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginUserDto } from './dto/login-user.dto';
-
-// import { Auth } from './decorators/auth.decorator';
-// import { ValidRoles } from './interfaces/valid-roles';
+import { Auth } from './decorators/auth.decorator';
+import { User } from './entities/user.entity';
+import { GetUser } from './decorators/get-user.decorator';
+import { ValidRoles } from './interfaces/valid-roles';
 
 @Controller('auth')
 export class AuthController {
@@ -26,6 +28,12 @@ export class AuthController {
   @Post('login')
   loginUser(@Body() loginUserDto: LoginUserDto) {
     return this.authService.login(loginUserDto);
+  }
+
+  @Get('check-status')
+  @Auth(ValidRoles.admin)
+  checkAuthStatus(@GetUser() user: User) {
+    return this.authService.checkAuthStatus(user);
   }
 
   // @Auth( ValidRoles.admin )

@@ -11,11 +11,14 @@ import {
 import { TagsService } from './tags.service';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
+import { Auth } from 'src/auth/decorators/auth.decorator';
+import { ValidRoles } from 'src/auth/interfaces/valid-roles';
 
 @Controller('tags')
 export class TagsController {
   constructor(private readonly tagsService: TagsService) {}
 
+  @Auth(ValidRoles.admin)
   @Post()
   create(@Body() createTagDto: CreateTagDto) {
     return this.tagsService.create(createTagDto);
@@ -31,11 +34,13 @@ export class TagsController {
     return this.tagsService.findOne(id);
   }
 
+  @Auth(ValidRoles.admin)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateTagDto: UpdateTagDto) {
     return this.tagsService.update(id, updateTagDto);
   }
 
+  @Auth(ValidRoles.admin)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.tagsService.remove(id);

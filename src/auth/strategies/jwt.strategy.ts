@@ -28,7 +28,6 @@ export class JWTStrategy extends PassportStrategy(Strategy) {
     if (!user.isActive) {
       throw new UnauthorizedException('Inactive user');
     }
-    console.log(user);
     // Todo lo que yo retorne aqui, se agrega al request en el controlador
     return user;
   }

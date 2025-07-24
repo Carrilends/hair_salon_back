@@ -74,7 +74,8 @@ export class ServiceService {
       .createQueryBuilder('service')
       .leftJoinAndSelect('service.images', 'i')
       .leftJoinAndSelect('service.detail', 'd')
-      .select(['service', 'i', 'd']);
+      .leftJoinAndSelect('service.tags', 't')
+      .select(['service', 'i', 'd', 't']);
     let service: Service;
 
     if (isUUID(term)) {

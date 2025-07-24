@@ -79,7 +79,6 @@ export function AlreadyExistOnePrincipalForUpdateImages(
   validationOptions?: ValidationOptions,
 ) {
   return function (object: object, propertyName: string) {
-    console.log('object', object);
     registerDecorator({
       target: object.constructor,
       propertyName: propertyName,
