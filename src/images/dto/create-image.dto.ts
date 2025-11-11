@@ -2,6 +2,7 @@ import {
   IsBoolean,
   IsIn,
   IsNotEmpty,
+  IsOptional,
   IsString,
   IsUUID,
   MinLength,
@@ -20,8 +21,17 @@ export class CreateImageDto {
   @MinLength(10)
   url: string;
 
+  @IsString()
+  @MinLength(5)
+  publicId: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(5)
+  version: string;
+
   @IsBoolean()
-  isPrincipal: any;
+  isPrincipal: boolean;
 }
 
 export class CreateImageDtoByService {
@@ -32,6 +42,15 @@ export class CreateImageDtoByService {
   @IsString()
   @MinLength(10)
   url: string;
+
+  @IsString()
+  @MinLength(5)
+  publicId: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(5)
+  version: string;
 
   @IsBoolean()
   isPrincipal: boolean;

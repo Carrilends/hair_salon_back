@@ -44,7 +44,7 @@ export class AuthService {
       const { email, password } = loginUserDto;
       const user = await this.userRepository.findOne({
         where: { email },
-        select: ['email', 'password', 'id'],
+        select: ['email', 'password', 'id', 'fullName', 'roles'],
       });
 
       if (!user) {
@@ -56,7 +56,7 @@ export class AuthService {
       // TODO: Retornar el JWT
       return {
         ...user,
-        token: this.getJwtToken({ id: user.id }),
+        token: this.getJwtToken({ id: user.id }), // puede que aqui este el error porque el token no firma los roles
       };
     } catch (error) {
       this.handleDBErrors(error);
@@ -94,7 +94,6 @@ export class AuthService {
     if (error.code === '23505') {
       throw new BadRequestException(error.detail);
     }
-    console.log(error);
     throw new InternalServerErrorException('Please check the logs');
   }
 }

@@ -5,7 +5,6 @@ import {
 } from '@nestjs/common';
 
 export const GetUser = createParamDecorator((data, ctx: ExecutionContext) => {
-  console.log('GetUser decorator called');
   const req = ctx.switchToHttp().getRequest();
   const user = req.user;
   if (!user) {

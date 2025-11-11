@@ -3,10 +3,11 @@ import { Module } from '@nestjs/common';
 import { TagsService } from './tags.service';
 import { TagsController } from './tags.controller';
 import { Tag } from './entities/tag.entity';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   controllers: [TagsController],
   providers: [TagsService],
-  imports: [TypeOrmModule.forFeature([Tag])],
+  imports: [TypeOrmModule.forFeature([Tag]), AuthModule],
 })
 export class TagsModule {}

@@ -11,32 +11,41 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { /* In, */ Repository, type SelectQueryBuilder } from 'typeorm';
 import { Service } from './entities/service.entity';
 import { isUUID } from 'class-validator';
-import { ImagesService } from 'src/images/images.service';
 import { Detail } from 'src/detail/entities/detail.entity';
 import { FilterServiceDto } from './dto/filter-service.dto';
 import { TagsService } from 'src/tags/tags.service';
 import seedData from './seed/seed-services.json';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { ImageManager } from 'src/images/images.entity';
+import { ImagesService } from 'src/images/images.service';
+import { selectPrincipalImage } from 'src/images/utils/utils.images';
 
 // TODO: Continua con la edicion del detalle
 @Injectable()
 export class ServiceService {
-  private readonly looger = new Logger('ServiceService');
+  private readonly logger = new Logger('ServiceService');
 
   constructor(
     @InjectRepository(Service)
     private readonly serviceRepository: Repository<Service>,
     @InjectRepository(Detail)
     private readonly detailRepository: Repository<Detail>,
-    private readonly imagesService: ImagesService,
+    @InjectRepository(ImageManager)
+    private readonly imagesRepository: Repository<ImageManager>,
+
     private readonly tagService: TagsService,
+    private readonly imageService: ImagesService,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   async create(createServiceDto: CreateServiceDto) {
     try {
-      const { tags, ...rest } = createServiceDto;
+      const { tags, images, ...rest } = createServiceDto;
       const tagsEntities = await this.tagService.findByIds(tags);
+
       const product = this.serviceRepository.create({
         ...rest,
+        images: selectPrincipalImage(images),
         tags: tagsEntities,
       });
 
@@ -55,7 +64,7 @@ export class ServiceService {
     const qb = this.serviceRepository
       .createQueryBuilder('s')
       .leftJoinAndSelect('s.tags', 'tags')
-      .leftJoinAndSelect('s.images', 'i')
+      .leftJoinAndSelect('s.images', 'i', 'i.isPrincipal = true')
       .leftJoinAndSelect('s.detail', 'd');
 
     this.applyFilters(qb, filterDto);
@@ -96,47 +105,45 @@ export class ServiceService {
   }
 
   async update(id: string, updateServiceDto: UpdateServiceDto) {
-    const { images, deleteImages, updateImages, tags, ...rest } =
-      updateServiceDto;
-
-    const tagsEntities = await this.tagService.findByIds(tags);
-
-    const service = await this.serviceRepository.preload({
-      id: id,
-      tags: tagsEntities,
-      ...rest,
-    });
-
-    if (images && images?.length) {
-      images.forEach(async (image) => {
-        this.imagesService.createFromService({
-          isPrincipal: image.isPrincipal,
-          url: image.url,
-          service: service.id,
-        });
-      });
-    }
-
-    if (deleteImages?.length && deleteImages) {
-      const ids = deleteImages.map((image) => image.id);
-      this.imagesService.removeByExternalId(ids);
-    }
-
-    if (updateImages?.length && updateImages) {
-      updateImages.forEach(async (image) => {
-        this.imagesService.update(image.id, image);
-      });
-    }
-
-    if (rest.detail) {
-      await this.detailRepository.update(rest.detail.id, rest.detail);
-    }
-
-    if (!service) {
-      throw new NotFoundException(`Service with id ${id} not found`);
-    }
-
     try {
+      const { images, tags, ...rest } = updateServiceDto;
+
+      const tagsEntities = await this.tagService.findByIds(tags);
+      const imagesFromDb = await this.imagesRepository.find({
+        where: { service: { id } },
+      });
+
+      // Imagenes existentes DTO / Base de datos
+      const idsFromImagesDto = images.filter((img) => img.id).map((i) => i.id);
+
+      const newImages = images.filter((img) => !img.id);
+      const imagesToKeep = imagesFromDb.filter((img) =>
+        idsFromImagesDto.includes(img.id),
+      );
+
+      // Eliminacion de imagenes
+      const imagesToDelete = imagesFromDb.filter(
+        (img) => !idsFromImagesDto.includes(img.id),
+      );
+      if (imagesToDelete.length > 0) {
+        await this.imageService.removeByExternalId(
+          imagesToDelete.map((i) => i.id),
+          imagesToDelete.map((i) => i.publicId),
+        );
+      }
+
+      console.log('Tags DTO:', tags);
+      console.log('Tags Entities:', tagsEntities);
+
+      // Creacion de nuevas imagenes
+      const imagesToSafe = selectPrincipalImage(imagesToKeep.concat(newImages));
+      const service = await this.serviceRepository.preload({
+        id: id,
+        tags: tagsEntities,
+        images: imagesToSafe,
+        ...rest,
+      });
+
       await this.serviceRepository.save(service);
       return service;
     } catch (error) {
@@ -147,8 +154,10 @@ export class ServiceService {
   async remove(id: string) {
     const serviceWithRelations = await this.serviceRepository.findOne({
       where: { id },
-      relations: ['detail'],
+      relations: ['detail', 'images'],
     });
+    const images = serviceWithRelations.images.map((img) => img.publicId);
+    await this.cloudinaryService.deleteAssets(images);
     await this.serviceRepository.delete(id);
     await this.detailRepository.delete(serviceWithRelations.detail.id);
     return 'deleted';
@@ -199,7 +208,7 @@ export class ServiceService {
     if (error.code === '23505') {
       throw new BadRequestException(error.detail);
     }
-    this.looger.error(error);
+    this.logger.error(error);
     throw new InternalServerErrorException('Unexpected error');
   }
 

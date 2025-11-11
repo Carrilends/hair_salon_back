@@ -7,7 +7,13 @@ export class ImageManager {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('text')
+  @Column('text', { default: 'example_public_id' })
+  publicId: string;
+
+  @Column('text', { default: null })
+  version: string;
+
+  @Column('text', { default: '/' })
   url: string;
 
   @Column('boolean', { default: false })

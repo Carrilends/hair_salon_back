@@ -10,11 +10,15 @@ import { ImageManager } from 'src/images/images.entity';
 import { Service } from './entities/service.entity';
 import { AuthModule } from 'src/auth/auth.module';
 import { TagsService } from 'src/tags/tags.service';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { CloudinaryProvider } from 'src/cloudinary/cloudinary.provider';
 
 @Module({
   controllers: [ServiceController],
   providers: [
     TagsService,
+    CloudinaryService,
+    CloudinaryProvider,
     ImagesService,
     ServiceService,
     AlreadyExistOnePrincipalConstraint,

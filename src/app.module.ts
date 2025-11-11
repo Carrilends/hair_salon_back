@@ -11,6 +11,7 @@ import { FilesModule } from './files/files.module';
 import { AuthModule } from './auth/auth.module';
 import { TagsModule } from './tags/tags.module';
 import { SharedInfoModule } from './shared/shared-info.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { SharedInfoModule } from './shared/shared-info.module';
     AuthModule,
     TagsModule,
     SharedInfoModule,
+    CloudinaryModule,
   ],
 })
 export class AppModule {}

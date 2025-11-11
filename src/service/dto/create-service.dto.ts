@@ -4,7 +4,7 @@ import {
   ArrayUnique,
   IsArray,
   IsBoolean,
-  IsIn,
+  /* IsIn, */
   IsNumber,
   IsOptional,
   IsPositive,
@@ -25,11 +25,11 @@ export class CreateServiceDto {
   @MinLength(2)
   name: string;
 
-  @IsIn(['men', 'women', 'unisex', 'kid'])
-  gender: string;
+  // @IsIn(['men', 'women', 'unisex', 'kid'])
+  // gender: string;
 
-  @IsIn(['manicure', 'pedicure', 'hair', 'face', 'body'])
-  type: string;
+  // @IsIn(['manicure', 'pedicure', 'hair', 'face', 'body'])
+  // type: string;
 
   @IsNumber()
   @IsPositive()

@@ -7,12 +7,15 @@ import { UpdateImagelDto } from './dto/update-image.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ImageManager } from './images.entity';
 import { Repository } from 'typeorm';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
 export class ImagesService {
   constructor(
     @InjectRepository(ImageManager)
     private readonly imageRepository: Repository<ImageManager>,
+
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   async createFromService(createImageDtoByService: CreateImageDtoByService) {
@@ -51,11 +54,8 @@ export class ImagesService {
     return await this.imageRepository.update(id, { isPrincipal, url });
   }
 
-  async removeByExternalId(ids: string[]) {
+  async removeByExternalId(ids: string[], publicIds?: string[]) {
+    await this.cloudinaryService.deleteAssets(publicIds);
     return await this.imageRepository.delete(ids);
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} detail`;
   }
 }

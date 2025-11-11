@@ -25,11 +25,8 @@ export class Service {
   })
   name: string;
 
-  @Column('text')
-  gender: string;
-
-  @Column('text')
-  type: string;
+  @Column('text', { nullable: true })
+  type?: string;
 
   @Column('numeric', { nullable: false })
   price: number;
