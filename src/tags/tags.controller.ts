@@ -7,12 +7,14 @@ import {
   Param,
   Delete,
   ForbiddenException,
+  Query,
 } from '@nestjs/common';
 import { TagsService } from './tags.service';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
 import { Auth } from 'src/auth/decorators/auth.decorator';
 import { ValidRoles } from 'src/auth/interfaces/valid-roles';
+import { FilterTagValidator } from './validators/tag.validator';
 
 @Controller('tags')
 export class TagsController {
@@ -25,13 +27,18 @@ export class TagsController {
   }
 
   @Get()
-  findAll() {
-    return this.tagsService.findAll();
+  findAll(@Query() queryParams: FilterTagValidator) {
+    return this.tagsService.findAll(queryParams);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.tagsService.findOne(id);
+  }
+
+  @Get('children/:id')
+  findChildren(@Param('id') id: string) {
+    return this.tagsService.findChildren(id);
   }
 
   @Auth(ValidRoles.admin)

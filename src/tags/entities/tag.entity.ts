@@ -27,4 +27,7 @@ export class Tag {
 
   @OneToMany(() => Tag, (tag) => tag.parent)
   children: Tag[];
+
+  @Column({ name: 'parentId', nullable: true })
+  parentId: string;
 }

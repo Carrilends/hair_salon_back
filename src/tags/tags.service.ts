@@ -5,11 +5,13 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Tag } from 'src/tags/entities/tag.entity';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
 import seedData from './seed/tag-seed.json'; // asegúrate de que este archivo exista
+import { ID_GENDER_TAG } from './constants';
+import { FilterTagValidator } from './validators/tag.validator';
 
 @Injectable()
 export class TagsService {
@@ -45,10 +47,29 @@ export class TagsService {
     return newTag;
   }
 
-  async findAll(): Promise<Tag[]> {
-    return await this.tagRepository.find({
-      relations: ['parent', 'children'],
-    });
+  async findAll(queryParams: FilterTagValidator): Promise<Tag[]> {
+    const { genres, principalParents, idParent } = queryParams;
+
+    const queryBuilder = this.tagRepository
+      .createQueryBuilder('t')
+      .leftJoinAndSelect('t.parent', 'parent')
+      .leftJoinAndSelect('t.children', 'children');
+
+    if (genres) {
+      queryBuilder.where('parent.id = :idParent', { idParent: ID_GENDER_TAG });
+    }
+
+    if (principalParents) {
+      queryBuilder.where('parent.id IS NULL AND t.id != :idGender', {
+        idGender: ID_GENDER_TAG,
+      });
+    }
+
+    if (idParent) {
+      queryBuilder.where('parent.id = :idParent', { idParent });
+    }
+
+    return await queryBuilder.getMany();
   }
 
   async findByIds(ids: string[]): Promise<Tag[]> {
@@ -104,6 +125,32 @@ export class TagsService {
     }
 
     return await this.tagRepository.save(tag);
+  }
+
+  async findChildren(idParent: string): Promise<Tag[]> {
+    const tags = await this.tagRepository
+      .createQueryBuilder('tag')
+      .leftJoin('tag.parent', 'parent')
+      .leftJoin('tag.children', 'children')
+      .select([
+        'tag.id',
+        'tag.name',
+        'parent.id as parentId',
+        'children.id as childrenId',
+      ])
+      .where('parent.id = :idParent AND parent.id != :genderId', {
+        idParent,
+        genderId: ID_GENDER_TAG,
+      })
+      .getMany();
+    return tags;
+  }
+
+  async findAllByDIds(ids: string[]): Promise<Tag[]> {
+    return await this.tagRepository.find({
+      where: { id: In(ids) },
+      relations: ['parent', 'children'],
+    });
   }
 
   async remove(id: string): Promise<void> {

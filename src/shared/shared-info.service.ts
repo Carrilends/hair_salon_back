@@ -15,32 +15,27 @@ export class SharedInfoService {
   ) {}
 
   async getFilterData() {
-    const tags = await this.tagRepo.find({
-      select: ['id', 'name', 'parent'],
-      relations: ['parent'],
-    });
+    const queryBuilder = this.tagRepo
+      .createQueryBuilder('t')
+      .leftJoin('t.parent', 'par');
 
-    const principalParents: Tag[] = [];
-    const genders: Tag[] = [];
-    const childrens: Tag[] = [];
+    const gendersPromise = queryBuilder
+      .where('par.id = :idParent', { idParent: ID_GENDER })
+      .getMany();
 
-    tags.forEach((tag) => {
-      if (!tag.parent) {
-        principalParents.push(tag);
-      } else {
-        if (tag.parent.id === ID_GENDER) {
-          genders.push(tag);
-        } else {
-          childrens.push(tag);
-        }
-      }
-    });
+    const principalParentsPromise = queryBuilder
+      .where('par.id IS NULL')
+      .andWhere('t.id != :idGender', { idGender: ID_GENDER })
+      .getMany();
+
+    const [genders, principalParents] = await Promise.all([
+      gendersPromise,
+      principalParentsPromise,
+    ]);
 
     return {
-      // services,
-      genders: genders.map((tag) => ({ ...tag, parent: null })),
-      childrens: childrens.map((tag) => ({ ...tag, parent: tag.parent?.id })),
-      principalParents: principalParents.filter((tag) => tag.id !== ID_GENDER),
+      genders,
+      principalParents,
     };
   }
 }
