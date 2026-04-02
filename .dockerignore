@@ -1,0 +1,16 @@
+node_modules
+dist
+coverage
+.temp
+.tmp
+.DS_Store
+.git
+.vscode
+
+hair_salon_db
+
+.env
+.env.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

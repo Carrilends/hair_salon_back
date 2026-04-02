@@ -12,6 +12,7 @@ import { AuthModule } from './auth/auth.module';
 import { TagsModule } from './tags/tags.module';
 import { SharedInfoModule } from './shared/shared-info.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { HealthController } from './health.controller';
 
 @Module({
   imports: [
@@ -38,5 +39,6 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
     SharedInfoModule,
     CloudinaryModule,
   ],
+  controllers: [HealthController],
 })
 export class AppModule {}
