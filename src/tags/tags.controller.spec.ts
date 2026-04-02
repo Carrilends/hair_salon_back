@@ -8,7 +8,20 @@ describe('TagsController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TagsController],
-      providers: [TagsService],
+      providers: [
+        {
+          provide: TagsService,
+          useValue: {
+            create: jest.fn(),
+            findAll: jest.fn(),
+            findOne: jest.fn(),
+            update: jest.fn(),
+            remove: jest.fn(),
+            findChildren: jest.fn(),
+            seed: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     controller = module.get<TagsController>(TagsController);

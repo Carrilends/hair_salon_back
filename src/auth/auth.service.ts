@@ -3,6 +3,7 @@ import {
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
+  HttpException,
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -35,6 +36,7 @@ export class AuthService {
       };
       // TODO: Retornar el JWT
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.handleDBErrors(error);
     }
   }
@@ -59,6 +61,7 @@ export class AuthService {
         token: this.getJwtToken({ id: user.id }), // puede que aqui este el error porque el token no firma los roles
       };
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.handleDBErrors(error);
     }
   }
