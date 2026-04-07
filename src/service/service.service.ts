@@ -132,9 +132,6 @@ export class ServiceService {
         );
       }
 
-      console.log('Tags DTO:', tags);
-      console.log('Tags Entities:', tagsEntities);
-
       // Creacion de nuevas imagenes
       const imagesToSafe = selectPrincipalImage(imagesToKeep.concat(newImages));
       const service = await this.serviceRepository.preload({

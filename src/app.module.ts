@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServiceModule } from './service/service.module';
 import { TypeModule } from './type/type.module';
@@ -14,18 +14,43 @@ import { SharedInfoModule } from './shared/shared-info.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { HealthController } from './health.controller';
 
+function parseBool(value: string | undefined): boolean | undefined {
+  if (value === undefined) return undefined;
+  const v = value.trim().toLowerCase();
+  if (['1', 'true', 'yes', 'y', 'on'].includes(v)) return true;
+  if (['0', 'false', 'no', 'n', 'off'].includes(v)) return false;
+  return undefined;
+}
+
 @Module({
   imports: [
     ConfigModule.forRoot(),
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: process.env.DB_HOST,
-      port: +process.env.DB_PORT, // + signo de mas para convertir de number a string
-      database: process.env.DB_NAME,
-      username: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      autoLoadEntities: true,
-      synchronize: true,
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const nodeEnv = config.get<string>('NODE_ENV') ?? 'development';
+        const isProd = nodeEnv === 'production';
+
+        const synchronize =
+          parseBool(config.get<string>('TYPEORM_SYNCHRONIZE')) ?? !isProd;
+        const logging =
+          parseBool(config.get<string>('TYPEORM_LOGGING')) ?? !isProd;
+
+        const dbSsl = parseBool(config.get<string>('DB_SSL')) ?? false;
+
+        return {
+          type: 'postgres' as const,
+          host: config.get<string>('DB_HOST'),
+          port: Number(config.get<string>('DB_PORT')),
+          database: config.get<string>('DB_NAME'),
+          username: config.get<string>('DB_USER'),
+          password: config.get<string>('DB_PASSWORD'),
+          autoLoadEntities: true,
+          synchronize,
+          logging,
+          ssl: dbSsl ? { rejectUnauthorized: false } : false,
+        };
+      },
     }),
     ServiceModule,
     TypeModule,
