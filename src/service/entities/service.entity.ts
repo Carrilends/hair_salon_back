@@ -34,6 +34,13 @@ export class Service {
   @Column('boolean', { default: false })
   isSpecial: boolean;
 
+  @Column('boolean', { name: 'have_promotion', default: false })
+  havePromotion: boolean;
+
+  /** Porcentaje de descuento (0–100). Nombre de columna según convención del proyecto. */
+  @Column('numeric', { name: 'porcentage_disscount', default: 0 })
+  porcentageDiscount: number;
+
   @Column('text', { unique: true })
   slug: string;
 

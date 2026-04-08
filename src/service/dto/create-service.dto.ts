@@ -10,6 +10,8 @@ import {
   IsPositive,
   IsString,
   IsUUID,
+  Max,
+  Min,
   MinLength,
   ValidateNested,
 } from 'class-validator';
@@ -38,6 +40,17 @@ export class CreateServiceDto {
   @IsBoolean()
   @IsOptional()
   isSpecial?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  havePromotion?: boolean;
+
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @IsOptional()
+  porcentageDiscount?: number;
 
   @IsString()
   @IsOptional()
