@@ -9,8 +9,14 @@ import { In, Repository } from 'typeorm';
 import { Tag } from 'src/tags/entities/tag.entity';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
-import seedData from './seed/tag-seed.json'; // asegúrate de que este archivo exista
+import seedData from './seed/tag-seed.json';
 import { ID_GENDER_TAG } from './constants';
+
+type SeedTagNode = {
+  id?: string;
+  name: string;
+  children?: SeedTagNode[];
+};
 import { FilterTagValidator } from './validators/tag.validator';
 
 @Injectable()
@@ -159,31 +165,49 @@ export class TagsService {
   }
 
   async seed(): Promise<string> {
-    for (const tagData of seedData) {
-      let parent = await this.tagRepository.findOneBy({ name: tagData.name });
+    const roots = seedData as SeedTagNode[];
+    for (const node of roots) {
+      await this.seedTagRecursive(node, null);
+    }
+    return 'Seed completed successfully';
+  }
 
-      if (!parent) {
-        parent = this.tagRepository.create({ name: tagData.name });
-        await this.tagRepository.save(parent);
+  private async seedTagRecursive(
+    node: SeedTagNode,
+    parent: Tag | null,
+  ): Promise<void> {
+    const genderId =
+      node.name === 'Género' ? ID_GENDER_TAG : (node.id ?? undefined);
+
+    let tag = await this.tagRepository.findOneBy({ name: node.name });
+
+    if (!tag) {
+      const created = this.tagRepository.create({
+        name: node.name,
+        ...(parent ? { parent } : {}),
+      });
+      if (genderId) {
+        created.id = genderId;
       }
-
-      if (tagData.children?.length) {
-        for (const child of tagData.children) {
-          const existingChild = await this.tagRepository.findOneBy({
-            name: child.name,
-          });
-
-          if (!existingChild) {
-            const newChild = this.tagRepository.create({
-              name: child.name,
-              parent,
-            });
-            await this.tagRepository.save(newChild);
-          }
+      tag = await this.tagRepository.save(created);
+    } else {
+      if (parent) {
+        if (tag.parentId && tag.parentId !== parent.id) {
+          throw new BadRequestException(
+            `Tag "${node.name}" already exists under another parent`,
+          );
+        }
+        if (!tag.parentId || tag.parentId !== parent.id) {
+          tag.parent = parent;
+          await this.tagRepository.save(tag);
         }
       }
     }
 
-    return 'Seed completed successfully';
+    if (node.children?.length) {
+      for (const child of node.children) {
+        await this.seedTagRecursive(child, tag);
+      }
+    }
   }
 }
