@@ -13,6 +13,7 @@ import { TagsModule } from './tags/tags.module';
 import { SharedInfoModule } from './shared/shared-info.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { HealthController } from './health.controller';
+import { ReviewsModule } from './reviews/reviews.module';
 
 function parseBool(value: string | undefined): boolean | undefined {
   if (value === undefined) return undefined;
@@ -63,6 +64,7 @@ function parseBool(value: string | undefined): boolean | undefined {
     TagsModule,
     SharedInfoModule,
     CloudinaryModule,
+    ReviewsModule,
   ],
   controllers: [HealthController],
 })

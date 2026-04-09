@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Get,
+  Patch,
   // Patch,
   // Param,
   // Delete,
@@ -15,6 +16,9 @@ import { Auth } from './decorators/auth.decorator';
 import { User } from './entities/user.entity';
 import { GetUser } from './decorators/get-user.decorator';
 import { ValidRoles } from './interfaces/valid-roles';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdateEmailDto } from './dto/update-email.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -34,6 +38,27 @@ export class AuthController {
   @Auth(ValidRoles.admin)
   checkAuthStatus(@GetUser() user: User) {
     return this.authService.checkAuthStatus(user);
+  }
+
+  @Patch('me/profile')
+  @Auth()
+  updateProfile(@GetUser() user: User, @Body() updateProfileDto: UpdateProfileDto) {
+    return this.authService.updateProfile(user, updateProfileDto);
+  }
+
+  @Patch('me/email')
+  @Auth()
+  updateEmail(@GetUser() user: User, @Body() updateEmailDto: UpdateEmailDto) {
+    return this.authService.updateEmail(user, updateEmailDto);
+  }
+
+  @Patch('me/password')
+  @Auth()
+  updatePassword(
+    @GetUser() user: User,
+    @Body() updatePasswordDto: UpdatePasswordDto,
+  ) {
+    return this.authService.updatePassword(user, updatePasswordDto);
   }
 
   // @Auth( ValidRoles.admin )

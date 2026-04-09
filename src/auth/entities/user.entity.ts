@@ -3,8 +3,10 @@ import {
   BeforeUpdate,
   Column,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { ReviewByUser } from 'src/reviews/entities/review-by-user.entity';
 
 @Entity('users')
 export class User {
@@ -35,6 +37,9 @@ export class User {
 
   @Column('boolean', { default: true })
   isActive: boolean;
+
+  @OneToMany(() => ReviewByUser, (reviewByUser) => reviewByUser.user)
+  reviewsByUser: ReviewByUser[];
 
   @BeforeInsert()
   emailToLowerCase() {

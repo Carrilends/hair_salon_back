@@ -6,12 +6,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JWTStrategy } from './strategies/jwt.strategy';
+import { Review } from 'src/reviews/entities/review.entity';
+import { ReviewByUser } from 'src/reviews/entities/review-by-user.entity';
 
 @Module({
   controllers: [AuthController],
   providers: [AuthService, JWTStrategy],
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Review, ReviewByUser]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [],
