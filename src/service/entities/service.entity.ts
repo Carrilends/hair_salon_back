@@ -41,6 +41,9 @@ export class Service {
   @Column('numeric', { name: 'porcentage_disscount', default: 0 })
   porcentageDiscount: number;
 
+  @Column('int', { nullable: false, default: 30 })
+  duration: number;
+
   @Column('text', { unique: true })
   slug: string;
 

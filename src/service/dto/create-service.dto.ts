@@ -4,6 +4,7 @@ import {
   ArrayUnique,
   IsArray,
   IsBoolean,
+  IsInt,
   /* IsIn, */
   IsNumber,
   IsOptional,
@@ -51,6 +52,11 @@ export class CreateServiceDto {
   @Max(100)
   @IsOptional()
   porcentageDiscount?: number;
+
+  @IsInt()
+  @Min(5)
+  @Max(480)
+  duration: number;
 
   @IsString()
   @IsOptional()
