@@ -1,13 +1,21 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WorkersService } from 'src/workers/workers.service';
 import { Reservation } from './entities/reservation.entity';
 import { CreateReservationDto } from './dto/create-reservation.dto';
-import { laborMinutesForCalendarDay } from './salon-schedule';
+import {
+  isWeekendYmd,
+  laborMinutesForCalendarDay,
+  WEEKDAY_OPEN_MIN,
+  WEEKDAY_CLOSE_MIN,
+  WEEKEND_OPEN_MIN,
+  WEEKEND_CLOSE_MIN,
+} from './salon-schedule';
 
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
@@ -64,45 +72,82 @@ export class ReservationsService {
   async getOccupancy(from: string, to: string): Promise<OccupancyResponse> {
     const start = parseYmdHyphen(from);
     const end = parseYmdHyphen(to);
-    const startTime = new Date(Date.UTC(start.y, start.m - 1, start.d)).getTime();
-    const endTime = new Date(Date.UTC(end.y, end.m - 1, end.d)).getTime();
+    const startTime = new Date(
+      Date.UTC(start.y, start.m - 1, start.d),
+    ).getTime();
+    const endTime = new Date(
+      Date.UTC(end.y, end.m - 1, end.d),
+    ).getTime();
     if (startTime > endTime) {
       throw new BadRequestException('"from" must be <= "to"');
     }
 
     const tz = process.env.SALON_TZ ?? 'America/Bogota';
-    const parallelStylists = await this.workersService.countParallelStylists();
+    const parallelStylists =
+      await this.workersService.countParallelStylists();
 
-    type Row = { d: string; used: string };
+    const now = new Date();
+    const salonNowStr = now.toLocaleString('en-US', { timeZone: tz });
+    const salonNow = new Date(salonNowStr);
+    const salonTodayKey = `${salonNow.getFullYear()}/${pad2(salonNow.getMonth() + 1)}/${pad2(salonNow.getDate())}`;
+    const nowMin = salonNow.getHours() * 60 + salonNow.getMinutes();
+
+    type Row = {
+      d: string;
+      start_min: string;
+      end_min: string;
+    };
     const rows = (await this.reservationRepository.manager.query(
       `
       SELECT
-        TO_CHAR(sub.local_day, 'YYYY/MM/DD') AS d,
-        COALESCE(SUM(sub.total_duration_minutes), 0)::text AS used
-      FROM (
-        SELECT
-          total_duration_minutes,
-          (scheduled_at AT TIME ZONE $1)::date AS local_day
-        FROM reservations
-        WHERE (scheduled_at AT TIME ZONE $1)::date >= $2::date
-          AND (scheduled_at AT TIME ZONE $1)::date <= $3::date
-      ) AS sub
-      GROUP BY sub.local_day
+        TO_CHAR((scheduled_at AT TIME ZONE $1)::date, 'YYYY/MM/DD') AS d,
+        (EXTRACT(HOUR FROM (scheduled_at AT TIME ZONE $1))::int * 60 +
+         EXTRACT(MINUTE FROM (scheduled_at AT TIME ZONE $1))::int)::text AS start_min,
+        total_duration_minutes::text AS end_min
+      FROM reservations
+      WHERE (scheduled_at AT TIME ZONE $1)::date >= $2::date
+        AND (scheduled_at AT TIME ZONE $1)::date <= $3::date
       `,
       [tz, from, to],
     )) as Row[];
 
-    const usedMap = new Map<string, number>();
+    const usedByDate = new Map<string, number>();
     for (const row of rows) {
-      usedMap.set(row.d, Number.parseInt(row.used, 10) || 0);
+      const resStart = Number(row.start_min);
+      const duration = Number(row.end_min);
+      const resEnd = resStart + duration;
+      const isToday = row.d === salonTodayKey;
+
+      let effective = 0;
+      if (isToday) {
+        if (resEnd > nowMin) {
+          effective = resEnd - Math.max(resStart, nowMin);
+        }
+      } else {
+        effective = duration;
+      }
+      usedByDate.set(row.d, (usedByDate.get(row.d) ?? 0) + effective);
     }
 
     const byDate: Record<string, OccupancyByDateEntry> = {};
     for (const key of iterateQDateKeysInRange(from, to)) {
       const { y, m, d } = parseQDateKey(key);
-      const L = laborMinutesForCalendarDay(y, m, d);
-      const capacityMinutes = parallelStylists * L;
-      const usedMinutes = usedMap.get(key) ?? 0;
+      const isToday = key === salonTodayKey;
+
+      let capacityMinutes: number;
+      if (isToday) {
+        const weekend = isWeekendYmd(y, m, d);
+        const openMin = weekend ? WEEKEND_OPEN_MIN : WEEKDAY_OPEN_MIN;
+        const closeMin = weekend ? WEEKEND_CLOSE_MIN : WEEKDAY_CLOSE_MIN;
+        const effectiveStart = Math.max(openMin, nowMin);
+        capacityMinutes =
+          parallelStylists * Math.max(0, closeMin - effectiveStart + 1);
+      } else {
+        capacityMinutes =
+          parallelStylists * laborMinutesForCalendarDay(y, m, d);
+      }
+
+      const usedMinutes = usedByDate.get(key) ?? 0;
       byDate[key] = { usedMinutes, capacityMinutes };
     }
 
@@ -113,8 +158,24 @@ export class ReservationsService {
     };
   }
 
+  async findAll(): Promise<Reservation[]> {
+    return this.reservationRepository.find({
+      relations: ['worker'],
+      order: { scheduledAt: 'DESC' },
+    });
+  }
+
+  async remove(id: string): Promise<void> {
+    const reservation = await this.reservationRepository.findOneBy({ id });
+    if (!reservation) {
+      throw new NotFoundException(`Reservation ${id} not found`);
+    }
+    await this.reservationRepository.remove(reservation);
+  }
+
   async create(dto: CreateReservationDto): Promise<Reservation> {
-    const worker = await this.workersService.getDefaultWorker();
+    const workerId =
+      dto.workerId ?? (await this.workersService.getDefaultWorker()).id;
     const scheduledAt = new Date(dto.scheduledAt);
     const endedAt = new Date(
       scheduledAt.getTime() + dto.totalDurationMinutes * 60 * 1000,
@@ -122,7 +183,7 @@ export class ReservationsService {
     const entity = this.reservationRepository.create({
       scheduledAt,
       endedAt,
-      workerId: worker.id,
+      workerId,
       totalDurationMinutes: dto.totalDurationMinutes,
     });
     return this.reservationRepository.save(entity);

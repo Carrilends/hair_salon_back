@@ -1,4 +1,4 @@
-import { IsInt, IsISO8601, Min } from 'class-validator';
+import { IsInt, IsISO8601, IsOptional, IsUUID, Min } from 'class-validator';
 
 export class CreateReservationDto {
   @IsISO8601()
@@ -7,4 +7,8 @@ export class CreateReservationDto {
   @IsInt()
   @Min(1)
   totalDurationMinutes: number;
+
+  @IsOptional()
+  @IsUUID()
+  workerId?: string;
 }
