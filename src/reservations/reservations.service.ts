@@ -3,8 +3,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MoreThan, Repository } from 'typeorm';
 import { WorkersService } from 'src/workers/workers.service';
 import { Reservation } from './entities/reservation.entity';
 import { CreateReservationDto } from './dto/create-reservation.dto';
@@ -157,9 +158,21 @@ export class ReservationsService {
 
   async findAll(): Promise<Reservation[]> {
     return this.reservationRepository.find({
+      where: { endedAt: MoreThan(new Date()) },
       relations: ['worker'],
       order: { scheduledAt: 'DESC' },
     });
+  }
+
+  /** Elimina reservas cuya ventana terminó hace más de un mes (PostgreSQL `INTERVAL '1 month'`). */
+  @Cron(CronExpression.EVERY_DAY_AT_4AM)
+  async purgeReservationsOlderThanOneMonth(): Promise<void> {
+    await this.reservationRepository
+      .createQueryBuilder()
+      .delete()
+      .from(Reservation)
+      .where("ended_at < NOW() - INTERVAL '1 month'")
+      .execute();
   }
 
   async remove(id: string): Promise<void> {
