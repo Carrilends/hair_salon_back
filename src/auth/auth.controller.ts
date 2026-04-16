@@ -42,7 +42,10 @@ export class AuthController {
 
   @Patch('me/profile')
   @Auth()
-  updateProfile(@GetUser() user: User, @Body() updateProfileDto: UpdateProfileDto) {
+  updateProfile(
+    @GetUser() user: User,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ) {
     return this.authService.updateProfile(user, updateProfileDto);
   }
 

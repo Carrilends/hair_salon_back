@@ -1,4 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Reservation } from 'src/reservations/entities/reservation.entity';
 
 @Entity('workers')
 export class Worker {
@@ -12,10 +13,8 @@ export class Worker {
   isDefault: boolean;
 
   @OneToMany(
-    () =>
-      require('../../reservations/entities/reservation.entity').Reservation,
-    (reservation: import('../../reservations/entities/reservation.entity').Reservation) =>
-      reservation.worker,
+    () => Reservation,
+    (reservation: Reservation) => reservation.worker,
   )
-  reservations?: import('../../reservations/entities/reservation.entity').Reservation[];
+  reservations?: Reservation[];
 }

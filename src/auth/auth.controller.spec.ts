@@ -18,9 +18,15 @@ describe('AuthController', () => {
 
   it('register delegates to service.create', async () => {
     authService.create.mockResolvedValue({ ok: true } as any);
-    const dto = { email: 'a@b.com', password: 'Str0ngP@ssw0rd!', fullName: 'A' };
+    const dto = {
+      email: 'a@b.com',
+      password: 'Str0ngP@ssw0rd!',
+      fullName: 'A',
+    };
 
-    await expect(controller.createUser(dto as any)).resolves.toEqual({ ok: true });
+    await expect(controller.createUser(dto as any)).resolves.toEqual({
+      ok: true,
+    });
     expect(authService.create).toHaveBeenCalledWith(dto);
   });
 
@@ -28,7 +34,9 @@ describe('AuthController', () => {
     authService.login.mockResolvedValue({ token: 't' } as any);
     const dto = { email: 'a@b.com', password: 'Str0ngP@ssw0rd!' };
 
-    await expect(controller.loginUser(dto as any)).resolves.toEqual({ token: 't' });
+    await expect(controller.loginUser(dto as any)).resolves.toEqual({
+      token: 't',
+    });
     expect(authService.login).toHaveBeenCalledWith(dto);
   });
 

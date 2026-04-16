@@ -33,7 +33,9 @@ describe('UserRoleGuard', () => {
     const guard = new UserRoleGuard(reflector);
 
     expect(() =>
-      guard.canActivate(makeContext({ roles: ['user'], fullName: 'Test User' })),
+      guard.canActivate(
+        makeContext({ roles: ['user'], fullName: 'Test User' }),
+      ),
     ).toThrow(ForbiddenException);
   });
 });

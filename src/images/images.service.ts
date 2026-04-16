@@ -29,6 +29,7 @@ export class ImagesService {
   }
 
   async create(createImageDto: CreateImageDto) {
+    void createImageDto;
     return 'HOLA';
   }
 

@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
+import * as bcrypt from 'bcrypt';
 
 describe('AuthService', () => {
   const strongPassword = 'Str0ngP@ssw0rd!';
@@ -90,7 +91,6 @@ describe('AuthService', () => {
         roles: ['admin'],
       });
 
-      const bcrypt = require('bcrypt');
       jest.spyOn(bcrypt, 'compareSync').mockReturnValue(true);
 
       const result = await service.login(dto as any);
@@ -129,11 +129,13 @@ describe('AuthService', () => {
         roles: ['user'],
       });
 
-      const bcrypt = require('bcrypt');
       jest.spyOn(bcrypt, 'compareSync').mockReturnValue(false);
 
       await expect(
-        service.login({ email: 'user@example.com', password: strongPassword } as any),
+        service.login({
+          email: 'user@example.com',
+          password: strongPassword,
+        } as any),
       ).rejects.toThrow(UnauthorizedException);
     });
   });

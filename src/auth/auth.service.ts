@@ -161,7 +161,9 @@ export class AuthService {
       throw new UnauthorizedException('Invalid token');
     }
 
-    if (!bcrypt.compareSync(updatePasswordDto.currentPassword, dbUser.password)) {
+    if (
+      !bcrypt.compareSync(updatePasswordDto.currentPassword, dbUser.password)
+    ) {
       throw new UnauthorizedException('Invalid credentials');
     }
 

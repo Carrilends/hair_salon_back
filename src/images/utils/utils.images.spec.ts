@@ -26,4 +26,3 @@ describe('selectPrincipalImage', () => {
     expect(result[2].isPrincipal).toBe(false);
   });
 });
-

@@ -5,6 +5,7 @@ import { UpdateTypeDto } from './dto/update-type.dto';
 @Injectable()
 export class TypeService {
   create(createTypeDto: CreateTypeDto) {
+    void createTypeDto;
     return 'This action adds a new type';
   }
 
@@ -17,6 +18,7 @@ export class TypeService {
   }
 
   update(id: number, updateTypeDto: UpdateTypeDto) {
+    void updateTypeDto;
     return `This action updates a #${id} type`;
   }
 

@@ -40,7 +40,9 @@ describe('TagsService', () => {
       };
       tagRepository.createQueryBuilder.mockReturnValue(qb);
 
-      await expect(service.findByIds(['id-1'])).rejects.toThrow(NotFoundException);
+      await expect(service.findByIds(['id-1'])).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('returns tags when found', async () => {
@@ -50,7 +52,9 @@ describe('TagsService', () => {
       };
       tagRepository.createQueryBuilder.mockReturnValue(qb);
 
-      await expect(service.findByIds(['id-1'])).resolves.toEqual([{ id: 'id-1' }]);
+      await expect(service.findByIds(['id-1'])).resolves.toEqual([
+        { id: 'id-1' },
+      ]);
     });
   });
 });

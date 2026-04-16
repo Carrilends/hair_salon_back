@@ -38,7 +38,7 @@ function* iterateQDateKeysInRange(
 ): Generator<string> {
   const a = parseYmdHyphen(fromYmd);
   const b = parseYmdHyphen(toYmd);
-  let cur = new Date(Date.UTC(a.y, a.m - 1, a.d));
+  const cur = new Date(Date.UTC(a.y, a.m - 1, a.d));
   const end = new Date(Date.UTC(b.y, b.m - 1, b.d));
   if (cur > end) return;
   while (cur <= end) {
@@ -75,16 +75,13 @@ export class ReservationsService {
     const startTime = new Date(
       Date.UTC(start.y, start.m - 1, start.d),
     ).getTime();
-    const endTime = new Date(
-      Date.UTC(end.y, end.m - 1, end.d),
-    ).getTime();
+    const endTime = new Date(Date.UTC(end.y, end.m - 1, end.d)).getTime();
     if (startTime > endTime) {
       throw new BadRequestException('"from" must be <= "to"');
     }
 
     const tz = process.env.SALON_TZ ?? 'America/Bogota';
-    const parallelStylists =
-      await this.workersService.countParallelStylists();
+    const parallelStylists = await this.workersService.countParallelStylists();
 
     const now = new Date();
     const salonNowStr = now.toLocaleString('en-US', { timeZone: tz });
