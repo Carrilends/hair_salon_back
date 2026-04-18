@@ -1,12 +1,17 @@
 import {
+  BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Worker } from './entities/worker.entity';
 import { Reservation } from '../reservations/entities/reservation.entity';
+import { CreateWorkerDto } from './dto/create-worker.dto';
+import { UpdateWorkerDto } from './dto/update-worker.dto';
 import {
   isWeekendYmd,
   WEEKDAY_OPEN_MIN,
@@ -72,6 +77,55 @@ export class WorkersService implements OnModuleInit {
       throw new InternalServerErrorException('Default worker not found');
     }
     return worker;
+  }
+
+  async findAll(): Promise<Worker[]> {
+    await this.ensureDefaultWorker();
+    return this.workerRepository.find({
+      order: {
+        isDefault: 'DESC',
+        name: 'ASC',
+      },
+    });
+  }
+
+  async create(dto: CreateWorkerDto): Promise<Worker> {
+    const name = dto.name.trim();
+    const worker = this.workerRepository.create({
+      name,
+      isDefault: false,
+    });
+    return this.workerRepository.save(worker);
+  }
+
+  async update(id: string, dto: UpdateWorkerDto): Promise<Worker> {
+    const worker = await this.findById(id);
+
+    if (dto.name !== undefined) {
+      worker.name = dto.name.trim();
+    }
+
+    return this.workerRepository.save(worker);
+  }
+
+  async remove(id: string): Promise<{ deleted: boolean }> {
+    const worker = await this.findById(id);
+
+    if (worker.isDefault) {
+      throw new BadRequestException('No se puede eliminar el trabajador predeterminado');
+    }
+
+    const reservationsCount = await this.reservationRepository.count({
+      where: { workerId: worker.id },
+    });
+    if (reservationsCount > 0) {
+      throw new ConflictException(
+        'No se puede eliminar el trabajador porque tiene reservas asociadas',
+      );
+    }
+
+    await this.workerRepository.delete(worker.id);
+    return { deleted: true };
   }
 
   /**
@@ -175,5 +229,15 @@ export class WorkersService implements OnModuleInit {
         };
       }),
     };
+  }
+
+  private async findById(id: string): Promise<Worker> {
+    const worker = await this.workerRepository.findOne({
+      where: { id },
+    });
+    if (!worker) {
+      throw new NotFoundException(`Worker with id ${id} not found`);
+    }
+    return worker;
   }
 }
