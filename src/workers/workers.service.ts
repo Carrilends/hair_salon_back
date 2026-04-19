@@ -12,13 +12,7 @@ import { Worker } from './entities/worker.entity';
 import { Reservation } from '../reservations/entities/reservation.entity';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
-import {
-  isWeekendYmd,
-  WEEKDAY_OPEN_MIN,
-  WEEKDAY_CLOSE_MIN,
-  WEEKEND_OPEN_MIN,
-  WEEKEND_CLOSE_MIN,
-} from '../reservations/salon-schedule';
+import { getDayBounds, getSalonNow } from '../reservations/salon-time';
 
 const DEFAULT_WORKER_NAME = 'Estilista default';
 
@@ -31,6 +25,7 @@ export type WorkerAvailabilityEntry = {
   id: string;
   name: string;
   isDefault: boolean;
+  assignable: boolean;
   usedMinutes: number;
   capacityMinutes: number;
   availableMinutes: number;
@@ -39,6 +34,17 @@ export type WorkerAvailabilityEntry = {
 
 export type WorkerAvailabilityResponse = {
   workers: WorkerAvailabilityEntry[];
+  dayBounds: {
+    openMin: number;
+    closeMin: number;
+    effectiveStartMin: number;
+    isToday: boolean;
+  };
+  salonNow: {
+    ymd: string;
+    minOfDay: number;
+    tz: string;
+  };
 };
 
 @Injectable()
@@ -148,26 +154,10 @@ export class WorkersService implements OnModuleInit {
   ): Promise<WorkerAvailabilityResponse> {
     await this.ensureDefaultWorker();
 
-    const [yStr, mStr, dStr] = dateYmd.split('-');
-    const y = Number(yStr);
-    const m = Number(mStr);
-    const d = Number(dStr);
     const tz = process.env.SALON_TZ ?? 'America/Bogota';
-
-    const weekend = isWeekendYmd(y, m, d);
-    const openMin = weekend ? WEEKEND_OPEN_MIN : WEEKDAY_OPEN_MIN;
-    const closeMin = weekend ? WEEKEND_CLOSE_MIN : WEEKDAY_CLOSE_MIN;
-
-    const now = new Date();
-    const salonNowStr = now.toLocaleString('en-US', { timeZone: tz });
-    const salonNow = new Date(salonNowStr);
-    const pad2 = (n: number) => String(n).padStart(2, '0');
-    const salonTodayYmd = `${salonNow.getFullYear()}-${pad2(salonNow.getMonth() + 1)}-${pad2(salonNow.getDate())}`;
-    const isToday = dateYmd === salonTodayYmd;
-    const nowMin = salonNow.getHours() * 60 + salonNow.getMinutes();
-
-    const effectiveStart = isToday ? Math.max(openMin, nowMin) : openMin;
-    const capacityMinutes = Math.max(0, closeMin - effectiveStart + 1);
+    const salonNow = getSalonNow(tz);
+    const dayBounds = getDayBounds(dateYmd, tz, salonNow);
+    const capacityMinutes = dayBounds.effectiveCapacityMin;
 
     const workers = await this.workerRepository.find();
 
@@ -201,9 +191,9 @@ export class WorkersService implements OnModuleInit {
       if (!workerBlocks.has(wId)) workerBlocks.set(wId, []);
       workerBlocks.get(wId)!.push({ startMin, endMin });
 
-      if (isToday) {
-        if (endMin > nowMin) {
-          const futurePortionStart = Math.max(startMin, nowMin);
+      if (dayBounds.isToday) {
+        if (endMin > salonNow.minOfDay) {
+          const futurePortionStart = Math.max(startMin, salonNow.minOfDay);
           workerUsed.set(
             wId,
             (workerUsed.get(wId) ?? 0) + (endMin - futurePortionStart),
@@ -222,12 +212,24 @@ export class WorkersService implements OnModuleInit {
           id: w.id,
           name: w.name,
           isDefault: w.isDefault,
+          assignable: !w.isDefault,
           usedMinutes,
           capacityMinutes,
           availableMinutes,
           reservations: workerBlocks.get(w.id) ?? [],
         };
       }),
+      dayBounds: {
+        openMin: dayBounds.openMin,
+        closeMin: dayBounds.closeMin,
+        effectiveStartMin: dayBounds.effectiveStartMin,
+        isToday: dayBounds.isToday,
+      },
+      salonNow: {
+        ymd: salonNow.ymd,
+        minOfDay: salonNow.minOfDay,
+        tz,
+      },
     };
   }
 

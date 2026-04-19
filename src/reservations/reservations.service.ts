@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,13 +11,10 @@ import { WorkersService } from 'src/workers/workers.service';
 import { Reservation } from './entities/reservation.entity';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import {
-  isWeekendYmd,
-  laborMinutesForCalendarDay,
-  WEEKDAY_OPEN_MIN,
-  WEEKDAY_CLOSE_MIN,
-  WEEKEND_OPEN_MIN,
-  WEEKEND_CLOSE_MIN,
-} from './salon-schedule';
+  getDatePartsInTz,
+  getDayBounds,
+  getSalonNow,
+} from './salon-time';
 
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
@@ -59,6 +57,10 @@ export type OccupancyByDateEntry = {
 export type OccupancyResponse = {
   parallelStylists: number;
   salonTimeZone: string;
+  salonNow: {
+    ymd: string;
+    minOfDay: number;
+  };
   byDate: Record<string, OccupancyByDateEntry>;
 };
 
@@ -83,12 +85,8 @@ export class ReservationsService {
 
     const tz = process.env.SALON_TZ ?? 'America/Bogota';
     const parallelStylists = await this.workersService.countParallelStylists();
-
-    const now = new Date();
-    const salonNowStr = now.toLocaleString('en-US', { timeZone: tz });
-    const salonNow = new Date(salonNowStr);
-    const salonTodayKey = `${salonNow.getFullYear()}/${pad2(salonNow.getMonth() + 1)}/${pad2(salonNow.getDate())}`;
-    const nowMin = salonNow.getHours() * 60 + salonNow.getMinutes();
+    const salonNow = getSalonNow(tz);
+    const salonTodayKey = salonNow.qdateKey;
 
     type Row = {
       d: string;
@@ -118,8 +116,8 @@ export class ReservationsService {
 
       let effective = 0;
       if (isToday) {
-        if (resEnd > nowMin) {
-          effective = resEnd - Math.max(resStart, nowMin);
+        if (resEnd > salonNow.minOfDay) {
+          effective = resEnd - Math.max(resStart, salonNow.minOfDay);
         }
       } else {
         effective = duration;
@@ -130,20 +128,8 @@ export class ReservationsService {
     const byDate: Record<string, OccupancyByDateEntry> = {};
     for (const key of iterateQDateKeysInRange(from, to)) {
       const { y, m, d } = parseQDateKey(key);
-      const isToday = key === salonTodayKey;
-
-      let capacityMinutes: number;
-      if (isToday) {
-        const weekend = isWeekendYmd(y, m, d);
-        const openMin = weekend ? WEEKEND_OPEN_MIN : WEEKDAY_OPEN_MIN;
-        const closeMin = weekend ? WEEKEND_CLOSE_MIN : WEEKDAY_CLOSE_MIN;
-        const effectiveStart = Math.max(openMin, nowMin);
-        capacityMinutes =
-          parallelStylists * Math.max(0, closeMin - effectiveStart + 1);
-      } else {
-        capacityMinutes =
-          parallelStylists * laborMinutesForCalendarDay(y, m, d);
-      }
+      const bounds = getDayBounds(`${y}-${pad2(m)}-${pad2(d)}`, tz, salonNow);
+      const capacityMinutes = parallelStylists * bounds.effectiveCapacityMin;
 
       const usedMinutes = usedByDate.get(key) ?? 0;
       byDate[key] = { usedMinutes, capacityMinutes };
@@ -152,6 +138,10 @@ export class ReservationsService {
     return {
       parallelStylists,
       salonTimeZone: tz,
+      salonNow: {
+        ymd: salonNow.ymd,
+        minOfDay: salonNow.minOfDay,
+      },
       byDate,
     };
   }
@@ -187,9 +177,41 @@ export class ReservationsService {
     const workerId =
       dto.workerId ?? (await this.workersService.getDefaultWorker()).id;
     const scheduledAt = new Date(dto.scheduledAt);
+    if (Number.isNaN(scheduledAt.getTime())) {
+      throw new BadRequestException('scheduledAt is invalid');
+    }
     const endedAt = new Date(
       scheduledAt.getTime() + dto.totalDurationMinutes * 60 * 1000,
     );
+
+    const tz = process.env.SALON_TZ ?? 'America/Bogota';
+    const scheduledParts = getDatePartsInTz(scheduledAt, tz);
+    const scheduledYmd = `${scheduledParts.year}-${pad2(scheduledParts.month)}-${pad2(scheduledParts.day)}`;
+    const bounds = getDayBounds(scheduledYmd, tz);
+    const startMin = scheduledParts.hour * 60 + scheduledParts.minute;
+    const endMin = startMin + dto.totalDurationMinutes;
+
+    if (startMin < bounds.openMin || endMin - 1 > bounds.closeMin) {
+      throw new BadRequestException(
+        'La reserva está fuera del horario laboral del salón',
+      );
+    }
+
+    const overlapCount = await this.reservationRepository
+      .createQueryBuilder('r')
+      .where('r.worker_id = :workerId', { workerId })
+      .andWhere('r.scheduled_at < :endedAt', { endedAt: endedAt.toISOString() })
+      .andWhere('r.ended_at > :scheduledAt', {
+        scheduledAt: scheduledAt.toISOString(),
+      })
+      .getCount();
+
+    if (overlapCount > 0) {
+      throw new ConflictException(
+        'El estilista ya tiene una reserva en ese horario',
+      );
+    }
+
     const entity = this.reservationRepository.create({
       scheduledAt,
       endedAt,
