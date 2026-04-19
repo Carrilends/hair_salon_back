@@ -27,6 +27,9 @@ export class FilterServiceDto {
   @IsBoolean()
   @IsOptional()
   includePriceRange: boolean;
+  @IsBoolean()
+  @IsOptional()
+  includePromotionsOnly: boolean;
   @IsOptional()
   prices: pricesType | null;
   @IsNumber()

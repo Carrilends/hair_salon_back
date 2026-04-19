@@ -164,8 +164,13 @@ export class ServiceService {
     qb: SelectQueryBuilder<Service>,
     filterDto: FilterServiceDto,
   ) {
-    const { name, selectedGenres, includePriceRange, selectedServicesIDs } =
-      filterDto;
+    const {
+      name,
+      selectedGenres,
+      includePriceRange,
+      selectedServicesIDs,
+      includePromotionsOnly,
+    } = filterDto;
 
     const commonTags = [
       ...(selectedGenres || []),
@@ -198,6 +203,11 @@ export class ServiceService {
     if (includePriceRange && filterDto.prices) {
       const { min, max } = filterDto.prices;
       qb.andWhere('s.price BETWEEN :min AND :max', { min, max });
+    }
+
+    if (includePromotionsOnly) {
+      qb.andWhere('s.havePromotion = :havePromotion', { havePromotion: true });
+      qb.andWhere('s.porcentageDiscount > :minDiscount', { minDiscount: 0 });
     }
   }
 
