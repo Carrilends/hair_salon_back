@@ -16,7 +16,11 @@ async function bootstrap() {
 
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
-  app.enableCors();
-  await app.listen(process.env.PORT ?? 3000);
+  const frontUrl = process.env.FRONT_URL;
+  app.enableCors({
+    origin: frontUrl ? frontUrl.split(',').map((s) => s.trim()) : true,
+    credentials: true,
+  });
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 bootstrap();
