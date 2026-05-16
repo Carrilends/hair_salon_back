@@ -1,0 +1,2174 @@
+{
+  "Cortes_hombre_nino": {
+    "1": {
+      "name": "Fade bajo clásico",
+      "description": "El degradado comienza justo por encima de la línea de las orejas y desciende suavemente hacia la nuca. Es el corte de barbería más solicitado del mundo por su versatilidad: luce igual de bien con cabello liso, ondulado o rizado, y se adapta tanto a ambientes casuales como formales.",
+      "tags": [
+        "Fade/Degradado",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "2": {
+      "name": "Mid fade",
+      "description": "El degradado arranca a la mitad lateral de la cabeza, creando un contraste moderado entre los lados y la parte superior. Es la opción preferida en el estilo urbano y streetwear, y combina perfectamente con diseños grabados o cortes texturizados arriba.",
+      "tags": [
+        "Fade/Degradado",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "3": {
+      "name": "High fade",
+      "description": "El degradado comienza muy arriba, casi en la coronilla, generando un contraste dramático y un aspecto muy limpio. Es ideal para quienes quieren un look llamativo y moderno; resalta especialmente bien con afros, quiffs o pompadours en la parte superior.",
+      "tags": [
+        "Fade/Degradado",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "4": {
+      "name": "Skin fade (bald fade)",
+      "description": "El degradado llega hasta la piel, dejando los laterales completamente rapados sin ningún pelo visible. Es el acabado más limpio y radical de los fades, muy popular en barberías urbanas y en combinación con cualquier estilo en la parte superior.",
+      "tags": [
+        "Fade/Degradado",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "5": {
+      "name": "Taper fade",
+      "description": "Degradado progresivo y suave que sigue la línea natural del cuello y las sienes. A diferencia del fade tradicional, el taper es más gradual y conservador, ideal para cabellos finos y lisos y ambientes de trabajo formales donde se necesita un look prolijo pero no exagerado.",
+      "tags": [
+        "Fade/Degradado",
+        "Caucásica/Latina",
+        "Adulto"
+      ]
+    },
+    "6": {
+      "name": "Drop fade",
+      "description": "El degradado sigue una línea curva que 'cae' detrás de la oreja, creando un contorno redondeado y estético en lugar de la línea horizontal estándar. Aporta un aspecto más artístico y dinámico, y funciona muy bien con diseños grabados en la zona de la sien.",
+      "tags": [
+        "Fade/Degradado",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "7": {
+      "name": "Temp fade",
+      "description": "Degradado enfocado exclusivamente en las sienes (temples), que limpia y define el perímetro facial sin alterar demasiado los laterales. Es un complemento frecuente de otros cortes para dar un acabado más cuidado y elegante al contorno del rostro.",
+      "tags": [
+        "Fade/Degradado",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "8": {
+      "name": "Burst fade",
+      "description": "El degradado tiene forma de arco o sol alrededor de la oreja, irradiando hacia afuera. Se usa especialmente en combinación con mohawks o afros para enmarcar el estilo central. Es un corte con mucha personalidad, muy popular en la cultura afrolatina y urbana.",
+      "tags": [
+        "Fade/Degradado",
+        "Afrolatina/Negra",
+        "Adulto"
+      ]
+    },
+    "9": {
+      "name": "Caesar cut",
+      "description": "Inspirado en el peinado de Julio César, este corte tiene un largo uniforme en toda la cabeza con un flequillo recto peinado hacia adelante. Es sencillo, fácil de mantener y atemporal. Funciona bien en cabellos lisos o ligeramente ondulados y es muy popular entre niños por su facilidad de cuidado.",
+      "tags": [
+        "Clásico",
+        "Caucásica/Latina",
+        "Adulto"
+      ]
+    },
+    "10": {
+      "name": "Crew cut",
+      "description": "Corte corto por los lados y la nuca con algo más de largo en la parte superior, peinado hacia adelante o con ligera textura. Es uno de los estilos más masculinos y versátiles que existen, asociado históricamente con lo militar y deportivo. Funciona en cualquier tipo de cabello.",
+      "tags": [
+        "Clásico",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "11": {
+      "name": "Ivy League",
+      "description": "Variante más refinada del crew cut, con suficiente largo al frente para peinarse con una raya lateral. Evoca el ambiente universitario de élite estadounidense y es perfecto para entornos formales o profesionales. Requiere algo de peinado pero se mantiene toda la jornada.",
+      "tags": [
+        "Clásico",
+        "Caucásica",
+        "Adulto"
+      ]
+    },
+    "12": {
+      "name": "Side part (raya lateral)",
+      "description": "El cabello se peina con una raya marcada a un lado, creando un look clásico, ordenado y elegante. Puede hacerse con el cabello liso, ondulado o con rizo leve. Es el estilo más recurrente en ambientes corporativos y formales, y combina perfectamente con barba bien arreglada.",
+      "tags": [
+        "Clásico",
+        "Caucásica/Latina",
+        "Adulto"
+      ]
+    },
+    "13": {
+      "name": "Slick back",
+      "description": "Todo el cabello se peina hacia atrás usando gel, pomada o aceite, dejando la frente completamente despejada. Da un look sofisticado, dominante y cinematográfico. Funciona especialmente bien con cabello grueso y con ondas naturales, y es un clásico del estilo italiano y latino.",
+      "tags": [
+        "Clásico",
+        "Caucásica/Latina",
+        "Adulto"
+      ]
+    },
+    "14": {
+      "name": "Undercut",
+      "description": "Los laterales y la nuca van rapados o muy cortos, mientras que la parte superior conserva mucho largo, creando un contraste fuerte de volumen. Es uno de los estilos más populares de la última década por su adaptabilidad: el pelo de arriba puede peinarse hacia atrás, a un lado, en moño o con textura.",
+      "tags": [
+        "Moderno",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "15": {
+      "name": "Disconnected undercut",
+      "description": "Similar al undercut clásico pero con una línea perfectamente definida entre la parte rapada y el largo superior, sin degradado de transición. La separación abrupta genera un efecto visual muy impactante. Es popular en moda asiática, barbería nórdica y estética punk-moderna.",
+      "tags": [
+        "Moderno",
+        "Caucásica/Asiática",
+        "Adulto"
+      ]
+    },
+    "16": {
+      "name": "Textured crop",
+      "description": "Corte corto con la parte superior texturizada y con movimiento, generalmente con flequillo hacia adelante y lados con fade o taper. Es el corte de tendencia más pedido actualmente en Europa y Latinoamérica. Muy fácil de mantener y estilizar con un poco de cera o sal marina.",
+      "tags": [
+        "Moderno",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "17": {
+      "name": "French crop",
+      "description": "Flequillo recto y definido con los laterales cortos y una leve textura arriba. Originado en la moda francesa, tiene un aire europeo elegante y moderno. Es especialmente favorecedor para rostros ovalados o rectangulares y para cabellos lisos o con onda leve.",
+      "tags": [
+        "Moderno",
+        "Caucásica/Latina",
+        "Adulto"
+      ]
+    },
+    "18": {
+      "name": "Quiff",
+      "description": "Corte con mucho volumen en la parte frontal peinado hacia arriba y atrás, con lados más cortos. Es una fusión entre el pompadour y el crop moderno. Aporta altura al rostro y es muy popular en el estilo rockabilly contemporáneo y en la moda masculina europea.",
+      "tags": [
+        "Moderno",
+        "Caucásica/Latina",
+        "Adulto"
+      ]
+    },
+    "19": {
+      "name": "Pompadour",
+      "description": "El cabello superior es largo y se peina completamente hacia atrás y arriba logrando gran volumen y altura, mientras los lados van cortos o con fade. Símbolo del rock and roll de los años 50, hoy es un clásico reinventado que transmite carácter y estilo retro-moderno.",
+      "tags": [
+        "Moderno",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "20": {
+      "name": "Faux hawk",
+      "description": "Simula un mohawk sin necesidad de rapar los lados completamente: el cabello central se eleva con gel o pomada mientras los costados van con fade o peinados hacia adentro. Es el término medio entre lo atrevido y lo aceptable en entornos laborales. Muy popular entre niños y adolescentes.",
+      "tags": [
+        "Moderno",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "21": {
+      "name": "Mohawk",
+      "description": "Los lados de la cabeza van completamente rapados y se deja una banda central de pelo que puede pararse en punta con fijador. Originado en la cultura nativa americana y popularizado por el punk en los años 70. Hoy existen versiones más suaves y estilizadas para uso cotidiano.",
+      "tags": [
+        "Alternativo",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "22": {
+      "name": "Mohawk con trenzas",
+      "description": "La cresta central del mohawk va trenzada en lugar de parada, fusionando la estética punk con técnicas africanas de trenzado. Los lados pueden ir con fade, cornrows o también trenzados. Es un estilo con mucha identidad cultural y creatividad, muy visto en comunidades afrolatinas.",
+      "tags": [
+        "Alternativo",
+        "Afrolatina/Negra",
+        "Adulto"
+      ]
+    },
+    "23": {
+      "name": "Afro natural",
+      "description": "El cabello afro crece en su forma natural sin alisados ni alteraciones químicas, formando una corona densa y redondeada. Símbolo de identidad, orgullo y resistencia cultural desde el movimiento Black Power de los años 60. Se mantiene con hidratación, aceites naturales y peinado con peine de púas anchas.",
+      "tags": [
+        "Afro/Rizado",
+        "Negra/Afrolatina",
+        "Adulto"
+      ]
+    },
+    "24": {
+      "name": "Afro fade",
+      "description": "Combina la corona afro natural con un degradado fade en los laterales, dando estructura y definición al estilo. Es muy popular en jóvenes afroamericanos y afrolatinos que quieren mantener su textura natural con un acabado moderno de barbería.",
+      "tags": [
+        "Afro/Rizado",
+        "Negra/Afrolatina",
+        "Adulto"
+      ]
+    },
+    "25": {
+      "name": "Twist out",
+      "description": "Técnica en la que el cabello se divide en secciones y se tuerce en dos hebras; al soltarse, revela rizos muy definidos y con volumen. El resultado varía según el grosor de los twists y el producto usado. Es uno de los estilos de cabello natural más usados por su resultado impresionante sin calor.",
+      "tags": [
+        "Afro/Rizado",
+        "Negra/Afrolatina",
+        "Adulto"
+      ]
+    },
+    "26": {
+      "name": "Locs cortos",
+      "description": "Dreadlocks en su etapa inicial o media, de longitud por encima de los hombros. El cabello se secciona y se deja compactar de forma natural o con ayuda del crochet. Representan el inicio de un camino de largo plazo con profundo significado cultural, especialmente en comunidades rastafari y africanas.",
+      "tags": [
+        "Afro/Rizado",
+        "Negra/Afrolatina",
+        "Adulto"
+      ]
+    },
+    "27": {
+      "name": "Locs largos",
+      "description": "Dreadlocks completamente maduros y bien definidos que pueden llegar a la espalda o más. Son el resultado de años de crecimiento y mantenimiento. Tienen un peso cultural enorme en tradiciones africanas, jamaicanas y espirituales, y hoy también forman parte del mainstream de la moda global.",
+      "tags": [
+        "Afro/Rizado",
+        "Negra/Afrolatina",
+        "Adulto"
+      ]
+    },
+    "28": {
+      "name": "360 waves",
+      "description": "Patrón de ondas continuas que rodean toda la cabeza en 360 grados, conseguido mediante cepillado constante con brocha, uso de durag y productos de fijación. Es un estilo que requiere disciplina y rutina diaria, muy popular entre hombres negros jóvenes en Estados Unidos.",
+      "tags": [
+        "Afro/Rizado",
+        "Negra",
+        "Adulto"
+      ]
+    },
+    "29": {
+      "name": "High top fade",
+      "description": "Corte icónico de los años 80 y 90 con un bloque plano de cabello afro en la parte superior y un fade limpio en los costados. Fue popularizado por artistas del hip-hop y jugadores de la NBA. Hoy vive un resurgimiento en la moda retro afroamericana.",
+      "tags": [
+        "Afro/Rizado",
+        "Negra/Afrolatina",
+        "Adulto"
+      ]
+    },
+    "30": {
+      "name": "Sponge curls",
+      "description": "Técnica rápida para definir rizos en cabello afro usando una esponja con agujeros que al frotarse sobre el pelo húmedo genera pequeños coils compactos y uniformes. Es muy popular para cuidado diario del cabello natural y funciona tanto en adultos como en niños desde los primeros años.",
+      "tags": [
+        "Afro/Rizado",
+        "Negra/Afrolatina",
+        "Adulto"
+      ]
+    },
+    "31": {
+      "name": "Box braids cortas",
+      "description": "Trenzas de sección cuadrada que van de longitud corta al mentón o al hombro. Se pueden hacer con cabello natural o con extensiones y ofrecen mucha versatilidad para peinar de distintas maneras. Son una opción de protección del cabello muy practicada en hombres con identidad afro.",
+      "tags": [
+        "Trenzas/Culturales",
+        "Negra/Afrolatina",
+        "Adulto"
+      ]
+    },
+    "32": {
+      "name": "Cornrows",
+      "description": "Trenzas planas y pegadas directamente al cuero cabelludo, tejidas en líneas rectas o patrones curvos. Es una de las técnicas de peinado más antiguas del mundo, con raíces en África Occidental. Son protectoras del cabello natural, duran semanas y admiten innumerables diseños y patrones.",
+      "tags": [
+        "Trenzas/Culturales",
+        "Negra/Afrolatina",
+        "Adulto"
+      ]
+    },
+    "33": {
+      "name": "Cornrows con fade",
+      "description": "Combinación de cornrows en la parte superior con un degradado fade limpio en los laterales. Esta fusión de técnicas tradicionales africanas y barbería moderna es extremadamente popular en barbershops urbanos de todo el mundo y aporta un look contemporáneo con profunda identidad cultural.",
+      "tags": [
+        "Trenzas/Culturales",
+        "Negra/Afrolatina",
+        "Adulto"
+      ]
+    },
+    "34": {
+      "name": "Two-strand twists",
+      "description": "Dos mechones de cabello se retuercen entre sí a lo largo de toda su extensión. Son más fáciles de hacer que las trenzas, duran varios días y pueden deshacerse para crear un twist out. Muy usados como estilo de transición o de protección en hombres que están creciendo su cabello natural.",
+      "tags": [
+        "Trenzas/Culturales",
+        "Negra/Afrolatina",
+        "Adulto"
+      ]
+    },
+    "35": {
+      "name": "Man bun",
+      "description": "El cabello largo se recoge en un moño alto en la coronilla, dejando el cuello y la nuca despejados. Es práctico, cómodo y tiene un atractivo bohemio-moderno. Puede usarse con cabello totalmente recogido o con algunos mechones sueltos enmarcando el rostro para un look más relajado.",
+      "tags": [
+        "Cabello largo",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "36": {
+      "name": "Half bun",
+      "description": "Solo la mitad superior del cabello se recoge en un moño, mientras el resto cae libre sobre los hombros. Es un estilo relajado y casual que combina lo recogido con lo suelto, muy popular en artistas, músicos y el mundo del surf y snowboard.",
+      "tags": [
+        "Cabello largo",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "37": {
+      "name": "Flow / curtains",
+      "description": "Cabello largo y liso o ligeramente ondulado que se divide con una raya al centro y cae hacia ambos lados enmarcando el rostro como una cortina. Ícono de los años 90 popularizado por actores y músicos de la época, actualmente en pleno resurgimiento en la generación Z.",
+      "tags": [
+        "Cabello largo",
+        "Caucásica/Latina",
+        "Adulto"
+      ]
+    },
+    "38": {
+      "name": "Samurai bun",
+      "description": "Moño tirante y alto ubicado en la coronilla, inspirado en el chonmage tradicional japonés de los samuráis. Transmite disciplina, fuerza y estética oriental. Funciona mejor con cabello liso y grueso, y ha ganado popularidad global gracias al anime y la cultura japonesa contemporánea.",
+      "tags": [
+        "Cabello largo",
+        "Asiática/Universal",
+        "Adulto"
+      ]
+    },
+    "39": {
+      "name": "Wolf cut",
+      "description": "Corte en capas largas y desordenadas que mezcla el shag de los años 70 con el mullet moderno. Tiene mucho volumen en la parte superior y capas largas y sueltas abajo. Es la tendencia más viral de los últimos años en redes sociales, adoptada por hombres y mujeres por igual.",
+      "tags": [
+        "Cabello largo",
+        "Universal",
+        "Adulto"
+      ]
+    },
+    "40": {
+      "name": "Two-block cut",
+      "description": "Los laterales y la nuca se cortan muy cortos o al rape, mientras la parte superior conserva su largo natural sin degradado de transición. Es el corte dominante en Corea del Sur desde mediados de los 2010 y ha trascendido globalmente gracias al K-pop y los dramas coreanos.",
+      "tags": [
+        "Asiático/K-style",
+        "Asiática",
+        "Adulto"
+      ]
+    },
+    "41": {
+      "name": "Perm suave (coreano)",
+      "description": "Ondas suaves y naturales conseguidas con permanente de bajo impacto, técnica popularizada en Corea del Sur. A diferencia del rizo marcado occidental, el perm coreano da movimiento y volumen orgánico al cabello liso. Muy solicitado en hombres asiáticos y latinos con cabello fino.",
+      "tags": [
+        "Asiático/K-style",
+        "Asiática",
+        "Adulto"
+      ]
+    },
+    "42": {
+      "name": "Mushroom cut",
+      "description": "El cabello cae uniforme alrededor de la cabeza con un flequillo recto que rodea toda la frente, dando forma de hongo. Es un corte que surgió en los 60s, pasó por los 90s y hoy está en plena tendencia gracias a la moda Y2K y la influencia asiática. Favorece rostros ovalados y pequeños.",
+      "tags": [
+        "Asiático/K-style",
+        "Asiática/Universal",
+        "Adulto"
+      ]
+    },
+    "43": {
+      "name": "Edgar cut",
+      "description": "Flequillo recto, horizontal y perfectamente definido combinado con fade en los laterales. Es el corte más representativo de la cultura barrial latina en EE.UU. y México, y ha conquistado barbershops en toda Latinoamérica. Puede hacerse con línea grabada para mayor definición del perímetro.",
+      "tags": [
+        "Latino/Urbano",
+        "Latina",
+        "Adulto"
+      ]
+    },
+    "44": {
+      "name": "Temple fade con línea",
+      "description": "Degradado en las sienes acompañado de una línea grabada con la máquina que define con precisión el borde del cabello. Es el sello de identidad de la barbería urbana latina y caribeña. La línea puede ser recta o tener diseños geométricos más elaborados según el cliente.",
+      "tags": [
+        "Latino/Urbano",
+        "Latina/Negra",
+        "Adulto"
+      ]
+    },
+    "45": {
+      "name": "Blowout",
+      "description": "El cabello afro o rizado se peina hacia afuera con difusor y secador, creando una corona esponjada y con volumen uniforme alrededor de la cabeza. Es un estilo icónico de Miami y las comunidades cubanas y puertorriqueñas en EE.UU., y representa la identidad afrolatina con mucho orgullo.",
+      "tags": [
+        "Latino/Urbano",
+        "Afrolatina",
+        "Adulto"
+      ]
+    },
+    "46": {
+      "name": "Bowl cut / niño clásico",
+      "description": "El corte más reconocible en niños pequeños: el pelo se corta recto alrededor de la cabeza a nivel de las orejas siguiendo una línea circular, como si se hubiera puesto un tazón encima. Es fácil de ejecutar, de mantener y muy resistente al movimiento de los niños en su día a día.",
+      "tags": [
+        "Niños",
+        "Universal",
+        "Niño"
+      ]
+    },
+    "47": {
+      "name": "Textured fringe niño",
+      "description": "Flequillo natural y texturizado que cae sobre la frente sin usar gel ni productos fuertes. Es un corte moderno pensado para niños entre 3 y 10 años, con apariencia desenfadada y juvenil. Los laterales van ligeramente cortos y la parte superior conserva movimiento y volumen.",
+      "tags": [
+        "Niños",
+        "Universal",
+        "Niño"
+      ]
+    },
+    "48": {
+      "name": "Mini fade con dibujo",
+      "description": "Fade bajo o medio adaptado para niños, con un diseño grabado con máquina en los laterales: puede ser una estrella, un rayo, iniciales u otras formas simples. Los niños lo piden para verse como los jugadores de fútbol o de baloncesto que admiran. Muy popular en barbershops del Caribe y Latinoamérica.",
+      "tags": [
+        "Niños",
+        "Latina/Negra",
+        "Niño"
+      ]
+    },
+    "49": {
+      "name": "Taper natural niño",
+      "description": "Taper suave en nuca y sienes con largo natural en la parte superior, sin fade pronunciado. Es el corte más solicitado por padres que quieren algo limpio, fácil de mantener y apropiado para el colegio. Funciona muy bien en niños con cabello liso o ligeramente ondulado de cualquier tono.",
+      "tags": [
+        "Niños",
+        "Caucásica/Latina",
+        "Niño"
+      ]
+    },
+    "50": {
+      "name": "Afro niño peinado",
+      "description": "Cabello afro natural bien hidratado y cuidado en niños, peinado con aceite de coco o manteca de karité para mantener la forma y evitar el frizz. Es una declaración de identidad desde la infancia, promovida por padres comprometidos con la herencia cultural afro. Se acompaña de educación sobre el amor propio y el cabello natural.",
+      "tags": [
+        "Niños",
+        "Negra/Afrolatina",
+        "Niño"
+      ]
+    }
+  },
+  "cortes_mujer_niña": {
+    "1": {
+      "name": "Capas largas",
+      "description": "El cabello conserva su largo y se trabajan capas suaves y graduales que aportan movimiento y aligeran las puntas sin sacrificar densidad. Es uno de los cortes más solicitados porque favorece prácticamente cualquier rostro y permite peinar el cabello con ondas, liso o en recogidos. Funciona muy bien tanto en cabellos finos como gruesos.",
+      "tags": [
+        "Cortes mujer",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "2": {
+      "name": "Bob clásico",
+      "description": "Corte recto a la altura de la mandíbula con líneas limpias y geométricas, inspirado en el icónico bob de los años 20. Estiliza el rostro, resalta el cuello y transmite elegancia atemporal. Es ideal para cabellos lisos o con onda leve y se mantiene impecable con un brushing rápido en casa.",
+      "tags": [
+        "Cortes mujer",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "3": {
+      "name": "Long bob (Lob)",
+      "description": "Versión más larga del bob, llega entre el mentón y los hombros con un corte recto o ligeramente desfilado. Es el punto medio perfecto entre lo corto y lo largo: aporta movimiento, es fácil de mantener y combina con todo tipo de rostros. Una de las tendencias más estables de la última década.",
+      "tags": [
+        "Cortes mujer",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "4": {
+      "name": "Pixie cut",
+      "description": "Corte corto y desenfadado que deja la nuca y los costados muy cortos, con algo más de largo y textura en la coronilla y el flequillo. Es un corte de alto impacto que resalta los rasgos del rostro, especialmente los ojos y los pómulos. Requiere visitas frecuentes a la peluquería para mantener la forma.",
+      "tags": [
+        "Cortes mujer",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "5": {
+      "name": "Pixie largo",
+      "description": "Versión más suave del pixie tradicional, con suficiente largo en la parte superior para peinarse a un lado o hacia atrás. Es ideal para quienes quieren animarse a un corte corto sin un cambio tan radical, y se adapta a entornos profesionales con un look moderno y femenino.",
+      "tags": [
+        "Cortes mujer",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "6": {
+      "name": "Shag cut",
+      "description": "Corte por capas muy desfiladas con flequillo abierto y mucho movimiento, originario de los años 70. Aporta volumen en la coronilla y aligera las puntas, dando un look bohemio y rockero. Funciona especialmente bien en cabellos con onda natural y favorece a rostros ovalados y alargados.",
+      "tags": [
+        "Cortes mujer",
+        "Caucásica/Latina",
+        "Adulta"
+      ]
+    },
+    "7": {
+      "name": "Wolf cut mujer",
+      "description": "Fusión entre el shag setentero y el mullet moderno, con capas cortas y voluminosas en la parte superior y largos desfilados en las puntas. Es uno de los cortes más virales en redes sociales gracias a su estética desenfadada y editorial. Realza la textura natural del cabello sin necesidad de mucho producto.",
+      "tags": [
+        "Cortes mujer",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "8": {
+      "name": "Blunt cut",
+      "description": "Corte completamente recto, sin capas ni desfilado, que da la sensación de un cabello más denso y pesado. Es un look muy limpio y moderno, popular en la moda asiática y en pasarelas internacionales. Funciona mejor en cabello liso de densidad media a alta.",
+      "tags": [
+        "Cortes mujer",
+        "Asiática/Universal",
+        "Adulta"
+      ]
+    },
+    "9": {
+      "name": "Bob asimétrico",
+      "description": "Variación moderna del bob donde un lado es notoriamente más largo que el otro, generando un efecto visual dinámico y vanguardista. Es perfecto para clientas que quieren un corte clásico con un toque diferente. Estiliza el rostro y aporta una personalidad fuerte a la imagen.",
+      "tags": [
+        "Cortes mujer",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "10": {
+      "name": "Capas en V",
+      "description": "Las capas se cortan formando una V pronunciada en la parte trasera, dejando las puntas centrales más largas que los costados. Es ideal para cabellos largos porque añade movimiento y profundidad sin perder longitud, y crea un efecto visual muy elegante cuando se peina con ondas suaves.",
+      "tags": [
+        "Cortes mujer",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "11": {
+      "name": "Capas en U",
+      "description": "Similar a las capas en V pero con una curva más suave y redondeada en la parte trasera, lo que produce una caída uniforme y natural. Es el corte por capas más conservador y favorecedor para casi cualquier tipo de rostro. Aporta movimiento sin alterar la forma general del peinado.",
+      "tags": [
+        "Cortes mujer",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "12": {
+      "name": "Mullet moderno mujer",
+      "description": "Reinterpretación femenina del mullet ochentero: corto en la parte superior y los lados, con largo desfilado en la nuca. Hoy se usa con mucho carácter editorial y se ha convertido en favorito de la generación Z por su actitud disruptiva y andrógina.",
+      "tags": [
+        "Cortes mujer",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "13": {
+      "name": "Corte midi con cortina",
+      "description": "Corte a la altura del hombro acompañado de un flequillo cortina abierto al centro que enmarca el rostro. Es uno de los cortes más pedidos actualmente porque combina practicidad y estilo, y favorece especialmente rostros ovalados, redondos y con forma de corazón.",
+      "tags": [
+        "Cortes mujer",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "14": {
+      "name": "Bob francés",
+      "description": "Bob corto a la altura del mentón con flequillo recto y aire parisino. Transmite chic, naturalidad y una sensualidad sutil muy característica del estilo francés. Funciona mejor en cabello liso o ligeramente ondulado y queda increíble con tonos castaños o rubios cenizos.",
+      "tags": [
+        "Cortes mujer",
+        "Caucásica/Latina",
+        "Adulta"
+      ]
+    },
+    "15": {
+      "name": "Corte princesa niña",
+      "description": "Corte largo en una sola línea con un ligero desfilado en las puntas y, opcionalmente, flequillo cortina suave. Conserva la longitud que las niñas suelen querer mantener para peinados con accesorios, trenzas o coletas, mientras se eliminan las puntas dañadas. Muy popular en niñas entre 4 y 12 años.",
+      "tags": [
+        "Cortes mujer",
+        "Universal",
+        "Niña"
+      ]
+    },
+    "16": {
+      "name": "Cola de caballo alta",
+      "description": "Todo el cabello se recoge en lo alto de la coronilla con una liga, dejando el rostro despejado y aportando un efecto lifting natural. Es un peinado versátil que sirve tanto para el día a día como para eventos cuando se acompaña de ondas o accesorios. Favorece cualquier tipo de rostro.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "17": {
+      "name": "Cola de caballo baja",
+      "description": "El cabello se recoge a la altura de la nuca de manera elegante y discreta. Es ideal para entornos formales, oficina y eventos sobrios, y combina muy bien con un mechón envolviendo la liga para esconderla y dar un acabado más pulido y profesional.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "18": {
+      "name": "Moño alto de bailarina",
+      "description": "Recogido tirante y perfectamente pulido en lo alto de la cabeza, inspirado en la disciplina del ballet. Aporta un aire elegante, sofisticado y atlético, y es muy usado en eventos formales, sesiones fotográficas y clases de danza. Suele acompañarse de fijador para garantizar firmeza durante horas.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "19": {
+      "name": "Moño bajo elegante",
+      "description": "Recogido pulido a la altura de la nuca, con el cabello peinado completamente hacia atrás o con raya al medio. Es uno de los peinados más solicitados para bodas, galas y eventos protocolares por su sobriedad y limpieza visual. Combina con cualquier escote y favorece todos los rostros.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "20": {
+      "name": "Messy bun",
+      "description": "Moño desordenado con mechones sueltos enmarcando el rostro, que da una apariencia relajada pero estudiada. Es el peinado favorito para el día a día porque se logra en pocos minutos, pero también se adapta a bodas estilo boho cuando se acompaña de flores o accesorios florales.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "21": {
+      "name": "Half up half down",
+      "description": "Solo la mitad superior del cabello se recoge en una coleta o moño, dejando el resto suelto cayendo sobre los hombros. Es un peinado romántico y juvenil que combina lo recogido con lo natural. Ideal para citas, graduaciones y celebraciones que no exigen un recogido total.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "22": {
+      "name": "Recogido con ondas",
+      "description": "Recogido suave en la parte de atrás de la cabeza con mechones ondulados sueltos y volumen estratégico en la coronilla. Es uno de los peinados nupciales más solicitados porque aporta un aire romántico, vintage y femenino que combina con velos, tiaras y todo tipo de accesorios.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "23": {
+      "name": "Ondas Hollywood",
+      "description": "Ondas grandes, definidas y muy brillantes peinadas hacia un solo lado, inspiradas en las divas del cine clásico de Hollywood. Es un peinado de alfombra roja por excelencia, y exige una técnica precisa de plancha o rulos para lograr la uniformidad de las ondas y el acabado glossy.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "24": {
+      "name": "Beach waves",
+      "description": "Ondas naturales y desenfadadas que imitan el efecto del mar y la sal sobre el cabello, con textura suelta y aspecto playero. Es un peinado relajado y juvenil, perfecto para el día a día, planes informales y looks de verano. Se logra con plancha, tenacilla ancha o spray salino.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "25": {
+      "name": "Ondas con plancha en S",
+      "description": "Técnica que utiliza la plancha para crear ondas marcadas en forma de S a lo largo del cabello, con un acabado moderno y geométrico. Es muy popular gracias a las redes sociales y favorece especialmente cabellos largos y de densidad media, dando un efecto editorial sin necesidad de tenacilla.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "26": {
+      "name": "Rizos definidos con difusor",
+      "description": "Técnica de peinado para cabellos rizados naturales que utiliza productos específicos (cremas, geles, mousses) y un difusor para definir cada rizo sin generar frizz. Realza la textura natural y es la base del movimiento curly girl, que promueve el cuidado y aceptación del cabello rizado.",
+      "tags": [
+        "Peinados",
+        "Latina/Afrolatina",
+        "Adulta"
+      ]
+    },
+    "27": {
+      "name": "Updo nupcial",
+      "description": "Recogido elaborado y altamente personalizable diseñado especialmente para novias, que puede incluir trenzas, ondas, torsiones y accesorios florales o de cristal. Cada updo se adapta al vestido, al velo y al estilo de la novia, y suele requerir una prueba previa para garantizar el resultado.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "28": {
+      "name": "Chignon clásico",
+      "description": "Recogido bajo en forma de rosca o caracol enrollado en la nuca, de origen francés y altamente refinado. Es uno de los peinados más elegantes y atemporales que existen, ideal para bodas, galas y ceremonias formales. Se mantiene firme con horquillas invisibles y una buena fijación.",
+      "tags": [
+        "Peinados",
+        "Caucásica/Latina",
+        "Adulta"
+      ]
+    },
+    "29": {
+      "name": "Space buns",
+      "description": "Dos moños altos ubicados simétricamente a cada lado de la cabeza, con un aire juvenil, festivalero y muy fotogénico. Es un peinado popular en festivales de música, fiestas temáticas y entre adolescentes y niñas. Puede combinarse con trenzas pegadas a los lados para mayor estilo.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "30": {
+      "name": "Peinado pin-up vintage",
+      "description": "Peinado retro inspirado en las pin-ups de los años 40 y 50, con flequillo enrollado tipo victory roll, ondas marcadas y, frecuentemente, un pañuelo de tela como accesorio. Es muy usado en bodas vintage, sesiones temáticas y eventos rockabilly por su carácter y feminidad clásica.",
+      "tags": [
+        "Peinados",
+        "Caucásica/Latina",
+        "Adulta"
+      ]
+    },
+    "31": {
+      "name": "French twist",
+      "description": "Recogido elegante en el que el cabello se enrolla verticalmente sobre sí mismo en la parte trasera de la cabeza, formando una columna pulida. Es uno de los peinados más sofisticados del repertorio clásico francés, ideal para eventos formales y vestidos con escote en la espalda.",
+      "tags": [
+        "Peinados",
+        "Caucásica/Latina",
+        "Adulta"
+      ]
+    },
+    "32": {
+      "name": "Coleta con volumen",
+      "description": "Cola de caballo trabajada con cardado en la coronilla para añadir altura y cuerpo, dando una sensación de mayor densidad y un efecto visual más glamoroso. Es muy usada en eventos y sesiones fotográficas, y suele acabarse con un mechón cubriendo la liga para un look más pulido.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "33": {
+      "name": "Half-up top knot",
+      "description": "La mitad superior del cabello se recoge en un pequeño moño alto, dejando el resto suelto. Es un peinado moderno, casual y muy práctico que ha ganado popularidad en redes sociales por su facilidad de ejecución y su capacidad de dar estilo sin complicaciones.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "34": {
+      "name": "Recogido de princesa con accesorios",
+      "description": "Peinado infantil semirrecogido inspirado en princesas de cuentos: media coleta con ondas, decorada con tiaras, lazos, flores o pequeños broches. Es muy solicitado para fiestas de cumpleaños, primeras comuniones y sesiones fotográficas de niñas, y se adapta al vestido y a la temática del evento.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Niña"
+      ]
+    },
+    "35": {
+      "name": "Coletas con burbujas",
+      "description": "Coleta dividida en secciones con ligas a lo largo de toda su longitud, formando 'burbujas' o esferas decorativas. Es un peinado muy popular en niñas porque es divertido, colorido cuando se usan ligas de colores, y mantiene el cabello sujeto durante todo el día escolar o de juegos.",
+      "tags": [
+        "Peinados",
+        "Universal",
+        "Niña"
+      ]
+    },
+    "36": {
+      "name": "Alisado con queratina",
+      "description": "Tratamiento de alisado semipermanente en el que se aplica queratina y se sella con plancha caliente. Reduce notoriamente el frizz, aporta brillo y deja el cabello manejable durante varios meses. Es ideal para cabellos crespos o gruesos que se desean conservar lisos sin perder vida.",
+      "tags": [
+        "Alisados/Brushing",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "37": {
+      "name": "Alisado japonés",
+      "description": "Técnica de alisado permanente de origen japonés que reestructura químicamente el cabello para dejarlo completamente lacio. Su efecto es duradero y solo requiere retoque en la raíz. Es un proceso largo y delicado que debe realizarse con expertos para no comprometer la salud del cabello.",
+      "tags": [
+        "Alisados/Brushing",
+        "Asiática/Universal",
+        "Adulta"
+      ]
+    },
+    "38": {
+      "name": "Alisado brasileño",
+      "description": "Tratamiento que combina queratina hidrolizada con otros activos para alisar y nutrir el cabello al mismo tiempo. No deja el cabello completamente lacio sino con un movimiento suave y mucho brillo, eliminando el frizz por varios meses. Es uno de los tratamientos más vendidos en Latinoamérica.",
+      "tags": [
+        "Alisados/Brushing",
+        "Latina/Universal",
+        "Adulta"
+      ]
+    },
+    "39": {
+      "name": "Alisado orgánico",
+      "description": "Tratamiento alisador libre de formol y químicos agresivos, basado en aminoácidos vegetales y aceites naturales. Es la opción preferida por clientas embarazadas, en lactancia o con cuero cabelludo sensible. Su efecto es más suave y dura entre dos y cuatro meses.",
+      "tags": [
+        "Alisados/Brushing",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "40": {
+      "name": "Botox capilar",
+      "description": "Tratamiento de hidratación profunda y rejuvenecimiento del cabello que rellena las cutículas con activos como queratina, colágeno y ácido hialurónico. No alisa de forma drástica pero deja el cabello sedoso, brillante y sin frizz. Es ideal como mantenimiento entre alisados.",
+      "tags": [
+        "Alisados/Brushing",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "41": {
+      "name": "Alisado de tanino",
+      "description": "Tratamiento alisador a base de tanino vegetal extraído de plantas, sin formaldehído. Aporta brillo intenso, elasticidad y disciplina al cabello sin alisarlo por completo. Es una excelente alternativa para clientas que buscan reducir el volumen sin perder el movimiento natural del pelo.",
+      "tags": [
+        "Alisados/Brushing",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "42": {
+      "name": "Brushing liso clásico",
+      "description": "Cepillado con secador y cepillo redondo que deja el cabello completamente liso, brillante y con las puntas hacia adentro. Es el servicio express más solicitado para eventos, reuniones de trabajo y citas, y suele complementarse con un sérum de brillo o un protector térmico ligero.",
+      "tags": [
+        "Alisados/Brushing",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "43": {
+      "name": "Brushing con volumen",
+      "description": "Técnica de cepillado que utiliza cepillos redondos y secador para añadir cuerpo y altura en la coronilla, ideal para cabellos finos o sin movimiento natural. Aporta una sensación de mayor densidad y un acabado glamoroso que evoca el estilo de las top models.",
+      "tags": [
+        "Alisados/Brushing",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "44": {
+      "name": "Brushing en C (puntas hacia adentro)",
+      "description": "Cepillado en el que las puntas se enrollan hacia adentro formando una suave curva en C, evocando los peinados clásicos de los años 60. Es un acabado pulido y elegante muy usado en entornos profesionales y en clientas que prefieren un look femenino tradicional.",
+      "tags": [
+        "Alisados/Brushing",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "45": {
+      "name": "Brushing flip (puntas hacia afuera)",
+      "description": "Variación del brushing tradicional en la que las puntas se voltean hacia afuera, dando un aire retro juvenil inspirado en los años 60 y 70. Es divertido, fresco y muy fotogénico, especialmente en cortes a la altura del hombro o long bob.",
+      "tags": [
+        "Alisados/Brushing",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "46": {
+      "name": "Brushing brasileño",
+      "description": "Brushing realizado con productos termoactivos brasileños que sellan la cutícula y aportan un brillo extra. Su acabado es más duradero que un brushing tradicional y resiste mejor la humedad, lo que lo vuelve ideal para climas tropicales y húmedos como los del Caribe colombiano.",
+      "tags": [
+        "Alisados/Brushing",
+        "Latina/Universal",
+        "Adulta"
+      ]
+    },
+    "47": {
+      "name": "Cepillado con ondas suaves",
+      "description": "Cepillado que combina secador y cepillo redondo grande para crear ondas naturales y movimiento, sin marcas ni rizos definidos. Es perfecto para clientas que quieren un acabado relajado pero pulido, y queda muy bien en cabellos largos y de longitud media.",
+      "tags": [
+        "Alisados/Brushing",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "48": {
+      "name": "Cepillado modelado",
+      "description": "Brushing personalizado que se adapta a la forma del rostro y al estilo de la clienta, combinando técnicas de volumen, ondas y movimiento según se necesite. Es un servicio estrella en peluquerías de barrio y atiende tanto a usuarias del día a día como a clientas de eventos especiales.",
+      "tags": [
+        "Alisados/Brushing",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "49": {
+      "name": "Plancha modeladora",
+      "description": "Servicio en el que se utiliza la plancha para definir el acabado del cabello, ya sea totalmente liso, con ondas en S, con puntas hacia adentro o hacia afuera. Es la alternativa rápida al brushing tradicional y deja el cabello sumamente lacio, brillante y disciplinado por varios días.",
+      "tags": [
+        "Alisados/Brushing",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "50": {
+      "name": "Brushing express niña",
+      "description": "Versión rápida y suave del brushing pensada para niñas, en la que se desenreda y peina el cabello con secador y un cepillo apropiado para la edad. Es muy solicitado para presentaciones escolares, cumpleaños, ceremonias religiosas y otras ocasiones especiales infantiles.",
+      "tags": [
+        "Alisados/Brushing",
+        "Universal",
+        "Niña"
+      ]
+    },
+    "51": {
+      "name": "Trenza francesa clásica",
+      "description": "Trenza tejida desde la coronilla hacia la nuca en la que se van añadiendo mechones laterales en cada cruce. Es elegante, ordenada y muy versátil, ideal tanto para entornos casuales como formales. Es además una excelente opción para mantener el cabello recogido durante actividades físicas.",
+      "tags": [
+        "Trenzas",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "52": {
+      "name": "Trenza espiga (fishtail)",
+      "description": "Trenza realizada con dos mechones que se van entrelazando en pequeñas secciones, formando un patrón visual parecido a una espina de pescado. Es delicada, romántica y muy fotogénica, perfecta para bodas estilo boho, festivales y eventos al aire libre.",
+      "tags": [
+        "Trenzas",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "53": {
+      "name": "Trenza holandesa",
+      "description": "Variante de la trenza francesa en la que los mechones se cruzan por debajo en lugar de por encima, lo que hace que la trenza sobresalga del cuero cabelludo. Da un efecto tridimensional muy llamativo y se usa frecuentemente como base de peinados elaborados y recogidos.",
+      "tags": [
+        "Trenzas",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "54": {
+      "name": "Box braids mujer",
+      "description": "Trenzas individuales de sección cuadrada hechas con extensiones, que pueden ir desde el largo medio hasta la cintura. Son protectoras del cabello natural, duran semanas y representan una herencia cultural africana muy presente en mujeres afrolatinas y afrodescendientes.",
+      "tags": [
+        "Trenzas",
+        "Negra/Afrolatina",
+        "Adulta"
+      ]
+    },
+    "55": {
+      "name": "Cornrows mujer",
+      "description": "Trenzas planas y pegadas al cuero cabelludo en líneas rectas o patrones curvos, técnica originaria de África Occidental con miles de años de historia. Son protectoras, duraderas y permiten una infinidad de diseños creativos. Funcionan tanto como peinado completo como base de otros estilos.",
+      "tags": [
+        "Trenzas",
+        "Negra/Afrolatina",
+        "Adulta"
+      ]
+    },
+    "56": {
+      "name": "Trenza cascada",
+      "description": "Trenza francesa modificada en la que algunos mechones se dejan caer libremente en lugar de incorporarse a la trenza, formando una 'cascada' de cabello suelto. Es uno de los peinados semirrecogidos más románticos y se utiliza con frecuencia en bodas y graduaciones.",
+      "tags": [
+        "Trenzas",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "57": {
+      "name": "Trenza corona",
+      "description": "Trenza que rodea la cabeza como una diadema natural, dando un aspecto regio y bohemio al mismo tiempo. Puede hacerse con una sola trenza larga enrollada o con dos trenzas más pequeñas unidas. Es un peinado favorito en bodas campestres y festivales por su feminidad atemporal.",
+      "tags": [
+        "Trenzas",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "58": {
+      "name": "Twin braids (dos trenzas francesas)",
+      "description": "Dos trenzas francesas simétricas que parten desde la frente y caen por la espalda, dando un aire deportivo, juvenil y muy práctico. Son muy populares en deportistas, niñas en edad escolar y mujeres que buscan mantener el cabello fuera del rostro durante todo el día.",
+      "tags": [
+        "Trenzas",
+        "Universal",
+        "Adulta"
+      ]
+    },
+    "59": {
+      "name": "Goddess braids",
+      "description": "Trenzas grandes y pegadas al cuero cabelludo, similares a los cornrows pero con mayor grosor y, frecuentemente, con mechones rizados o sueltos enmarcando el rostro. Tienen un aire majestuoso y se asocian a la imagen de una diosa, de ahí su nombre. Son un símbolo de poder y belleza afro.",
+      "tags": [
+        "Trenzas",
+        "Negra/Afrolatina",
+        "Adulta"
+      ]
+    },
+    "60": {
+      "name": "Trenzas niña con accesorios",
+      "description": "Conjunto de trenzas pequeñas o medianas decoradas con ligas de colores, broches, perlas o cintas, pensadas especialmente para niñas. Son protectoras del cabello, duran varios días y son una excelente opción para fiestas, presentaciones escolares o el día a día.",
+      "tags": [
+        "Trenzas",
+        "Universal",
+        "Niña"
+      ]
+    }
+  },
+  "uñas": {
+    "1": {
+      "name": "Manicure clásico de cuidado",
+      "description": "Servicio básico de cuidado de uñas que incluye limado para dar forma, retiro de cutículas, exfoliación suave de la mano y pulido natural sin aplicación de esmalte. Es ideal para personas que buscan unas uñas saludables, prolijas y de aspecto natural, sin color añadido.",
+      "tags": [
+        "Manicure",
+        "Cuidado",
+        "Unisex"
+      ]
+    },
+    "2": {
+      "name": "Pedicure clásico de cuidado",
+      "description": "Servicio enfocado en la salud y estética del pie: remojo, eliminación de durezas, limado de uñas, retiro de cutículas y masaje hidratante. No incluye esmalte. Es la opción más solicitada por personas que priorizan el bienestar y la higiene sobre la decoración.",
+      "tags": [
+        "Pedicure",
+        "Cuidado",
+        "Unisex"
+      ]
+    },
+    "3": {
+      "name": "Esmaltado transparente brillante",
+      "description": "Aplicación de esmalte completamente transparente que sella la uña, le aporta un brillo sutil y la protege del desgaste cotidiano. Es la opción favorita para quienes desean unas uñas pulidas y elegantes sin que se note maquillaje, muy elegida tanto por hombres como por mujeres.",
+      "tags": [
+        "Manicure",
+        "Clásico",
+        "Unisex"
+      ]
+    },
+    "4": {
+      "name": "Tratamiento fortalecedor de uñas",
+      "description": "Aplicación de productos especializados con queratina, calcio o biotina que refuerzan la lámina ungueal y previenen la fragilidad, descamación o quiebre. Se recomienda como tratamiento de varias sesiones y es ideal para uñas debilitadas por el uso prolongado de acrílicos o gel.",
+      "tags": [
+        "Tratamiento",
+        "Reparador",
+        "Unisex"
+      ]
+    },
+    "5": {
+      "name": "Limpieza profunda de cutícula",
+      "description": "Servicio enfocado en el retiro detallado y profesional de cutículas y pieles muertas alrededor de la uña, con técnicas que minimizan la irritación y promueven un crecimiento sano. Es la base de cualquier manicure o pedicure de calidad y puede contratarse de forma independiente.",
+      "tags": [
+        "Tratamiento",
+        "Cuidado",
+        "Unisex"
+      ]
+    },
+    "6": {
+      "name": "Manicure francés clásico",
+      "description": "Diseño icónico que combina una base rosada o nude con la punta de la uña pintada en blanco mate. Transmite elegancia atemporal y limpieza visual, y es uno de los manicures más solicitados para bodas, eventos formales y entornos profesionales por su sobriedad y versatilidad.",
+      "tags": [
+        "Manicure",
+        "Clásico",
+        "Mujer"
+      ]
+    },
+    "7": {
+      "name": "Manicure baby boomer",
+      "description": "Variación moderna del francés en la que el blanco de la punta se difumina suavemente con el rosado de la base, creando un efecto degradado u ombré muy delicado. Aporta un acabado más natural y sofisticado que el francés tradicional, y es uno de los favoritos para novias.",
+      "tags": [
+        "Manicure",
+        "Moderno",
+        "Mujer"
+      ]
+    },
+    "8": {
+      "name": "Esmaltado semipermanente",
+      "description": "Aplicación de esmalte de gel que se cura con lámpara UV o LED y dura entre dos y tres semanas sin desconcharse. Aporta un brillo intenso y resiste el desgaste diario mucho mejor que el esmalte tradicional. Es la opción más vendida por su durabilidad y variedad de colores.",
+      "tags": [
+        "Manicure",
+        "Moderno",
+        "Mujer"
+      ]
+    },
+    "9": {
+      "name": "Uñas acrílicas",
+      "description": "Extensiones realizadas con polvo y monómero acrílico que permiten alargar y reforzar la uña natural. Son extremadamente resistentes, admiten cualquier forma (almendra, stiletto, ballerina, cuadrada) y duran semanas con el debido mantenimiento. Es la técnica más popular en salones latinoamericanos.",
+      "tags": [
+        "Manicure",
+        "Esculpidas",
+        "Mujer"
+      ]
+    },
+    "10": {
+      "name": "Uñas de gel",
+      "description": "Extensiones o esculpidos realizados con gel constructor que se cura con lámpara UV o LED. Son más flexibles y livianas que las acrílicas, ofrecen un acabado muy natural y permiten todo tipo de decoraciones. Ideales para quienes buscan resultados elegantes y duraderos.",
+      "tags": [
+        "Manicure",
+        "Esculpidas",
+        "Mujer"
+      ]
+    },
+    "11": {
+      "name": "Manicure rusa",
+      "description": "Técnica de manicure realizada con tornos eléctricos y fresas profesionales que permite trabajar la cutícula con extrema precisión, dejando un acabado impecable y de larga duración. Requiere un nivel técnico avanzado y es muy demandada por su perfección visual y duración prolongada.",
+      "tags": [
+        "Manicure",
+        "Avanzado",
+        "Mujer"
+      ]
+    },
+    "12": {
+      "name": "Nail art floral",
+      "description": "Decoración manual de las uñas con motivos florales pintados a mano alzada o aplicados con sellos y pinceles finos. Puede ir desde flores discretas en una sola uña hasta diseños botánicos completos en todas. Es muy popular en primavera, verano y para bodas con temática natural.",
+      "tags": [
+        "Nail art",
+        "Decoración",
+        "Mujer"
+      ]
+    },
+    "13": {
+      "name": "Nail art geométrico",
+      "description": "Decoración basada en líneas, triángulos, cuadrículas y formas geométricas conseguidas con cinta adhesiva, pinceles finos o stickers. Tiene un aire moderno, minimalista y editorial, y es la opción favorita de quienes buscan un diseño contemporáneo sin recargar las uñas.",
+      "tags": [
+        "Nail art",
+        "Decoración",
+        "Mujer"
+      ]
+    },
+    "14": {
+      "name": "Decoración con piedras y rhinestones",
+      "description": "Aplicación de pequeños cristales, perlas o rhinestones sobre la uña para añadir brillo y volumen. Puede ir desde una sola piedra discreta hasta un diseño totalmente cubierto tipo joyería. Es un favorito en eventos especiales, bodas y celebraciones temáticas.",
+      "tags": [
+        "Nail art",
+        "Decoración",
+        "Mujer"
+      ]
+    },
+    "15": {
+      "name": "Cromo / efecto espejo",
+      "description": "Acabado metálico ultra brillante conseguido con polvos cromados aplicados sobre una base de gel pigmentada. Da la apariencia de un espejo líquido sobre la uña y refleja la luz de forma espectacular. Es uno de los efectos virales más solicitados en redes sociales.",
+      "tags": [
+        "Nail art",
+        "Moderno",
+        "Mujer"
+      ]
+    },
+    "16": {
+      "name": "Uñas marmoleadas",
+      "description": "Diseño que imita las vetas naturales del mármol mediante la mezcla de varios esmaltes con técnicas de agua, alcohol o pincel fino. Cada uña es única y aporta un acabado lujoso y sofisticado, especialmente popular en tonos blancos, negros y nude con detalles dorados.",
+      "tags": [
+        "Nail art",
+        "Decoración",
+        "Mujer"
+      ]
+    },
+    "17": {
+      "name": "Encapsulado con flores secas",
+      "description": "Técnica que coloca pequeñas flores naturales secas dentro de varias capas de gel, encapsulándolas y conservándolas dentro de la uña. El resultado es delicado, romántico y muy fotogénico, ideal para bodas campestres, sesiones primaverales y bohemias.",
+      "tags": [
+        "Nail art",
+        "Decoración",
+        "Mujer"
+      ]
+    },
+    "18": {
+      "name": "Uñas press-on personalizadas",
+      "description": "Uñas postizas prefabricadas y decoradas a medida que se aplican con pegamento o pestañas adhesivas y duran varios días. Son una alternativa rápida y reutilizable a las uñas esculpidas, ideales para eventos puntuales o para quienes no quieren comprometerse con un servicio largo.",
+      "tags": [
+        "Manicure",
+        "Express",
+        "Mujer"
+      ]
+    },
+    "19": {
+      "name": "Pedicure francés",
+      "description": "Versión del clásico francés aplicada en los pies, con la uña en tono natural y la punta blanca. Es una opción elegante y muy solicitada para temporadas cálidas, viajes a la playa, vacaciones y bodas en sandalias. Combina con cualquier color de piel y tipo de uña.",
+      "tags": [
+        "Pedicure",
+        "Clásico",
+        "Mujer"
+      ]
+    },
+    "20": {
+      "name": "Pedicure spa con exfoliación",
+      "description": "Servicio integral que incluye remojo aromaterapéutico, exfoliación con sales o azúcar, mascarilla hidratante, masaje relajante de pierna y aplicación de esmalte. Es la experiencia premium del cuidado del pie y se recomienda al menos una vez al mes para mantener la salud y suavidad de la piel.",
+      "tags": [
+        "Pedicure",
+        "Spa",
+        "Mujer"
+      ]
+    },
+    "21": {
+      "name": "Pedicure semipermanente",
+      "description": "Aplicación de esmalte de gel en las uñas de los pies, con un acabado brillante y resistente que dura entre cuatro y seis semanas. Es ideal para quienes viajan, hacen deporte o simplemente quieren olvidarse del retoque del esmalte por más de un mes.",
+      "tags": [
+        "Pedicure",
+        "Moderno",
+        "Mujer"
+      ]
+    },
+    "22": {
+      "name": "Pedicure con parafina",
+      "description": "Tratamiento que sumerge los pies en cera de parafina caliente para hidratar profundamente la piel reseca, aliviar dolores articulares y mejorar la circulación. Es muy recomendado en climas fríos, para pies con resequedad extrema y para personas con problemas de circulación leve.",
+      "tags": [
+        "Pedicure",
+        "Spa",
+        "Unisex"
+      ]
+    },
+    "23": {
+      "name": "Pedicure con piedra volcánica",
+      "description": "Servicio que utiliza piedras volcánicas calentadas para masajear los pies y la pantorrilla, combinado con aceites esenciales. Aporta una profunda relajación muscular, mejora la circulación y libera tensiones acumuladas. Es uno de los rituales spa más sensoriales y completos.",
+      "tags": [
+        "Pedicure",
+        "Spa",
+        "Mujer"
+      ]
+    },
+    "24": {
+      "name": "Pedicure callista",
+      "description": "Servicio especializado en el retiro profesional de durezas, callosidades y ojos de pollo en pies maltratados. Se realiza con herramientas profesionales y deja el pie suave y descongestionado. Es altamente recomendado para personas que pasan muchas horas de pie o usan calzado inadecuado.",
+      "tags": [
+        "Pedicure",
+        "Cuidado",
+        "Unisex"
+      ]
+    },
+    "25": {
+      "name": "Pedicure express",
+      "description": "Versión rápida del pedicure que incluye limado de uñas, retiro básico de cutículas y aplicación de esmalte en menos de 30 minutos. Es ideal para clientas con poco tiempo, retoques entre servicios completos o emergencias antes de un evento de último momento.",
+      "tags": [
+        "Pedicure",
+        "Express",
+        "Mujer"
+      ]
+    },
+    "26": {
+      "name": "Pedicure con diseño nail art",
+      "description": "Pedicure tradicional acompañado de decoraciones artísticas en una o varias uñas: flores, líneas, piedras, glitter o diseños temáticos. Es muy popular en temporada de playa, vacaciones y bodas, donde los pies son protagonistas con sandalias abiertas.",
+      "tags": [
+        "Pedicure",
+        "Decoración",
+        "Mujer"
+      ]
+    },
+    "27": {
+      "name": "Pedicure terapéutico para uña encarnada",
+      "description": "Servicio especializado en tratar uñas encarnadas leves o moderadas, retirando con cuidado la porción problemática y enseñando técnicas de prevención. Es una alternativa no quirúrgica para casos no severos y debe acompañarse de seguimiento profesional si la condición persiste.",
+      "tags": [
+        "Pedicure",
+        "Tratamiento",
+        "Unisex"
+      ]
+    },
+    "28": {
+      "name": "Pedicure con esmalte tradicional",
+      "description": "Pedicure básico completo con aplicación de esmalte en línea regular (no semipermanente). Es la opción más solicitada por su precio accesible y la posibilidad de cambiar de color con frecuencia. Dura entre cinco y diez días con el cuidado adecuado.",
+      "tags": [
+        "Pedicure",
+        "Clásico",
+        "Mujer"
+      ]
+    },
+    "29": {
+      "name": "Pedicure ombré",
+      "description": "Diseño en el que el color del esmalte se va degradando suavemente desde la base hasta la punta de la uña, o entre dos tonos complementarios a lo largo de los diez dedos. Aporta un efecto visual moderno y artístico, muy demandado en temporada de verano y vacaciones.",
+      "tags": [
+        "Pedicure",
+        "Decoración",
+        "Mujer"
+      ]
+    },
+    "30": {
+      "name": "Manicure y pedicure de niña con diseños",
+      "description": "Servicio infantil con esmaltes hipoalergénicos en colores vibrantes y diseños divertidos: brillos, stickers de personajes, corazones o estrellas. Es ideal para fiestas de cumpleaños, sesiones madre-hija y celebraciones especiales. Se realiza con productos seguros y técnicas suaves.",
+      "tags": [
+        "Manicure",
+        "Decoración",
+        "Niña"
+      ]
+    }
+  },
+  "maquillaje": {
+    "1": {
+      "name": "Maquillaje correctivo masculino",
+      "description": "Servicio discreto que unifica el tono de la piel, disimula ojeras, manchas y rojeces sin que se note ningún producto encima. Es ideal para hombres que asisten a eventos importantes, entrevistas, presentaciones o sesiones fotográficas y desean lucir descansados sin un acabado obviamente maquillado.",
+      "tags": [
+        "Maquillaje",
+        "Correctivo",
+        "Unisex"
+      ]
+    },
+    "2": {
+      "name": "Maquillaje para fotografía corporativa",
+      "description": "Aplicación pensada específicamente para sesiones de retrato profesional: reduce brillos en frente, nariz y mentón, unifica el tono y resalta sutilmente los rasgos sin alterar la apariencia natural. Se usa en perfiles ejecutivos de LinkedIn, fichas corporativas y reels institucionales.",
+      "tags": [
+        "Maquillaje",
+        "Fotográfico",
+        "Unisex"
+      ]
+    },
+    "3": {
+      "name": "Maquillaje para televisión y streaming",
+      "description": "Maquillaje de alta definición (HD) diseñado para resistir las luces intensas de cámaras 4K, transmisiones en vivo y entrevistas. Controla el brillo facial, evita el efecto 'flashback' del polvo blanco y mantiene la piel uniforme durante horas frente a la cámara.",
+      "tags": [
+        "Maquillaje",
+        "Fotográfico",
+        "Unisex"
+      ]
+    },
+    "4": {
+      "name": "BB cream y unificación de tono",
+      "description": "Servicio express en el que se aplica una BB o CC cream ligera sobre la piel limpia para emparejar el tono, hidratar y proteger sin generar un acabado de maquillaje completo. Es perfecto como rutina previa a un evento corto o como alternativa diaria muy ligera.",
+      "tags": [
+        "Maquillaje",
+        "Día/natural",
+        "Unisex"
+      ]
+    },
+    "5": {
+      "name": "Maquillaje de novio",
+      "description": "Servicio especializado para novios que desean verse impecables el día de su boda sin notarse maquillados. Cubre ojeras producto del estrés previo, controla brillos, unifica el tono y prepara la piel para resistir las largas horas de ceremonia, fotografías y celebración.",
+      "tags": [
+        "Maquillaje",
+        "Novia",
+        "Unisex"
+      ]
+    },
+    "6": {
+      "name": "Cubrimiento de tatuajes para evento",
+      "description": "Técnica especializada que utiliza correctores de alta cobertura, neutralizadores de color y selladores para ocultar tatuajes durante un evento puntual: bodas, sesiones fotográficas o eventos corporativos. Es resistente al sudor y al roce, y se retira fácilmente al final del día.",
+      "tags": [
+        "Maquillaje",
+        "Correctivo",
+        "Unisex"
+      ]
+    },
+    "7": {
+      "name": "Maquillaje teatral neutro",
+      "description": "Maquillaje base para artes escénicas que iguala el tono y resalta los rasgos para que sean visibles desde el público bajo luces de escenario. Es la base sobre la que se construyen caracterizaciones de personaje y se utiliza en obras teatrales, coros, ballet y presentaciones musicales.",
+      "tags": [
+        "Maquillaje",
+        "Caracterización",
+        "Unisex"
+      ]
+    },
+    "8": {
+      "name": "Caracterización y efectos especiales",
+      "description": "Maquillaje artístico avanzado que transforma el rostro mediante prótesis, sangre falsa, latex líquido, contornos extremos y pintura corporal. Se utiliza en producciones audiovisuales, obras de teatro, fiestas de Halloween y sesiones temáticas para crear personajes, heridas o criaturas fantásticas.",
+      "tags": [
+        "Maquillaje",
+        "Caracterización",
+        "Unisex"
+      ]
+    },
+    "9": {
+      "name": "Maquillaje editorial / pasarela",
+      "description": "Propuesta artística audaz pensada para desfiles de moda, editoriales de revista y sesiones de portafolio. Permite explorar conceptos vanguardistas: ojos pintados con grafismos, labios fuera de la línea natural, glitter masivo o paletas de color inusuales. Es una pieza creativa más que un maquillaje convencional.",
+      "tags": [
+        "Maquillaje",
+        "Fotográfico",
+        "Unisex"
+      ]
+    },
+    "10": {
+      "name": "Cubrimiento de cicatrices y manchas",
+      "description": "Aplicación de correctores de cobertura alta y maquillaje camuflaje para disimular cicatrices visibles, melasma, vitíligo o manchas pronunciadas de la piel. Es un servicio personalizado que combina técnica de neutralización de color con sellado a prueba de roce y agua.",
+      "tags": [
+        "Maquillaje",
+        "Correctivo",
+        "Unisex"
+      ]
+    },
+    "11": {
+      "name": "Maquillaje natural diario",
+      "description": "Maquillaje ligero y sutil que realza los rasgos sin transformarlos: base ligera, máscara de pestañas, un toque de rubor y labios en tono nude. Es el maquillaje perfecto para el día a día, oficinas, salidas casuales y reuniones informales sin sentir el rostro recargado.",
+      "tags": [
+        "Maquillaje",
+        "Día/natural",
+        "Mujer"
+      ]
+    },
+    "12": {
+      "name": "No makeup look",
+      "description": "Maquillaje aparentemente inexistente que disimula imperfecciones, ilumina la piel y resalta sutilmente los rasgos para que se vean naturales. Requiere mucha técnica para lograr ese efecto 'sin maquillaje pero mejor', y es uno de los acabados más solicitados gracias a redes sociales y la estética minimalista.",
+      "tags": [
+        "Maquillaje",
+        "Día/natural",
+        "Mujer"
+      ]
+    },
+    "13": {
+      "name": "Glow natural luminoso",
+      "description": "Maquillaje con piel iluminada y dewy, pómulos resaltados con iluminador líquido y un acabado fresco y juvenil. Es ideal para días soleados, brunchs, paseos y sesiones casuales en exteriores donde la luz natural acompaña el efecto luminoso.",
+      "tags": [
+        "Maquillaje",
+        "Día/natural",
+        "Mujer"
+      ]
+    },
+    "14": {
+      "name": "Maquillaje para oficina",
+      "description": "Maquillaje neutro y profesional con base mate de cobertura media, sombras en tonos tierra, máscara de pestañas y labios nude. Está pensado para durar toda la jornada laboral sin necesidad de retoques, y proyecta una imagen pulida y confiable en entornos corporativos.",
+      "tags": [
+        "Maquillaje",
+        "Día/natural",
+        "Mujer"
+      ]
+    },
+    "15": {
+      "name": "Maquillaje natural con énfasis en ojos",
+      "description": "Maquillaje cuya piel se mantiene en estilo natural pero los ojos reciben mayor protagonismo con sombras suaves, pestañas postizas individuales y delineado discreto. Es la combinación favorita de quienes quieren resaltar la mirada sin recargar el resto del rostro.",
+      "tags": [
+        "Maquillaje",
+        "Día/natural",
+        "Mujer"
+      ]
+    },
+    "16": {
+      "name": "Maquillaje coreano piel jugosa",
+      "description": "Inspirado en la estética K-beauty, busca una piel ultrahidratada, jugosa y luminosa, con cejas rectas naturales, labios degradados (tinted lips) y rubor en la zona alta de las mejillas. Es muy popular entre adolescentes y jóvenes adultas por su aire fresco y juvenil.",
+      "tags": [
+        "Maquillaje",
+        "Día/natural",
+        "Mujer"
+      ]
+    },
+    "17": {
+      "name": "Smokey eye clásico negro",
+      "description": "Maquillaje icónico de noche con sombras negras y grises difuminadas alrededor del ojo, creando un efecto ahumado e intenso. Es el favorito para salidas nocturnas, conciertos y citas, y se acompaña de una piel impecable y labios neutros para no competir con la mirada.",
+      "tags": [
+        "Maquillaje",
+        "Noche",
+        "Mujer"
+      ]
+    },
+    "18": {
+      "name": "Smokey eye dorado / cobre",
+      "description": "Variación más cálida del smokey clásico que utiliza tonos dorados, cobrizos y bronce para iluminar la mirada. Favorece especialmente a ojos verdes, miel y marrones, y aporta un acabado glam ideal para cenas, eventos formales y salidas elegantes.",
+      "tags": [
+        "Maquillaje",
+        "Noche",
+        "Mujer"
+      ]
+    },
+    "19": {
+      "name": "Maquillaje de noche con labios rojos",
+      "description": "Maquillaje atemporal que combina ojos sobrios bien delineados con labios en rojo intenso mate o satinado. Es la fórmula clásica de elegancia hollywoodense, perfecta para galas, cenas, teatro y eventos donde el labio se convierte en el protagonista absoluto del look.",
+      "tags": [
+        "Maquillaje",
+        "Noche",
+        "Mujer"
+      ]
+    },
+    "20": {
+      "name": "Cat eye delineado dramático",
+      "description": "Maquillaje centrado en un delineado negro alargado tipo 'ojo de gato' con final puntiagudo, inspirado en las divas de los años 60. Es estilizado, sofisticado y se complementa con pestañas postizas y labios en tonos neutros o vino para un efecto retro-moderno.",
+      "tags": [
+        "Maquillaje",
+        "Noche",
+        "Mujer"
+      ]
+    },
+    "21": {
+      "name": "Maquillaje glam de noche",
+      "description": "Maquillaje completo de alto impacto con base de cobertura completa, contouring marcado, iluminador intenso, ojos ahumados con glitter y labios definidos. Está pensado para resistir toda la noche en celebraciones de gala, premiaciones y fiestas donde el glamour es protagonista.",
+      "tags": [
+        "Maquillaje",
+        "Noche",
+        "Mujer"
+      ]
+    },
+    "22": {
+      "name": "Maquillaje de novia clásico",
+      "description": "Look nupcial atemporal con piel luminosa, ojos en tonos neutros y un labio rosado o nude que no compita con el vestido. Es resistente al llanto, sudor y horas de ceremonia, y queda perfecto en fotografías profesionales gracias a su balance entre cobertura y naturalidad.",
+      "tags": [
+        "Maquillaje",
+        "Novia",
+        "Mujer"
+      ]
+    },
+    "23": {
+      "name": "Maquillaje de novia romántico / boho",
+      "description": "Propuesta nupcial con piel fresca y dewy, sombras en tonos tierra y rosados, rubor difuminado y labios en tonos durazno o coral suave. Es ideal para bodas al aire libre, campestres o de estilo bohemio, donde la novia busca un aire natural y soñador.",
+      "tags": [
+        "Maquillaje",
+        "Novia",
+        "Mujer"
+      ]
+    },
+    "24": {
+      "name": "Maquillaje de novia glam Hollywood",
+      "description": "Look nupcial inspirado en las divas del cine clásico: piel pulida, contouring marcado, ondas en el cabello, ojos ahumados elegantes y labios rojos o vino. Es perfecto para bodas formales, ceremonias en hoteles de lujo y novias que buscan un impacto cinematográfico.",
+      "tags": [
+        "Maquillaje",
+        "Novia",
+        "Mujer"
+      ]
+    },
+    "25": {
+      "name": "Maquillaje de novia natural",
+      "description": "Versión minimalista del maquillaje nupcial que respeta al máximo los rasgos naturales de la novia, con base ligera, cejas peinadas, pestañas naturales reforzadas y labios bálsamo. Es ideal para bodas íntimas, civiles y novias que prefieren no transformar su apariencia.",
+      "tags": [
+        "Maquillaje",
+        "Novia",
+        "Mujer"
+      ]
+    },
+    "26": {
+      "name": "Maquillaje de novia con airbrush",
+      "description": "Aplicación profesional de base mediante aerógrafo, que distribuye el producto en una capa uniforme, ligera y de larga duración. Resiste el calor, la humedad y las largas jornadas de boda, y deja la piel con un acabado impecable que se ve perfecto en fotos y video.",
+      "tags": [
+        "Maquillaje",
+        "Novia",
+        "Mujer"
+      ]
+    },
+    "27": {
+      "name": "Maquillaje con glitter en ojos",
+      "description": "Maquillaje festivo en el que los párpados llevan glitter brillante, ya sea en gel, suelto o prensado, sobre una sombra base. Es ideal para fiestas de fin de año, conciertos, festivales y celebraciones temáticas donde el brillo es bienvenido y protagonista.",
+      "tags": [
+        "Maquillaje",
+        "Fiesta",
+        "Mujer"
+      ]
+    },
+    "28": {
+      "name": "Maquillaje colorido con sombras vibrantes",
+      "description": "Propuesta lúdica que utiliza una paleta colorida —fucsias, azules, verdes, naranjas— en los párpados, jugando con bloques de color y delineados gráficos. Es la favorita de jóvenes creativas, asistentes a festivales y para producciones de contenido en redes sociales.",
+      "tags": [
+        "Maquillaje",
+        "Fiesta",
+        "Mujer"
+      ]
+    },
+    "29": {
+      "name": "Maquillaje cut crease",
+      "description": "Técnica que define con precisión el pliegue del párpado utilizando un color contrastante, creando un efecto visual de mayor profundidad y dramatismo. Es muy técnica, requiere paciencia y resulta muy fotogénica, especialmente popular en bodas, fiestas y sesiones de retrato glam.",
+      "tags": [
+        "Maquillaje",
+        "Fiesta",
+        "Mujer"
+      ]
+    },
+    "30": {
+      "name": "Maquillaje festivo de fin de año",
+      "description": "Look pensado para celebraciones de Navidad, Año Nuevo y fiestas decembrinas, con tonos dorados, plateados o burdeos, abundante iluminador y un labio brillante. Es resistente para durar la cena familiar, las fotos y la fiesta de medianoche.",
+      "tags": [
+        "Maquillaje",
+        "Fiesta",
+        "Mujer"
+      ]
+    },
+    "31": {
+      "name": "Maquillaje de carnaval / festival",
+      "description": "Propuesta artística para festivales de música, carnavales y fiestas temáticas, con uso de glitter facial, gemas adhesivas, líneas de color en pómulos y delineados creativos. Es lúdica, libre y se ajusta totalmente al concepto de la fiesta o el outfit elegido.",
+      "tags": [
+        "Maquillaje",
+        "Fiesta",
+        "Mujer"
+      ]
+    },
+    "32": {
+      "name": "Maquillaje para sesión de fotos profesional",
+      "description": "Maquillaje preparado específicamente para resistir las luces de estudio y verse impecable a través del lente de cámaras profesionales. Tiene un nivel de cobertura mayor de lo habitual, contouring marcado y productos antibrillo de alta gama para evitar reflejos no deseados.",
+      "tags": [
+        "Maquillaje",
+        "Social/Fotográfico",
+        "Mujer"
+      ]
+    },
+    "33": {
+      "name": "Maquillaje para graduación",
+      "description": "Look pensado para ceremonias académicas, donde la egresada quiere verse radiante para fotos familiares, redes sociales y la entrega de diploma. Combina piel luminosa, ojos resaltados y labios en tonos rosa, durazno o vino discreto, según el código de la institución.",
+      "tags": [
+        "Maquillaje",
+        "Social/Fotográfico",
+        "Mujer"
+      ]
+    },
+    "34": {
+      "name": "Maquillaje para baby shower o matrimonio civil",
+      "description": "Maquillaje sutil pero fotográfico, ideal para celebraciones íntimas y de día. Tiene una cobertura media-natural, ojos suaves en tonos tierra y un labio rosado o nude. Está pensado para verse perfecto en cientos de fotos sin lucir demasiado producido.",
+      "tags": [
+        "Maquillaje",
+        "Social/Fotográfico",
+        "Mujer"
+      ]
+    },
+    "35": {
+      "name": "Maquillaje para invitada de boda",
+      "description": "Maquillaje elegante pensado para asistentes que quieren lucir radiantes sin opacar a la novia. Tiene un nivel intermedio entre el day y el glam, con ojos definidos, piel impecable y un labio personalizable según el outfit y la hora del evento.",
+      "tags": [
+        "Maquillaje",
+        "Social/Fotográfico",
+        "Mujer"
+      ]
+    },
+    "36": {
+      "name": "Maquillaje para sesión de embarazo",
+      "description": "Look fotográfico pensado para sesiones de maternidad: piel luminosa, dewy y muy fresca, con tonos rosados suaves en ojos y mejillas que aporten ternura y feminidad. Está diseñado para destacar el brillo natural de la futura mamá sin recargar el rostro.",
+      "tags": [
+        "Maquillaje",
+        "Social/Fotográfico",
+        "Mujer"
+      ]
+    },
+    "37": {
+      "name": "Maquillaje de quinceañera tradicional",
+      "description": "Maquillaje clásico para los quince años con piel luminosa, sombras en rosados o durazno, pestañas postizas naturales y labios en tono rosa suave. Realza la juventud sin envejecer el rostro, y queda perfecto con el vestido tradicional y la sesión fotográfica del evento.",
+      "tags": [
+        "Maquillaje",
+        "Quinceañera",
+        "Niña"
+      ]
+    },
+    "38": {
+      "name": "Maquillaje de quinceañera moderno con glitter",
+      "description": "Versión contemporánea del maquillaje de quince con glitter en el centro del párpado, contouring suave y labios glossy. Es ideal para quinceañeras que prefieren una estética actual, fotogénica para redes sociales y con un toque festivo.",
+      "tags": [
+        "Maquillaje",
+        "Quinceañera",
+        "Niña"
+      ]
+    },
+    "39": {
+      "name": "Maquillaje de quinceañera natural",
+      "description": "Propuesta minimalista para quinceañeras y sus madres que prefieren un look fresco y juvenil, sin pestañas postizas ni cobertura completa. Resalta la belleza natural de la adolescente con una piel luminosa, ojos suaves y labios rosados, ideal para celebraciones íntimas.",
+      "tags": [
+        "Maquillaje",
+        "Quinceañera",
+        "Niña"
+      ]
+    },
+    "40": {
+      "name": "Maquillaje de quinceañera princesa",
+      "description": "Look temático inspirado en princesas de cuento: piel iluminada, sombras en tonos pastel o nacarados, gemas decorativas en el rabillo del ojo y labios brillantes. Es perfecto para quinceañeras con vestidos de gala, vals coreografiado y entrada teatralizada.",
+      "tags": [
+        "Maquillaje",
+        "Quinceañera",
+        "Niña"
+      ]
+    }
+  },
+  "cejas_pestanas": {
+    "1": {
+      "name": "Diseño de cejas con visagismo",
+      "description": "Servicio personalizado que utiliza técnicas de medición facial para definir la forma ideal de ceja según la geometría del rostro de cada cliente. Incluye marcaje con compás, depilación de los pelos sobrantes y peinado final con gel fijador, dejando una ceja totalmente armónica con los rasgos.",
+      "tags": [
+        "Diseño cejas",
+        "Personalizado",
+        "Mujer"
+      ]
+    },
+    "2": {
+      "name": "Diseño natural / esponjado",
+      "description": "Diseño de ceja que respeta la forma natural del arco y solo retira los pelos visiblemente fuera de línea, dejando el efecto esponjado y voluminoso que está de moda. Es ideal para clientas que prefieren una imagen fresca y juvenil sin perder la naturalidad de la ceja.",
+      "tags": [
+        "Diseño cejas",
+        "Natural",
+        "Mujer"
+      ]
+    },
+    "3": {
+      "name": "Brow lamination",
+      "description": "Tratamiento que alisa y reorganiza los pelos de la ceja en una dirección uniforme hacia arriba, mediante una solución reestructurante. El resultado es una ceja peinada, voluminosa y con efecto laminado tipo soap brows, que dura entre cuatro y seis semanas.",
+      "tags": [
+        "Diseño cejas",
+        "Tratamiento",
+        "Mujer"
+      ]
+    },
+    "4": {
+      "name": "Microshading / soft powder brows",
+      "description": "Técnica semipermanente de pigmentación que crea un efecto de ceja maquillada con sombra suave y degradado natural. Dura entre uno y dos años y es ideal para quienes desean despertarse con la ceja siempre lista, sin recurrir a tatuajes con líneas pelo a pelo más agresivas.",
+      "tags": [
+        "Diseño cejas",
+        "Semipermanente",
+        "Mujer"
+      ]
+    },
+    "5": {
+      "name": "Diseño express de cejas",
+      "description": "Servicio rápido que limpia los excesos de la ceja con pinza o cera y aplica un peinado fijador, sin marcaje detallado ni tinte. Es perfecto para mantenimiento entre diseños completos o para retoques de último momento antes de un evento.",
+      "tags": [
+        "Diseño cejas",
+        "Express",
+        "Mujer"
+      ]
+    },
+    "6": {
+      "name": "Tinte de cejas castaño",
+      "description": "Aplicación de tinte profesional en tono castaño que cubre los pelos rubios o decolorados, intensifica el color natural y rellena visualmente los espacios vacíos. Dura entre dos y cuatro semanas y aporta un acabado mucho más definido sin necesidad de maquillar la ceja a diario.",
+      "tags": [
+        "Tinte cejas",
+        "Color natural",
+        "Mujer"
+      ]
+    },
+    "7": {
+      "name": "Tinte de cejas negro",
+      "description": "Tinte de alta intensidad que define profundamente la ceja, ideal para clientas con cabello oscuro y rasgos marcados. Es perfecto para sesiones fotográficas, eventos formales y como complemento del maquillaje de noche o de novia que requiere mayor presencia en la mirada.",
+      "tags": [
+        "Tinte cejas",
+        "Color natural",
+        "Mujer"
+      ]
+    },
+    "8": {
+      "name": "Tinte de cejas rubio o claro",
+      "description": "Tinte aplicado en tonos cenizos, rubios o avellana, pensado para clientas con cabello claro o que han aclarado su tono natural. Logra un acabado armónico con el cabello sin generar el contraste excesivo que produciría un castaño o negro tradicional.",
+      "tags": [
+        "Tinte cejas",
+        "Color natural",
+        "Mujer"
+      ]
+    },
+    "9": {
+      "name": "Tinte de cejas cobertura de canas",
+      "description": "Tinte especial formulado para cubrir canas blancas en cejas, frecuentes a partir de cierta edad o por estrés. Tiene mayor concentración de pigmento y mejor adherencia a las canas resistentes, dejando una ceja completamente uniforme y rejuvenecida.",
+      "tags": [
+        "Tinte cejas",
+        "Cobertura canas",
+        "Unisex"
+      ]
+    },
+    "10": {
+      "name": "Henna brows clásica",
+      "description": "Técnica de tinción semipermanente con henna que pigmenta tanto los pelos como la piel debajo de la ceja, creando un efecto de mayor densidad y relleno. Dura entre dos y siete días en piel y hasta seis semanas en pelo. Es ideal para cejas con espacios vacíos o muy claras.",
+      "tags": [
+        "Henna brows",
+        "Semipermanente",
+        "Mujer"
+      ]
+    },
+    "11": {
+      "name": "Henna brows con diseño combinado",
+      "description": "Servicio que combina diseño completo de cejas con visagismo, depilación con cera o hilo y aplicación de henna. Es la opción más completa para clientas que desean transformar totalmente su mirada en una sola sesión y mantener el resultado por varias semanas.",
+      "tags": [
+        "Henna brows",
+        "Personalizado",
+        "Mujer"
+      ]
+    },
+    "12": {
+      "name": "Henna brows para pieles oscuras",
+      "description": "Aplicación de henna formulada con tonos más profundos y técnicas adaptadas para pieles morenas y oscuras, en las que los tintes claros no contrastan adecuadamente. El resultado es una ceja perfectamente visible, definida y armónica con el subtono natural de la piel.",
+      "tags": [
+        "Henna brows",
+        "Especializado",
+        "Mujer"
+      ]
+    },
+    "13": {
+      "name": "Perfilado con cera",
+      "description": "Técnica de depilación que utiliza cera tibia o fría para retirar los pelos sobrantes de la ceja en una sola pasada, dejando un acabado limpio y duradero. Es rápido, eficaz y permite definir líneas precisas, aunque puede ser ligeramente irritante para pieles sensibles.",
+      "tags": [
+        "Perfilado",
+        "Cera",
+        "Mujer"
+      ]
+    },
+    "14": {
+      "name": "Perfilado con hilo (threading)",
+      "description": "Técnica milenaria originaria de India y Medio Oriente que utiliza un hilo de algodón retorcido para arrancar los pelos uno a uno con extrema precisión. Es ideal para pieles sensibles, alérgicas a la cera o con tendencia al enrojecimiento, y permite diseñar líneas muy finas.",
+      "tags": [
+        "Perfilado",
+        "Hilo",
+        "Mujer"
+      ]
+    },
+    "15": {
+      "name": "Perfilado con pinza",
+      "description": "Depilación pelo por pelo realizada exclusivamente con pinza profesional, garantizando un control total sobre cada pelo retirado. Es la técnica más recomendada para mantenimientos periódicos entre diseños y para clientas que prefieren evitar la cera o el hilo.",
+      "tags": [
+        "Perfilado",
+        "Pinza",
+        "Mujer"
+      ]
+    },
+    "16": {
+      "name": "Perfilado masculino",
+      "description": "Limpieza discreta de cejas en hombres, retirando únicamente los pelos del entrecejo y los que crecen claramente fuera de la línea natural, sin alterar la forma ni el grosor original. Es un servicio cada vez más demandado por hombres que cuidan su imagen sin querer un acabado obviamente diseñado.",
+      "tags": [
+        "Perfilado",
+        "Natural",
+        "Unisex"
+      ]
+    },
+    "17": {
+      "name": "Lifting de pestañas clásico",
+      "description": "Tratamiento que riza las pestañas naturales desde la raíz hacia arriba mediante una solución permeabilizadora aplicada sobre un molde de silicona. El efecto dura entre seis y ocho semanas, abre la mirada y elimina la necesidad de usar rizador a diario.",
+      "tags": [
+        "Lifting pestañas",
+        "Clásico",
+        "Mujer"
+      ]
+    },
+    "18": {
+      "name": "Lash lift con tinte",
+      "description": "Combina el lifting tradicional con la aplicación de tinte negro o castaño, intensificando el color de las pestañas y dando un efecto similar al de una capa de máscara permanente. Es ideal para vacaciones, lunas de miel y rutinas en las que se quiere prescindir del maquillaje.",
+      "tags": [
+        "Lifting pestañas",
+        "Combinado",
+        "Mujer"
+      ]
+    },
+    "19": {
+      "name": "Lash lift con keratina",
+      "description": "Versión avanzada del lifting que incorpora keratina hidrolizada en el proceso para nutrir y reparar la pestaña mientras se riza. Es ideal para pestañas debilitadas, finas o dañadas por el uso prolongado de extensiones, y deja un acabado suave y saludable.",
+      "tags": [
+        "Lifting pestañas",
+        "Tratamiento",
+        "Mujer"
+      ]
+    },
+    "20": {
+      "name": "Lash lift efecto natural",
+      "description": "Lifting realizado con moldes pequeños que generan una curvatura más sutil, evitando el efecto demasiado curvado o teatral. Es ideal para clientas que prefieren un resultado discreto, profesional y compatible con entornos corporativos o conservadores.",
+      "tags": [
+        "Lifting pestañas",
+        "Natural",
+        "Mujer"
+      ]
+    },
+    "21": {
+      "name": "Extensiones pelo a pelo (clásicas)",
+      "description": "Aplicación de una extensión sintética por cada pestaña natural, alargando y densificando la mirada de forma sutil. Es la técnica más conservadora, ideal para clientas primerizas o que prefieren un resultado natural sin volúmenes pronunciados.",
+      "tags": [
+        "Extensiones",
+        "Clásico",
+        "Mujer"
+      ]
+    },
+    "22": {
+      "name": "Extensiones volumen ruso",
+      "description": "Técnica avanzada que aplica abanicos hechos a mano de varias extensiones ultrafinas sobre cada pestaña natural, creando un efecto de gran volumen y densidad. Es ideal para clientas que buscan una mirada impactante y muy fotogénica para eventos o redes sociales.",
+      "tags": [
+        "Extensiones",
+        "Volumen",
+        "Mujer"
+      ]
+    },
+    "23": {
+      "name": "Extensiones híbridas",
+      "description": "Combinación de extensiones clásicas pelo a pelo con abanicos de volumen ruso, logrando un efecto a medio camino entre lo natural y lo dramático. Es la técnica más versátil y se adapta a casi cualquier preferencia y forma de ojo.",
+      "tags": [
+        "Extensiones",
+        "Híbrido",
+        "Mujer"
+      ]
+    },
+    "24": {
+      "name": "Extensiones efecto rímel",
+      "description": "Aplicación que busca imitar el efecto de varias capas de máscara de pestañas: oscuras, definidas y con cierta densidad pero sin la espectacularidad del volumen ruso. Es la opción favorita de clientas que quieren olvidarse del maquillaje diario sin un cambio extremo.",
+      "tags": [
+        "Extensiones",
+        "Natural",
+        "Mujer"
+      ]
+    },
+    "25": {
+      "name": "Extensiones mega volumen 5D",
+      "description": "Técnica de máximo impacto que coloca abanicos de cinco o más extensiones ultrafinas por cada pestaña natural. El resultado es una mirada extremadamente densa y dramática, ideal para sesiones de fotos, producciones audiovisuales y eventos donde se busca máxima presencia en los ojos.",
+      "tags": [
+        "Extensiones",
+        "Volumen",
+        "Mujer"
+      ]
+    },
+    "26": {
+      "name": "Retoque o relleno de extensiones",
+      "description": "Servicio de mantenimiento en el que se reponen las extensiones que se han caído junto con la pestaña natural en su ciclo de crecimiento, sin necesidad de un servicio completo. Se recomienda cada dos o tres semanas para conservar el efecto inicial intacto.",
+      "tags": [
+        "Extensiones",
+        "Mantenimiento",
+        "Mujer"
+      ]
+    },
+    "27": {
+      "name": "Tinte de pestañas negro",
+      "description": "Aplicación de tinte oscuro sobre las pestañas naturales para intensificar su color, simulando el efecto de máscara de pestañas permanente. Dura entre cuatro y seis semanas y es ideal para clientas con pestañas claras que se sienten desnudas sin maquillaje.",
+      "tags": [
+        "Tinte pestañas",
+        "Color natural",
+        "Mujer"
+      ]
+    },
+    "28": {
+      "name": "Tinte de pestañas marrón",
+      "description": "Tinte en tono castaño o marrón, ideal para clientas rubias, pelirrojas o con pieles muy claras a las que el negro les genera demasiado contraste. Aporta definición a la pestaña sin endurecer la mirada, ideal para looks cotidianos y naturales.",
+      "tags": [
+        "Tinte pestañas",
+        "Color natural",
+        "Mujer"
+      ]
+    },
+    "29": {
+      "name": "BB lashes (tinte + tratamiento)",
+      "description": "Servicio que combina tinte de pestañas con un tratamiento nutritivo y reparador a base de keratina, vitaminas y aminoácidos. No solo aporta color sino que fortalece la pestaña natural, ideal para clientas que han retirado extensiones y quieren recuperar la salud de su pestaña.",
+      "tags": [
+        "Tinte pestañas",
+        "Tratamiento",
+        "Mujer"
+      ]
+    },
+    "30": {
+      "name": "Tinte combinado con lifting",
+      "description": "Servicio combinado que aplica primero el lifting para rizar la pestaña desde la raíz y posteriormente el tinte para intensificar su color. Es la combinación más vendida porque potencia ambos efectos: pestañas más largas, curvadas y oscuras en una sola sesión.",
+      "tags": [
+        "Tinte pestañas",
+        "Combinado",
+        "Mujer"
+      ]
+    }
+  },
+  "tinturas": {
+    "1": {
+      "name": "Coloración completa castaño natural",
+      "description": "Aplicación de tinte profesional en toda la cabellera para conseguir un castaño uniforme y luminoso. Es el color más solicitado por su versatilidad: favorece prácticamente a cualquier tipo de piel y sirve como base sobre la que se pueden realizar futuros trabajos de mechas o balayage.",
+      "tags": [
+        "Coloración completa",
+        "Color natural",
+        "Mujer"
+      ]
+    },
+    "2": {
+      "name": "Coloración completa negro azabache",
+      "description": "Tintura intensa que cubre el cabello completo con un negro profundo y brillante, ideal para clientas con rasgos marcados o que buscan un look elegante y dramático. Se recomienda valorar bien el tono natural de la piel antes de aplicarlo, pues es uno de los colores más difíciles de retirar.",
+      "tags": [
+        "Coloración completa",
+        "Color natural",
+        "Mujer"
+      ]
+    },
+    "3": {
+      "name": "Coloración completa rubio dorado",
+      "description": "Coloración integral en tonos rubios cálidos con reflejos dorados que aportan luminosidad y un aspecto solar al cabello. Generalmente requiere una decoloración previa si se parte de una base oscura, y se complementa con tratamiento hidratante para preservar la salud del cabello.",
+      "tags": [
+        "Coloración completa",
+        "Color natural",
+        "Mujer"
+      ]
+    },
+    "4": {
+      "name": "Coloración completa rojo cobrizo",
+      "description": "Coloración vibrante en tonos rojos cobrizos o caoba que aporta carácter y personalidad a la imagen. Es uno de los colores más demandados en otoño e invierno por su calidez visual, y favorece especialmente a pieles claras y a clientas con ojos verdes o miel.",
+      "tags": [
+        "Coloración completa",
+        "Color natural",
+        "Mujer"
+      ]
+    },
+    "5": {
+      "name": "Cobertura completa de canas",
+      "description": "Coloración integral formulada con mayor concentración de pigmento y tiempo de pose ajustado para cubrir el cien por ciento de las canas, incluso las más resistentes. Es el servicio más vendido en clientes adultos y se realiza periódicamente cada cuatro a seis semanas.",
+      "tags": [
+        "Coloración completa",
+        "Cobertura canas",
+        "Unisex"
+      ]
+    },
+    "6": {
+      "name": "Coloración completa chocolate caliente",
+      "description": "Color de tendencia que combina la base castaña con reflejos cálidos en tonos cacao, caramelo y avellana. Aporta dimensión y movimiento al cabello sin necesidad de mechas tradicionales, y es uno de los favoritos para temporadas frías por su aire goloso y reconfortante.",
+      "tags": [
+        "Coloración completa",
+        "Tendencia",
+        "Mujer"
+      ]
+    },
+    "7": {
+      "name": "Balayage clásico",
+      "description": "Técnica de coloración a mano alzada en la que se pintan mechones seleccionados de forma irregular para imitar el aclarado natural del sol. Genera un efecto degradado muy natural, exige menos mantenimiento que las mechas tradicionales y permite espaciar los retoques varios meses.",
+      "tags": [
+        "Mechas/Balayage",
+        "Balayage",
+        "Mujer"
+      ]
+    },
+    "8": {
+      "name": "Mechas californianas",
+      "description": "Mechas que arrancan a media altura del cabello y se intensifican hacia las puntas, simulando el aclarado producido por el sol y el agua de mar. Son ideales para verano, dan un efecto natural y soleado y combinan especialmente bien con bases castañas claras y rubias oscuras.",
+      "tags": [
+        "Mechas/Balayage",
+        "Mechas",
+        "Mujer"
+      ]
+    },
+    "9": {
+      "name": "Babylights",
+      "description": "Mechas ultra finas y muy próximas a la raíz que imitan los aclarados naturales del cabello infantil. Aportan luminosidad uniforme y un acabado delicado, sin contrastes pronunciados. Es la técnica favorita para iluminar el rostro y dar vida a cabelleras opacas.",
+      "tags": [
+        "Mechas/Balayage",
+        "Mechas",
+        "Mujer"
+      ]
+    },
+    "10": {
+      "name": "Highlights con foil",
+      "description": "Mechas tradicionales realizadas con papel aluminio que permiten levantar varios niveles de tono con precisión y uniformidad. Son ideales para clientas que buscan un cambio notorio y mucho contraste entre la base y las mechas, con un acabado más estructurado que el balayage.",
+      "tags": [
+        "Mechas/Balayage",
+        "Mechas",
+        "Mujer"
+      ]
+    },
+    "11": {
+      "name": "Face framing / contouring",
+      "description": "Técnica que aclara únicamente los mechones que enmarcan el rostro, generando un efecto luminoso similar al de un iluminador facial. Es ideal como complemento de un balayage o para clientas que buscan un cambio sutil pero impactante sin alterar el resto del cabello.",
+      "tags": [
+        "Mechas/Balayage",
+        "Iluminación",
+        "Mujer"
+      ]
+    },
+    "12": {
+      "name": "Foilyage",
+      "description": "Híbrido entre el balayage tradicional y los highlights con foil: las mechas se pintan a mano alzada al estilo balayage y luego se envuelven en papel aluminio para conseguir un aclarado más intenso. Es ideal para clientas con cabello oscuro que desean balayage con mayor luminosidad.",
+      "tags": [
+        "Mechas/Balayage",
+        "Híbrido",
+        "Mujer"
+      ]
+    },
+    "13": {
+      "name": "Retoque de raíz tradicional",
+      "description": "Aplicación de tinte únicamente en la zona de la raíz para igualar el color con el resto del cabello previamente teñido. Se realiza cada cuatro a seis semanas según la velocidad de crecimiento, y mantiene la coloración integral siempre uniforme y prolija.",
+      "tags": [
+        "Retoque raíz",
+        "Color natural",
+        "Mujer"
+      ]
+    },
+    "14": {
+      "name": "Retoque de raíz cobertura de canas",
+      "description": "Servicio enfocado en cubrir las canas que aparecen en la zona de la raíz entre coloraciones completas. Utiliza tinte de máxima concentración con tiempo de pose calibrado y es uno de los servicios más recurrentes tanto en clientas como en clientes con cabello cano.",
+      "tags": [
+        "Retoque raíz",
+        "Cobertura canas",
+        "Unisex"
+      ]
+    },
+    "15": {
+      "name": "Root smudge / shadow root",
+      "description": "Técnica que difumina suavemente el límite entre la raíz natural y las mechas o coloración previa, generando una transición orgánica que prolonga la vida útil del color. Es ideal entre balayages y reduce notoriamente la frecuencia de retoques.",
+      "tags": [
+        "Retoque raíz",
+        "Tendencia",
+        "Mujer"
+      ]
+    },
+    "16": {
+      "name": "Retoque express de raíz",
+      "description": "Servicio rápido de retoque de raíz pensado para emergencias antes de un evento o reunión importante. Reduce los pasos del retoque tradicional sin sacrificar la cobertura, y permite salir del salón en menos de una hora con el color uniforme.",
+      "tags": [
+        "Retoque raíz",
+        "Express",
+        "Unisex"
+      ]
+    },
+    "17": {
+      "name": "Color fantasía rosa pastel",
+      "description": "Coloración en tonos rosados pasteles aplicada sobre cabello previamente decolorado a una base muy clara. Es uno de los colores fantasía más solicitados por su feminidad y aire soñador, y suele combinarse con baños de color para refrescar el tono cada pocas semanas.",
+      "tags": [
+        "Color fantasía",
+        "Pastel",
+        "Mujer"
+      ]
+    },
+    "18": {
+      "name": "Color fantasía azul galaxia",
+      "description": "Coloración intensa en tonos azules profundos con destellos índigo y violeta, evocando el aspecto de la vía láctea. Requiere decoloración previa fuerte y es uno de los colores con mayor impacto visual, ideal para clientas con personalidad atrevida y artística.",
+      "tags": [
+        "Color fantasía",
+        "Vibrante",
+        "Mujer"
+      ]
+    },
+    "19": {
+      "name": "Color fantasía lila / lavanda",
+      "description": "Tonalidad fría y romántica en tonos lila y lavanda que aporta un aire mágico y editorial al cabello. Es uno de los colores fantasía más fotogénicos y favorece especialmente a clientas con piel clara y rasgos delicados.",
+      "tags": [
+        "Color fantasía",
+        "Pastel",
+        "Mujer"
+      ]
+    },
+    "20": {
+      "name": "Color fantasía multicolor / arcoíris",
+      "description": "Coloración artística que combina varios tonos fantasía en mechas o secciones distintas: rosa, azul, verde, violeta y amarillo. Es altamente personalizable y representa un fuerte gesto de identidad personal, muy popular en festivales y comunidades creativas.",
+      "tags": [
+        "Color fantasía",
+        "Artístico",
+        "Mujer"
+      ]
+    },
+    "21": {
+      "name": "Mechas peekaboo de color",
+      "description": "Mechas de color fantasía ocultas debajo de las capas superiores del cabello, que solo se revelan al recogerlo o moverlo. Es perfecto para clientas que quieren explorar el color sin comprometer la apariencia profesional o conservadora del look principal.",
+      "tags": [
+        "Color fantasía",
+        "Discreto",
+        "Mujer"
+      ]
+    },
+    "22": {
+      "name": "Decoloración global",
+      "description": "Aclarado integral del cabello mediante polvo decolorante con el objetivo de levantar varios niveles de tono. Es el paso previo necesario para coloraciones rubias muy claras o color fantasía, y debe realizarse con técnica precisa para preservar la fibra capilar.",
+      "tags": [
+        "Decoloración",
+        "Integral",
+        "Mujer"
+      ]
+    },
+    "23": {
+      "name": "Decoloración a platino",
+      "description": "Decoloración intensiva que lleva el cabello al nivel más alto de aclarado posible, dejando una base ultra clara para conseguir el codiciado rubio platino. Es uno de los servicios más exigentes técnicamente y requiere cabello en buenas condiciones para obtener un resultado sano.",
+      "tags": [
+        "Decoloración",
+        "Avanzado",
+        "Mujer"
+      ]
+    },
+    "24": {
+      "name": "Decoloración con plex protector",
+      "description": "Decoloración que incorpora aditivos protectores de tipo bond builder (Olaplex, K18 o similares) durante el proceso para reconstruir los enlaces internos del cabello. Reduce notoriamente el daño y permite aclarados más seguros incluso en cabelleras delicadas.",
+      "tags": [
+        "Decoloración",
+        "Tratamiento",
+        "Mujer"
+      ]
+    },
+    "25": {
+      "name": "Pre-decoloración para color fantasía",
+      "description": "Servicio diseñado específicamente como base para una coloración fantasía posterior. Se aclara el cabello hasta el nivel necesario para que el pigmento fantasía resulte visible y vibrante, asegurando que el tono final coincida con el deseado.",
+      "tags": [
+        "Decoloración",
+        "Especializado",
+        "Mujer"
+      ]
+    },
+    "26": {
+      "name": "Matiz violeta anti-amarillos",
+      "description": "Aplicación de matiz violeta sobre cabello rubio o decolorado para neutralizar los tonos amarillos no deseados y devolver al cabello un acabado frío y limpio. Es un mantenimiento esencial entre decoloraciones y se recomienda cada tres a cuatro semanas.",
+      "tags": [
+        "Matiz/Gloss",
+        "Neutralizador",
+        "Mujer"
+      ]
+    },
+    "27": {
+      "name": "Matiz cenizo",
+      "description": "Matiz que aporta tonos cenizos y grisáceos al cabello previamente aclarado, generando un acabado frío y moderno muy demandado en tendencias actuales. Es ideal para clientas con piel neutra o fría y para combinaciones con balayage frío.",
+      "tags": [
+        "Matiz/Gloss",
+        "Frío",
+        "Mujer"
+      ]
+    },
+    "28": {
+      "name": "Gloss brillo translúcido",
+      "description": "Tratamiento de coloración semipermanente sin pigmento intenso que aporta brillo extremo y suaviza el cabello como una capa de barniz capilar. Refresca el color existente, sella la cutícula y deja un acabado vidrioso muy fotogénico que dura entre tres y cinco semanas.",
+      "tags": [
+        "Matiz/Gloss",
+        "Brillo",
+        "Mujer"
+      ]
+    },
+    "29": {
+      "name": "Toner cobre / cálido",
+      "description": "Matiz en tonos cobrizos o cálidos que potencia los reflejos rojos y caramelo del cabello, especialmente en bases castañas o rubias oscuras. Aporta dimensión y un aire luminoso, ideal para temporadas frías o para refrescar coloraciones cálidas existentes.",
+      "tags": [
+        "Matiz/Gloss",
+        "Cálido",
+        "Mujer"
+      ]
+    },
+    "30": {
+      "name": "Color refresh",
+      "description": "Servicio rápido para refrescar la intensidad y vibración del color existente sin realizar una coloración completa. Es ideal entre retoques de raíz, antes de eventos importantes o cuando el color se ha apagado por exposición al sol, lavados frecuentes o piscina.",
+      "tags": [
+        "Matiz/Gloss",
+        "Mantenimiento",
+        "Mujer"
+      ]
+    }
+  }
+}
