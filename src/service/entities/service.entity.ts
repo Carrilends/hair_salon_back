@@ -44,7 +44,7 @@ export class Service {
   @Column('int', { nullable: false, default: 30 })
   duration: number;
 
-  @Column('text', { unique: true })
+  @Column('text', { default: '' })
   slug: string;
 
   @ManyToMany(() => Tag, (tag) => tag.services)
