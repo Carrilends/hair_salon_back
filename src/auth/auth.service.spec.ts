@@ -80,8 +80,50 @@ describe('AuthService', () => {
           token: 'jwt-token',
         }),
       );
-      expect(result.password).toBeDefined();
-      expect(result.password).not.toBe(dto.password);
+      // La contraseña se hashea antes de guardarla...
+      const created = (userRepository.create as jest.Mock).mock.calls[0][0];
+      expect(created.password).toEqual(expect.any(String));
+      expect(created.password).not.toBe(dto.password);
+      // ...pero nunca debe salir en la respuesta, ni siquiera hasheada.
+      expect(result).not.toHaveProperty('password');
+    });
+
+    it('no expone el hash de la contraseña en la respuesta del registro', async () => {
+      const dto = {
+        email: 'user@example.com',
+        fullName: 'Test User',
+        password: strongPassword,
+        dataPolicyAccepted: true,
+      };
+
+      (userRepository.create as jest.Mock).mockImplementation((u) => u);
+      (userRepository.save as jest.Mock).mockResolvedValue(undefined);
+
+      const result = await service.create(dto as any);
+
+      expect(result).not.toHaveProperty('password');
+      expect(JSON.stringify(result)).not.toContain('$2b$');
+    });
+
+    it('persiste la fecha de aceptación de la política y no el booleano de entrada', async () => {
+      const dto = {
+        email: 'user@example.com',
+        fullName: 'Test User',
+        password: strongPassword,
+        dataPolicyAccepted: true,
+      };
+
+      (userRepository.create as jest.Mock).mockImplementation((u) => u);
+      (userRepository.save as jest.Mock).mockResolvedValue(undefined);
+
+      await service.create(dto as any);
+
+      const created = (userRepository.create as jest.Mock).mock.calls[0][0];
+
+      // La evidencia auditable es la marca de tiempo (Ley 1581 de 2012).
+      expect(created.dataPolicyAcceptedAt).toBeInstanceOf(Date);
+      // El booleano del DTO no es una columna y no debe llegar a la entidad.
+      expect(created).not.toHaveProperty('dataPolicyAccepted');
     });
 
     it('throws BadRequest on duplicate email', async () => {
@@ -134,6 +176,9 @@ describe('AuthService', () => {
           token: 'jwt-token',
         }),
       );
+      // El hash se necesita para comparar, pero no debe salir en la respuesta.
+      expect(result).not.toHaveProperty('password');
+      expect(JSON.stringify(result)).not.toContain('$2b$');
     });
 
     it('throws Unauthorized when user not found', async () => {

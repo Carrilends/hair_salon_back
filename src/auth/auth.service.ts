@@ -34,17 +34,21 @@ export class AuthService {
 
   async create(createUserDto: CreateUserDto) {
     try {
+      // `dataPolicyAccepted` es un booleano de entrada, no una columna: lo que
+      // se persiste es la marca de tiempo de la aceptación, que es la evidencia
+      // auditable exigida por la Ley 1581 de 2012. Por eso se desestructura en
+      // lugar de hacer spread del DTO completo.
+      const { dataPolicyAccepted, password, ...userData } = createUserDto;
+
       const user = this.userRepository.create({
-        ...createUserDto,
-        password: bcrypt.hashSync(createUserDto.password, 10),
+        ...userData,
+        password: bcrypt.hashSync(password, 10),
         roles: ['user'],
+        dataPolicyAcceptedAt: dataPolicyAccepted ? new Date() : null,
       });
       await this.userRepository.save(user);
-      return {
-        ...user,
-        token: this.getJwtToken({ id: user.id }),
-      };
-      // TODO: Retornar el JWT
+      // No devolver la entidad completa: arrastra el hash de la contraseña.
+      return this.buildAuthResponse(user);
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.handleDBErrors(error);
@@ -56,7 +60,7 @@ export class AuthService {
       const { email, password } = loginUserDto;
       const user = await this.userRepository.findOne({
         where: { email },
-        select: ['email', 'password', 'id', 'fullName', 'roles'],
+        select: ['email', 'password', 'id', 'fullName', 'roles', 'isActive'],
       });
 
       if (!user) {
@@ -65,11 +69,8 @@ export class AuthService {
       if (!bcrypt.compareSync(password, user.password)) {
         throw new UnauthorizedException('Invalid credentials');
       }
-      // TODO: Retornar el JWT
-      return {
-        ...user,
-        token: this.getJwtToken({ id: user.id }), // puede que aqui este el error porque el token no firma los roles
-      };
+      // No devolver la entidad completa: arrastra el hash de la contraseña.
+      return this.buildAuthResponse(user);
     } catch (error) {
       if (error instanceof HttpException) throw error;
       this.handleDBErrors(error);

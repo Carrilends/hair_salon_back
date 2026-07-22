@@ -7,6 +7,7 @@ const buildDto = (overrides: Partial<CreateUserDto> = {}) =>
     email: 'jane.doe@example.com',
     password: 'Str0ngP@ssw0rd!',
     fullName: 'Jane Doe',
+    dataPolicyAccepted: true,
     ...overrides,
   });
 
@@ -43,5 +44,36 @@ describe('CreateUserDto (NF05 — validación de datos de entrada)', () => {
       buildDto({ fullName: 12345 as unknown as string }),
     );
     expect(constraintsFor(errors, 'fullName')).toHaveProperty('isString');
+  });
+
+  describe('consentimiento de datos personales (Ley 1581 de 2012)', () => {
+    it('Caso 6: rechaza el registro si el consentimiento es false', async () => {
+      const errors = await validate(buildDto({ dataPolicyAccepted: false }));
+
+      expect(constraintsFor(errors, 'dataPolicyAccepted')).toHaveProperty(
+        'equals',
+        'Debe aceptar la Política de Tratamiento de Datos Personales',
+      );
+    });
+
+    it('Caso 7: rechaza el registro si el consentimiento no viene', async () => {
+      const errors = await validate(
+        buildDto({ dataPolicyAccepted: undefined }),
+      );
+
+      expect(
+        Object.keys(constraintsFor(errors, 'dataPolicyAccepted')),
+      ).not.toHaveLength(0);
+    });
+
+    it('Caso 8: rechaza valores que no son booleanos', async () => {
+      const errors = await validate(
+        buildDto({ dataPolicyAccepted: 'true' as unknown as boolean }),
+      );
+
+      expect(constraintsFor(errors, 'dataPolicyAccepted')).toHaveProperty(
+        'isBoolean',
+      );
+    });
   });
 });

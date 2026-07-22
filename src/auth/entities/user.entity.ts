@@ -38,6 +38,15 @@ export class User {
   @Column('boolean', { default: true })
   isActive: boolean;
 
+  /**
+   * Momento en que el usuario aceptó la Política de Tratamiento de Datos
+   * Personales (Ley 1581 de 2012, Decreto 1377 de 2013). Es la evidencia
+   * auditable del consentimiento. Admite nulos únicamente por las cuentas
+   * creadas antes de que se registrara esta marca.
+   */
+  @Column('timestamptz', { name: 'data_policy_accepted_at', nullable: true })
+  dataPolicyAcceptedAt: Date | null;
+
   @OneToMany(() => ReviewByUser, (reviewByUser) => reviewByUser.user)
   reviewsByUser: ReviewByUser[];
 
