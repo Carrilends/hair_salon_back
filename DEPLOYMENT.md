@@ -98,6 +98,32 @@ Notas:
 docker compose up -d --build
 ```
 
+## Operaciones sensibles en producción
+
+### CORS
+
+`src/main.ts` restringe el origen con `FRONT_URL` (lista separada por comas). Si la variable falta o queda vacía, cae a `origin: true`, que **refleja cualquier origen** y anula la protección. En producción debe apuntar al dominio real del frontend.
+
+### Sembrado de datos
+
+El sembrado se hace con scripts de línea de comandos (`yarn seed:resolved <seccion>`), no con endpoints públicos.
+
+`POST /api/service/seed` tiene doble protección y **no es alcanzable en producción**: exige rol `admin` (`@Auth(ValidRoles.admin)`) y además lanza `ForbiddenException` cuando `NODE_ENV !== 'development'` (`src/service/service.controller.ts`). No hace falta abrir una "ventana" de `NODE_ENV=development` en producción para poblar el catálogo: ejecuta el script desde una consola con las variables de entorno apuntando a la base de producción, y haz respaldo antes.
+
+### Primer administrador
+
+El registro (`POST /api/auth/register`) crea siempre usuarios con rol `user`; no hay ruta para auto-asignarse `admin`, lo cual es deliberado. Para promover al primer administrador, conéctate a la base y ejecútalo manualmente:
+
+```sql
+UPDATE users SET roles = ARRAY['admin'] WHERE email = 'correo-del-admin@ejemplo.com';
+```
+
+Verifica después que solo la cuenta esperada tenga el rol:
+
+```sql
+SELECT email, roles FROM users WHERE 'admin' = ANY(roles);
+```
+
 ## Troubleshooting rápido
 
 - **La API intenta conectar a `localhost`**: asegúrate de estar usando `docker compose` (no correr `start:dev` en tu host con `.env` apuntando a docker). En Compose la API fuerza `DB_HOST=db`.
