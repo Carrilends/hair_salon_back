@@ -37,10 +37,16 @@ function parseBool(value: string | undefined): boolean | undefined {
         const nodeEnv = config.get<string>('NODE_ENV') ?? 'development';
         const isProd = nodeEnv === 'production';
 
+        // El esquema lo gobiernan las migraciones de `src/database/migrations`
+        // (ver DEPLOYMENT.md). `synchronize` queda desactivado por defecto en
+        // todos los entornos; para activarlo puntualmente en desarrollo hay que
+        // pedirlo de forma explícita con TYPEORM_SYNCHRONIZE=true.
         const synchronize =
-          parseBool(config.get<string>('TYPEORM_SYNCHRONIZE')) ?? !isProd;
+          parseBool(config.get<string>('TYPEORM_SYNCHRONIZE')) ?? false;
         const logging =
           parseBool(config.get<string>('TYPEORM_LOGGING')) ?? !isProd;
+        const migrationsRun =
+          parseBool(config.get<string>('TYPEORM_MIGRATIONS_RUN')) ?? isProd;
 
         const dbSsl = parseBool(config.get<string>('DB_SSL')) ?? false;
 
@@ -53,6 +59,9 @@ function parseBool(value: string | undefined): boolean | undefined {
           password: config.get<string>('DB_PASSWORD'),
           autoLoadEntities: true,
           synchronize,
+          // En runtime se ejecuta el build de `dist/`, no los fuentes.
+          migrations: ['dist/database/migrations/*.js'],
+          migrationsRun,
           logging,
           ssl: dbSsl ? { rejectUnauthorized: false } : false,
         };
