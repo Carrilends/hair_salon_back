@@ -3,13 +3,25 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
+import { Review } from 'src/reviews/entities/review.entity';
+import { ReviewByUser } from 'src/reviews/entities/review-by-user.entity';
 import * as bcrypt from 'bcrypt';
+
+jest.mock('bcrypt', () => {
+  const actual = jest.requireActual('bcrypt');
+  return {
+    ...actual,
+    compareSync: jest.fn(),
+  };
+});
 
 describe('AuthService', () => {
   const strongPassword = 'Str0ngP@ssw0rd!';
 
   let service: AuthService;
   let userRepository: jest.Mocked<Partial<Repository<User>>>;
+  let reviewRepository: jest.Mocked<Partial<Repository<Review>>>;
+  let reviewByUserRepository: jest.Mocked<Partial<Repository<ReviewByUser>>>;
   let jwtService: jest.Mocked<Partial<JwtService>>;
 
   beforeEach(() => {
@@ -19,11 +31,23 @@ describe('AuthService', () => {
       findOne: jest.fn(),
     };
 
+    reviewRepository = {};
+    reviewByUserRepository = {};
+
     jwtService = {
       sign: jest.fn().mockReturnValue('jwt-token'),
     };
 
-    service = new AuthService(userRepository as any, jwtService as any);
+    service = new AuthService(
+      userRepository as any,
+      reviewRepository as any,
+      reviewByUserRepository as any,
+      jwtService as any,
+    );
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   describe('create', () => {
@@ -91,7 +115,7 @@ describe('AuthService', () => {
         roles: ['admin'],
       });
 
-      jest.spyOn(bcrypt, 'compareSync').mockReturnValue(true);
+      (bcrypt.compareSync as jest.Mock).mockReturnValue(true);
 
       const result = await service.login(dto as any);
 
@@ -129,7 +153,7 @@ describe('AuthService', () => {
         roles: ['user'],
       });
 
-      jest.spyOn(bcrypt, 'compareSync').mockReturnValue(false);
+      (bcrypt.compareSync as jest.Mock).mockReturnValue(false);
 
       await expect(
         service.login({
