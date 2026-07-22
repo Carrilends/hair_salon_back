@@ -83,7 +83,8 @@ async function bootstrap() {
 
   for (const section of SECTIONS) {
     const raw = json[section.sectionKey];
-    if (!raw) throw new Error(`Sección ${section.sectionKey} no encontrada en JSON`);
+    if (!raw)
+      throw new Error(`Sección ${section.sectionKey} no encontrada en JSON`);
 
     for (const [index, item] of Object.entries(raw)) {
       const override = section.perServiceOverrides[Number(index)] ?? {};
@@ -102,9 +103,12 @@ async function bootstrap() {
       const service = serviceRepo.create({
         name: item.name,
         type: section.serviceType,
-        price: override.price ?? randomPrice(section.priceRange.min, section.priceRange.max),
+        price:
+          override.price ??
+          randomPrice(section.priceRange.min, section.priceRange.max),
         duration:
-          override.duration ?? randomDuration(section.durationRange.min, section.durationRange.max),
+          override.duration ??
+          randomDuration(section.durationRange.min, section.durationRange.max),
         isSpecial: false, // decisión #9 — siempre false
         havePromotion,
         porcentageDiscount,
@@ -119,7 +123,9 @@ async function bootstrap() {
       await serviceRepo.save(service);
       total++;
     }
-    console.log(`  ✓ ${section.sectionKey}: ${Object.keys(raw).length} servicios`);
+    console.log(
+      `  ✓ ${section.sectionKey}: ${Object.keys(raw).length} servicios`,
+    );
   }
 
   console.log(`✔ Total insertados: ${total}`);

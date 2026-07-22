@@ -43,7 +43,9 @@ function parseYmd(dateYmd: string): { y: number; m: number; d: number } {
 
 export function getSalonNow(tz: string): SalonNow {
   const now = getDatePartsInTz(new Date(), tz);
-  const weekday = new Date(Date.UTC(now.year, now.month - 1, now.day)).getUTCDay();
+  const weekday = new Date(
+    Date.UTC(now.year, now.month - 1, now.day),
+  ).getUTCDay();
 
   return {
     ymd: `${now.year}-${pad2(now.month)}-${pad2(now.day)}`,

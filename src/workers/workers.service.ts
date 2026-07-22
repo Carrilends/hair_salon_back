@@ -118,7 +118,9 @@ export class WorkersService implements OnModuleInit {
     const worker = await this.findById(id);
 
     if (worker.isDefault) {
-      throw new BadRequestException('No se puede eliminar el trabajador predeterminado');
+      throw new BadRequestException(
+        'No se puede eliminar el trabajador predeterminado',
+      );
     }
 
     const reservationsCount = await this.reservationRepository.count({

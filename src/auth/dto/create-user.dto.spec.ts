@@ -10,8 +10,10 @@ const buildDto = (overrides: Partial<CreateUserDto> = {}) =>
     ...overrides,
   });
 
-const constraintsFor = (errors: Awaited<ReturnType<typeof validate>>, field: string) =>
-  errors.find((e) => e.property === field)?.constraints ?? {};
+const constraintsFor = (
+  errors: Awaited<ReturnType<typeof validate>>,
+  field: string,
+) => errors.find((e) => e.property === field)?.constraints ?? {};
 
 describe('CreateUserDto (NF05 — validación de datos de entrada)', () => {
   it('Caso 1: acepta un payload válido', async () => {
@@ -31,11 +33,15 @@ describe('CreateUserDto (NF05 — validación de datos de entrada)', () => {
 
   it('Caso 4: rechaza password débil (sin mayúsculas/símbolos/dígitos)', async () => {
     const errors = await validate(buildDto({ password: 'abcdefghij' }));
-    expect(constraintsFor(errors, 'password')).toHaveProperty('isStrongPassword');
+    expect(constraintsFor(errors, 'password')).toHaveProperty(
+      'isStrongPassword',
+    );
   });
 
   it('Caso 5: rechaza fullName que no es string', async () => {
-    const errors = await validate(buildDto({ fullName: 12345 as unknown as string }));
+    const errors = await validate(
+      buildDto({ fullName: 12345 as unknown as string }),
+    );
     expect(constraintsFor(errors, 'fullName')).toHaveProperty('isString');
   });
 });

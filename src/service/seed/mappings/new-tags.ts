@@ -2,7 +2,10 @@ import { NewTagSpec } from './shared-types';
 
 export const NEW_TAGS: NewTagSpec[] = [
   // Sección 1 — Cortes_hombre_nino
-  { name: 'Cabello afro/rizado', parentId: 'ead486e4-d86e-4481-954c-4b2eb5915be2' },
+  {
+    name: 'Cabello afro/rizado',
+    parentId: 'ead486e4-d86e-4481-954c-4b2eb5915be2',
+  },
   { name: 'Alternativo', parentId: '83c6a558-805c-4156-94f6-fa7ea55c7d84' },
   { name: 'Cabello largo', parentId: 'ead486e4-d86e-4481-954c-4b2eb5915be2' },
 
@@ -19,5 +22,8 @@ export const NEW_TAGS: NewTagSpec[] = [
   { name: 'Color natural', parentId: '90fd2551-7f19-4bf0-86c7-c8c09ffc5c83' },
 
   // Sección 6 — tinturas (parent: Tintes)
-  { name: 'Cobertura de canas', parentId: '11eb3167-dce0-4d4b-92d2-0ab1c4a940a7' },
+  {
+    name: 'Cobertura de canas',
+    parentId: '11eb3167-dce0-4d4b-92d2-0ab1c4a940a7',
+  },
 ];

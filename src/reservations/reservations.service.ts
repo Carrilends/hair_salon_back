@@ -10,11 +10,7 @@ import { MoreThan, Repository } from 'typeorm';
 import { WorkersService } from 'src/workers/workers.service';
 import { Reservation } from './entities/reservation.entity';
 import { CreateReservationDto } from './dto/create-reservation.dto';
-import {
-  getDatePartsInTz,
-  getDayBounds,
-  getSalonNow,
-} from './salon-time';
+import { getDatePartsInTz, getDayBounds, getSalonNow } from './salon-time';
 
 function pad2(n: number): string {
   return String(n).padStart(2, '0');

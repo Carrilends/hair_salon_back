@@ -12,8 +12,10 @@ const buildDto = (overrides: Partial<CreateReservationDto> = {}) =>
     ...overrides,
   });
 
-const constraintsFor = (errors: Awaited<ReturnType<typeof validate>>, field: string) =>
-  errors.find((e) => e.property === field)?.constraints ?? {};
+const constraintsFor = (
+  errors: Awaited<ReturnType<typeof validate>>,
+  field: string,
+) => errors.find((e) => e.property === field)?.constraints ?? {};
 
 describe('CreateReservationDto (NF05 — validación de datos de entrada)', () => {
   it('Caso 1: acepta un payload válido', async () => {
@@ -22,18 +24,24 @@ describe('CreateReservationDto (NF05 — validación de datos de entrada)', () =
   });
 
   it('Caso 2: rechaza scheduledAt sin formato ISO 8601', async () => {
-    const errors = await validate(buildDto({ scheduledAt: '06/05/2026 15:00' }));
+    const errors = await validate(
+      buildDto({ scheduledAt: '06/05/2026 15:00' }),
+    );
     expect(constraintsFor(errors, 'scheduledAt')).toHaveProperty('isIso8601');
   });
 
   it('Caso 3: rechaza totalDurationMinutes no entero', async () => {
     const errors = await validate(buildDto({ totalDurationMinutes: 30.5 }));
-    expect(constraintsFor(errors, 'totalDurationMinutes')).toHaveProperty('isInt');
+    expect(constraintsFor(errors, 'totalDurationMinutes')).toHaveProperty(
+      'isInt',
+    );
   });
 
   it('Caso 4: rechaza totalDurationMinutes menor que 1', async () => {
     const errors = await validate(buildDto({ totalDurationMinutes: 0 }));
-    expect(constraintsFor(errors, 'totalDurationMinutes')).toHaveProperty('min');
+    expect(constraintsFor(errors, 'totalDurationMinutes')).toHaveProperty(
+      'min',
+    );
   });
 
   it('Caso 5: rechaza workerId con UUID malformado', async () => {
