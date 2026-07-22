@@ -6,15 +6,17 @@ This is the **backend** of the thesis project *Portal web de la Peluquería Marl
 
 ## Commands
 
+Package manager is **yarn** (`packageManager: yarn@1.22.22`; the `Dockerfile` builds with `yarn install --frozen-lockfile`). Only `yarn.lock` is committed — do not reintroduce `package-lock.json`.
+
 ```bash
-npm run start:dev        # nest start --watch (default port 3000)
-npm run start:prod       # node dist/main (after npm run build)
-npm run build            # nest build
-npm run lint             # eslint --fix on {src,apps,libs,test}/**/*.ts
-npm run format           # prettier write on src + test
-npm run test             # jest (rootDir = src, *.spec.ts colocated with code)
-npm run test:cov
-npm run test:e2e         # jest --config ./test/jest-e2e.json
+yarn start:dev           # nest start --watch (default port 3000)
+yarn start:prod          # node dist/main (after yarn build)
+yarn build               # nest build
+yarn lint                # eslint --fix on {src,apps,libs,test}/**/*.ts
+yarn format              # prettier write on src + test
+yarn test                # jest (rootDir = src, *.spec.ts colocated with code)
+yarn test:cov
+yarn test:e2e            # jest --config ./test/jest-e2e.json
 npx jest path/to/file.spec.ts      # single test file
 npx jest -t "name fragment"        # single test by name
 ```
