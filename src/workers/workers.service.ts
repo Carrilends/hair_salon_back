@@ -9,7 +9,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Worker } from './entities/worker.entity';
-import { Reservation } from '../reservations/entities/reservation.entity';
+import { ReservationOrmEntity } from '../reservations/infrastructure/persistence/reservation.orm-entity';
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
 import { getDayBounds, getSalonNow } from '../reservations/salon-time';
@@ -52,8 +52,8 @@ export class WorkersService implements OnModuleInit {
   constructor(
     @InjectRepository(Worker)
     private readonly workerRepository: Repository<Worker>,
-    @InjectRepository(Reservation)
-    private readonly reservationRepository: Repository<Reservation>,
+    @InjectRepository(ReservationOrmEntity)
+    private readonly reservationRepository: Repository<ReservationOrmEntity>,
   ) {}
 
   async onModuleInit() {

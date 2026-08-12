@@ -7,8 +7,8 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
-@Entity('reservations')
-export class Reservation {
+@Entity('reservations') // ← misma tabla y mismas columnas; sin cambio de esquema
+export class ReservationOrmEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

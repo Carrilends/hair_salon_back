@@ -1,5 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { Reservation } from 'src/reservations/entities/reservation.entity';
+import { ReservationOrmEntity } from 'src/reservations/infrastructure/persistence/reservation.orm-entity';
 
 @Entity('workers')
 export class Worker {
@@ -13,8 +13,8 @@ export class Worker {
   isDefault: boolean;
 
   @OneToMany(
-    () => Reservation,
-    (reservation: Reservation) => reservation.worker,
+    () => ReservationOrmEntity,
+    (reservation: ReservationOrmEntity) => reservation.worker,
   )
-  reservations?: Reservation[];
+  reservations?: ReservationOrmEntity[];
 }

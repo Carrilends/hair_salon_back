@@ -8,7 +8,10 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, Repository } from 'typeorm';
 import { WorkersService } from 'src/workers/workers.service';
-import { Reservation } from './entities/reservation.entity';
+// Puente temporal (Fase 1 T4): la entidad ORM se renombró a ReservationOrmEntity.
+// Este servicio monolítico se retira en T5; se mantiene el nombre local vía alias
+// para no tocar su lógica interna mientras siga vivo.
+import { ReservationOrmEntity as Reservation } from './infrastructure/persistence/reservation.orm-entity';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { getDatePartsInTz, getDayBounds, getSalonNow } from './salon-time';
 

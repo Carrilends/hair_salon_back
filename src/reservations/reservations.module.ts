@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { WorkersModule } from 'src/workers/workers.module';
 import { AuthModule } from 'src/auth/auth.module';
-import { Reservation } from './entities/reservation.entity';
+// Puente temporal (Fase 1 T4): entidad renombrada. El módulo se reescribe en T5.
+import { ReservationOrmEntity as Reservation } from './infrastructure/persistence/reservation.orm-entity';
 import { ReservationsController } from './reservations.controller';
 import { ReservationsService } from './reservations.service';
 

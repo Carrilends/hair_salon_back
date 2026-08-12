@@ -6,12 +6,14 @@ import {
 import { Repository } from 'typeorm';
 import { WorkersService } from './workers.service';
 import { Worker } from './entities/worker.entity';
-import { Reservation } from 'src/reservations/entities/reservation.entity';
+import { ReservationOrmEntity } from 'src/reservations/infrastructure/persistence/reservation.orm-entity';
 
 describe('WorkersService', () => {
   let service: WorkersService;
   let workerRepository: jest.Mocked<Partial<Repository<Worker>>>;
-  let reservationRepository: jest.Mocked<Partial<Repository<Reservation>>>;
+  let reservationRepository: jest.Mocked<
+    Partial<Repository<ReservationOrmEntity>>
+  >;
 
   beforeEach(() => {
     workerRepository = {

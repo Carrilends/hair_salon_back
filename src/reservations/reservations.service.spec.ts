@@ -1,7 +1,8 @@
 import { ConflictException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { ReservationsService } from './reservations.service';
-import { Reservation } from './entities/reservation.entity';
+// Puente temporal (Fase 1 T4): entidad renombrada; este spec se retira en T5.
+import { ReservationOrmEntity as Reservation } from './infrastructure/persistence/reservation.orm-entity';
 import { WorkersService } from 'src/workers/workers.service';
 
 describe('ReservationsService', () => {
