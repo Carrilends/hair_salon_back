@@ -29,3 +29,24 @@ export class InvalidStatusTransitionError extends DomainError {
     this.name = 'InvalidStatusTransitionError';
   }
 }
+
+export class EmptyServicesError extends DomainError {
+  constructor() {
+    super('La reserva debe incluir al menos un servicio');
+    this.name = 'EmptyServicesError';
+  }
+}
+
+export class MissingContactError extends DomainError {
+  constructor() {
+    super('Una reserva sin usuario autenticado requiere datos de contacto');
+    this.name = 'MissingContactError';
+  }
+}
+
+export class CancellationTooLateError extends DomainError {
+  constructor() {
+    super('La reserva ya no puede cancelarse: la hora de inicio ya pasó');
+    this.name = 'CancellationTooLateError';
+  }
+}

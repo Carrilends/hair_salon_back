@@ -12,8 +12,11 @@ describe('ReservationScheduling.assertWithinBusinessHours', () => {
   const at = (isoUtc: string, minutes: number) =>
     Reservation.schedule({
       scheduledAt: new Date(isoUtc),
-      totalDurationMinutes: minutes,
       workerId: 'w-1',
+      userId: 'w-1',
+      lines: [
+        { serviceId: 's', name: 'Servicio', price: 0, durationMinutes: minutes },
+      ],
     });
 
   it('acepta una reserva dentro del horario (lun 10:00 Bogotá)', () => {
