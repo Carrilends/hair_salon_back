@@ -115,6 +115,13 @@ describe('Reservation (agregado maduro)', () => {
     expect(r.status).toBe(ReservationStatus.Cancelada);
   });
 
+  it('se serializa exponiendo status y totalDurationMinutes (no el campo interno _status)', () => {
+    const json = JSON.parse(JSON.stringify(make('u-1')));
+    expect(json.status).toBe('pendiente');
+    expect(json.totalDurationMinutes).toBe(45);
+    expect(json).not.toHaveProperty('_status');
+  });
+
   it('rehidrata desde persistencia conservando estado y líneas', () => {
     const r = Reservation.fromPersistence({
       id: 'r-1',

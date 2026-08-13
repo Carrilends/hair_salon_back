@@ -89,6 +89,25 @@ export class Reservation {
     return new Reservation(props);
   }
 
+  /**
+   * Forma pública serializada: expone `status` y `totalDurationMinutes` (que son
+   * getters) y oculta el campo interno `_status`. La invoca `JSON.stringify`
+   * cuando el controlador devuelve el agregado directamente.
+   */
+  toJSON() {
+    return {
+      id: this.id,
+      userId: this.userId,
+      contact: this.contact,
+      scheduledAt: this.scheduledAt,
+      endedAt: this.endedAt,
+      workerId: this.workerId,
+      status: this.status,
+      totalDurationMinutes: this.totalDurationMinutes,
+      lines: this.lines,
+    };
+  }
+
   confirm(): void {
     assertTransition(this._status, ReservationStatus.Confirmada);
     this._status = ReservationStatus.Confirmada;
