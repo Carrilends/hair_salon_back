@@ -1,15 +1,22 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Reservation } from '../domain/reservation';
 import { ReservationScheduling } from '../domain/reservation-scheduling';
-import { WorkerOverlapError } from '../domain/errors';
+import { WorkerOverlapError, InvalidReservationError } from '../domain/errors';
 import { ReservationRepositoryPort } from '../domain/ports/reservation-repository.port';
 import { WorkerAvailabilityPort } from '../domain/ports/worker-availability.port';
-import { RESERVATION_REPOSITORY, WORKER_AVAILABILITY } from './tokens';
+import { ServiceCatalogPort } from '../domain/ports/service-catalog.port';
+import {
+  RESERVATION_REPOSITORY,
+  WORKER_AVAILABILITY,
+  SERVICE_CATALOG,
+} from './tokens';
 
 export interface CreateReservationCommand {
   scheduledAt: string;
-  totalDurationMinutes: number;
+  serviceIds: string[];
   workerId?: string;
+  userId?: string | null;
+  contact?: { name: string; phone: string; email?: string | null } | null;
 }
 
 @Injectable()
@@ -21,6 +28,8 @@ export class CreateReservationUseCase {
     private readonly repository: ReservationRepositoryPort,
     @Inject(WORKER_AVAILABILITY)
     private readonly workers: WorkerAvailabilityPort,
+    @Inject(SERVICE_CATALOG)
+    private readonly catalog: ServiceCatalogPort,
   ) {}
 
   async execute(command: CreateReservationCommand): Promise<Reservation> {
@@ -28,10 +37,23 @@ export class CreateReservationUseCase {
     const workerId =
       command.workerId ?? (await this.workers.getDefaultWorkerId());
 
+    const snapshots = await this.catalog.getSnapshots(command.serviceIds);
+    if (snapshots.length !== command.serviceIds.length) {
+      throw new InvalidReservationError('Uno o más servicios no existen');
+    }
+    const lines = snapshots.map((s) => ({
+      serviceId: s.id,
+      name: s.name,
+      price: s.price,
+      durationMinutes: s.durationMinutes,
+    }));
+
     const reservation = Reservation.schedule({
       scheduledAt: new Date(command.scheduledAt),
-      totalDurationMinutes: command.totalDurationMinutes,
       workerId,
+      lines,
+      userId: command.userId ?? null,
+      contact: command.contact ?? null,
     });
 
     this.scheduling.assertWithinBusinessHours(reservation, tz);
