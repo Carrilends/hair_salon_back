@@ -22,3 +22,10 @@ export class ReservationNotFoundError extends DomainError {
 }
 
 export class InvalidReservationError extends DomainError {}
+
+export class InvalidStatusTransitionError extends DomainError {
+  constructor(from: string, to: string) {
+    super(`Transición de estado inválida: ${from} → ${to}`);
+    this.name = 'InvalidStatusTransitionError';
+  }
+}
