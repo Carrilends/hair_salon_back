@@ -1,13 +1,18 @@
 import { Worker } from 'src/workers/entities/worker.entity';
+import { User } from 'src/auth/entities/user.entity';
 import {
   Column,
+  CreateDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
+  UpdateDateColumn,
 } from 'typeorm';
+import { ReservationServiceOrmEntity } from './reservation-service.orm-entity';
 
-@Entity('reservations') // ← misma tabla y mismas columnas; sin cambio de esquema
+@Entity('reservations')
 export class ReservationOrmEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -31,4 +36,36 @@ export class ReservationOrmEntity {
 
   @Column('int', { name: 'total_duration_minutes' })
   totalDurationMinutes: number;
+
+  /** Ciclo de vida (§6.4): pendiente | confirmada | cumplida | cancelada. */
+  @Column('text', { default: 'pendiente' })
+  status: string;
+
+  @Column('uuid', { name: 'user_id', nullable: true })
+  userId: string | null;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'user_id' })
+  user: User | null;
+
+  @Column('text', { name: 'customer_name', nullable: true })
+  customerName: string | null;
+
+  @Column('text', { name: 'customer_phone', nullable: true })
+  customerPhone: string | null;
+
+  @Column('text', { name: 'customer_email', nullable: true })
+  customerEmail: string | null;
+
+  @OneToMany(() => ReservationServiceOrmEntity, (s) => s.reservation, {
+    cascade: true,
+    eager: true,
+  })
+  services: ReservationServiceOrmEntity[];
+
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
+  updatedAt: Date;
 }

@@ -20,7 +20,19 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
   async save(reservation: Reservation): Promise<Reservation> {
     const entity = this.repo.create(ReservationMapper.toOrm(reservation));
     const saved = await this.repo.save(entity);
-    return ReservationMapper.toDomain(saved);
+    const full = await this.repo.findOne({
+      where: { id: saved.id },
+      relations: ['services'],
+    });
+    return ReservationMapper.toDomain(full ?? saved);
+  }
+
+  async findById(id: string): Promise<Reservation | null> {
+    const row = await this.repo.findOne({
+      where: { id },
+      relations: ['services'],
+    });
+    return row ? ReservationMapper.toDomain(row) : null;
   }
 
   countOverlaps(
@@ -35,27 +47,26 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
       .andWhere('r.ended_at > :scheduledAt', {
         scheduledAt: scheduledAt.toISOString(),
       })
+      .andWhere("r.status <> 'cancelada'")
       .getCount();
   }
 
   async findActiveWithWorker(now: Date): Promise<ReservationView[]> {
     const rows = await this.repo.find({
       where: { endedAt: MoreThan(now) },
-      relations: ['worker'],
+      relations: ['worker', 'services'],
       order: { scheduledAt: 'DESC' },
     });
-    return rows.map((r) => ({
-      id: r.id,
-      scheduledAt: r.scheduledAt,
-      endedAt: r.endedAt,
-      workerId: r.workerId,
-      totalDurationMinutes: r.totalDurationMinutes,
-      worker: {
-        id: r.worker.id,
-        name: r.worker.name,
-        isDefault: r.worker.isDefault,
-      },
-    }));
+    return rows.map((r) => this.toView(r));
+  }
+
+  async findByUser(userId: string): Promise<ReservationView[]> {
+    const rows = await this.repo.find({
+      where: { userId },
+      relations: ['worker', 'services'],
+      order: { scheduledAt: 'DESC' },
+    });
+    return rows.map((r) => this.toView(r));
   }
 
   async findOccupancyRows(
@@ -74,6 +85,7 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
       FROM reservations
       WHERE (scheduled_at AT TIME ZONE $1)::date >= $2::date
         AND (scheduled_at AT TIME ZONE $1)::date <= $3::date
+        AND status <> 'cancelada'
       `,
       [tz, fromYmd, toYmd],
     )) as Row[];
@@ -84,9 +96,15 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
     }));
   }
 
-  async deleteById(id: string): Promise<boolean> {
-    const result = await this.repo.delete(id);
-    return (result.affected ?? 0) > 0;
+  async markFulfilledEndedBefore(now: Date): Promise<number> {
+    const result = await this.repo
+      .createQueryBuilder()
+      .update()
+      .set({ status: 'cumplida' })
+      .where('ended_at < :now', { now: now.toISOString() })
+      .andWhere("status IN ('pendiente','confirmada')")
+      .execute();
+    return result.affected ?? 0;
   }
 
   async deleteEndedBefore(cutoff: Date): Promise<void> {
@@ -96,5 +114,34 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
       .from(ReservationOrmEntity)
       .where('ended_at < :cutoff', { cutoff: cutoff.toISOString() })
       .execute();
+  }
+
+  private toView(r: ReservationOrmEntity): ReservationView {
+    return {
+      id: r.id,
+      scheduledAt: r.scheduledAt,
+      endedAt: r.endedAt,
+      workerId: r.workerId,
+      totalDurationMinutes: r.totalDurationMinutes,
+      status: r.status,
+      userId: r.userId,
+      contact:
+        r.customerName || r.customerPhone
+          ? {
+              name: r.customerName ?? '',
+              phone: r.customerPhone ?? '',
+              email: r.customerEmail,
+            }
+          : null,
+      worker: r.worker
+        ? { id: r.worker.id, name: r.worker.name, isDefault: r.worker.isDefault }
+        : { id: r.workerId, name: '', isDefault: false },
+      services: (r.services ?? []).map((s) => ({
+        serviceId: s.serviceId,
+        name: s.name,
+        price: Number(s.price),
+        durationMinutes: s.durationMinutes,
+      })),
+    };
   }
 }

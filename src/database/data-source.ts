@@ -24,9 +24,10 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   ssl: parseBool(process.env.DB_SSL) ? { rejectUnauthorized: false } : false,
-  // Todas las entidades del proyecto terminan en `.entity.ts`; el glob las cubre
-  // sin necesidad de registrarlas una a una.
-  entities: ['src/**/*.entity.ts'],
+  // Las entidades de dominio terminan en `.entity.ts`; las entidades ORM del
+  // bounded context hexagonal de Reservas terminan en `.orm-entity.ts`. El glob
+  // debe cubrir ambas o la CLI no vería las tablas hexagonales al migrar.
+  entities: ['src/**/*.entity.ts', 'src/**/*.orm-entity.ts'],
   migrations: ['src/database/migrations/*.ts'],
   // El esquema se gobierna por migraciones: nunca sincronizar desde la CLI.
   synchronize: false,
