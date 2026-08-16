@@ -4,9 +4,11 @@ import { Cloudinary } from './cloudinary';
 import { CloudinaryService } from './cloudinary.service';
 import { CloudinaryProvider } from './cloudinary.provider';
 import { CloudinaryController } from './cloudinary.controller';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true })],
+  // AuthModule es necesario para que @Auth(admin) resuelva el guard JWT.
+  imports: [ConfigModule.forRoot({ isGlobal: true }), AuthModule],
   controllers: [CloudinaryController],
   providers: [Cloudinary, CloudinaryService, CloudinaryProvider],
   exports: [CloudinaryProvider, CloudinaryService],

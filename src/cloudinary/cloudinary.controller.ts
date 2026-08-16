@@ -1,23 +1,19 @@
 // cloudinary.controller.ts
 import { Body, Controller, Post } from '@nestjs/common';
 import { CloudinaryService } from './cloudinary.service';
-
-class SignDto {
-  folder?: string;
-  public_id?: string;
-  eager?: string[];
-  tags?: string[];
-  overwrite?: boolean;
-}
+import { SignDto } from './dto/sign.dto';
+import { Auth } from 'src/auth/decorators/auth.decorator';
+import { ValidRoles } from 'src/auth/interfaces/valid-roles';
 
 @Controller('cloudinary')
 export class CloudinaryController {
   constructor(private readonly cloudinaryService: CloudinaryService) {}
 
-  // El front llama a este endpoint para obtener signature + timestamp + apiKey + cloudName
+  // Firma de subida: habilita escribir en la cuenta Cloudinary del salón, por lo
+  // que exige rol admin (la subida de medios es una operación de administración).
+  @Auth(ValidRoles.admin)
   @Post('sign')
   sign(@Body() body: SignDto) {
-    // TIP de seguridad: puedes ignorar body y fijar tú mismo folder/tags desde el backend
     return this.cloudinaryService.generateSignature({
       folder: body.folder ?? 'uploads',
       public_id: body.public_id,
