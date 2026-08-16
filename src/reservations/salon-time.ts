@@ -109,6 +109,6 @@ export function getDayBounds(
     closeMin,
     isToday,
     effectiveStartMin,
-    effectiveCapacityMin: Math.max(0, closeMin - effectiveStartMin + 1),
+    effectiveCapacityMin: Math.max(0, closeMin - effectiveStartMin),
   };
 }

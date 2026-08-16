@@ -14,7 +14,9 @@ export class ReservationScheduling {
     const bounds = getDayBounds(ymd, tz);
     const startMin = parts.hour * 60 + parts.minute;
     const endMin = startMin + reservation.totalDurationMinutes;
-    if (startMin < bounds.openMin || endMin - 1 > bounds.closeMin) {
+    // `closeMin` es la hora de cierre: la reserva puede terminar justo en ella,
+    // no después. (Misma convención que el front: `end <= closeMin`.)
+    if (startMin < bounds.openMin || endMin > bounds.closeMin) {
       throw new OutOfBusinessHoursError();
     }
   }

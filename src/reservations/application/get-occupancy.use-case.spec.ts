@@ -7,8 +7,8 @@ import {
 import { WorkerAvailabilityPort } from '../domain/ports/worker-availability.port';
 
 // Rango fijo en el pasado (2026-04-20, lunes) para que el ajuste "hoy" no
-// aplique: capacidad = estilistas × minutos laborables del día (08:00–21:59 →
-// 840 min) y los minutos usados son la duración completa de cada reserva.
+// aplique: capacidad = estilistas × minutos laborables del día (08:00–20:00 →
+// 720 min) y los minutos usados son la duración completa de cada reserva.
 class FakeRepo implements Partial<ReservationRepositoryPort> {
   constructor(private readonly rows: OccupancyMinuteRow[]) {}
   findOccupancyRows = async () => this.rows;
@@ -37,7 +37,7 @@ describe('GetOccupancyUseCase', () => {
     expect(result.salonTimeZone).toBe('America/Bogota');
     expect(result.byDate['2026/04/20']).toEqual({
       usedMinutes: 90, // 60 + 30
-      capacityMinutes: 2520, // 3 × 840
+      capacityMinutes: 2160, // 3 × 720 (L–V 08:00–20:00 = 12 h)
     });
   });
 

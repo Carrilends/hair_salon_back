@@ -66,7 +66,7 @@ describe('WorkersService', () => {
 
     expect(result.dayBounds).toEqual({
       openMin: 8 * 60,
-      closeMin: 21 * 60 + 59,
+      closeMin: 20 * 60,
       effectiveStartMin: 18 * 60,
       isToday: true,
     });
@@ -76,12 +76,15 @@ describe('WorkersService', () => {
       tz: 'America/Bogota',
     });
 
+    // Cierre 20:00 y "ahora" 18:00 → capacidad 120 min (18:00–20:00). Las dos
+    // reservas futuras suman 150 min (se solapan), así que la disponibilidad se
+    // satura en 0.
     expect(ana).toEqual(
       expect.objectContaining({
         assignable: true,
-        capacityMinutes: 240,
+        capacityMinutes: 120,
         usedMinutes: 150,
-        availableMinutes: 90,
+        availableMinutes: 0,
       }),
     );
     expect(def).toEqual(

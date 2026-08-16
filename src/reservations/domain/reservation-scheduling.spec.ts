@@ -3,8 +3,8 @@ import { ReservationScheduling } from './reservation-scheduling';
 import { OutOfBusinessHoursError } from './errors';
 
 // Horario del salón (America/Bogota, UTC-5):
-//   Lun–Vie 08:00–21:59 · Sáb/Dom 09:00–19:59
-// La regla replica la del servicio actual: [start, end) debe caber en el día.
+//   Lun–Vie 08:00–20:00 · Sáb/Dom/festivos 09:00–19:00
+// La reserva [start, end) debe caber en el día: end no puede pasar del cierre.
 describe('ReservationScheduling.assertWithinBusinessHours', () => {
   const tz = 'America/Bogota';
   const scheduling = new ReservationScheduling();
@@ -36,11 +36,16 @@ describe('ReservationScheduling.assertWithinBusinessHours', () => {
     expect(() => scheduling.assertWithinBusinessHours(r, tz)).not.toThrow();
   });
 
-  it('rechaza cuando el fin excede el cierre laborable (lun 21:30 + 60min)', () => {
-    const r = at('2026-04-21T02:30:00.000Z', 60); // lun 21:30–22:30, cierra 21:59
+  it('rechaza cuando el fin excede el cierre laborable (lun 20:00 + 60min → 21:00)', () => {
+    const r = at('2026-04-21T01:00:00.000Z', 60); // lun 20:00–21:00, cierra 20:00
     expect(() => scheduling.assertWithinBusinessHours(r, tz)).toThrow(
       OutOfBusinessHoursError,
     );
+  });
+
+  it('acepta cuando el fin coincide justo con el cierre laborable (lun 19:00 + 60min → 20:00)', () => {
+    const r = at('2026-04-21T00:00:00.000Z', 60); // lun 19:00–20:00
+    expect(() => scheduling.assertWithinBusinessHours(r, tz)).not.toThrow();
   });
 
   it('acepta justo en la apertura del fin de semana (sáb 09:00)', () => {
@@ -53,5 +58,17 @@ describe('ReservationScheduling.assertWithinBusinessHours', () => {
     expect(() => scheduling.assertWithinBusinessHours(r, tz)).toThrow(
       OutOfBusinessHoursError,
     );
+  });
+
+  it('rechaza cuando el fin excede el cierre del fin de semana (sáb 18:30 + 60min → 19:30)', () => {
+    const r = at('2026-04-18T23:30:00.000Z', 60); // sáb 18:30–19:30, cierra 19:00
+    expect(() => scheduling.assertWithinBusinessHours(r, tz)).toThrow(
+      OutOfBusinessHoursError,
+    );
+  });
+
+  it('acepta cuando el fin coincide justo con el cierre del fin de semana (sáb 18:00 + 60min → 19:00)', () => {
+    const r = at('2026-04-18T23:00:00.000Z', 60); // sáb 18:00–19:00
+    expect(() => scheduling.assertWithinBusinessHours(r, tz)).not.toThrow();
   });
 });
