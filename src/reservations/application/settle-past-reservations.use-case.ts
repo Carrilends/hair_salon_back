@@ -4,7 +4,7 @@ import { ClockPort } from '../domain/ports/clock.port';
 import { RESERVATION_REPOSITORY, CLOCK } from './tokens';
 
 @Injectable()
-export class MarkPastReservationsFulfilledUseCase {
+export class SettlePastReservationsUseCase {
   constructor(
     @Inject(RESERVATION_REPOSITORY)
     private readonly repository: ReservationRepositoryPort,
@@ -13,6 +13,6 @@ export class MarkPastReservationsFulfilledUseCase {
   ) {}
 
   execute(): Promise<number> {
-    return this.repository.markFulfilledEndedBefore(this.clock.now());
+    return this.repository.settlePastReservations(this.clock.now());
   }
 }

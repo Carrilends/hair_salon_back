@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThan, Repository } from 'typeorm';
+import { LessThan, MoreThan, Repository } from 'typeorm';
 import { ReservationOrmEntity } from './reservation.orm-entity';
 import { ReservationMapper } from './reservation.mapper';
 import { Reservation } from '../../domain/reservation';
@@ -110,15 +110,20 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
     }));
   }
 
-  async markFulfilledEndedBefore(now: Date): Promise<number> {
-    const result = await this.repo
-      .createQueryBuilder()
-      .update()
-      .set({ status: 'cumplida' })
-      .where('ended_at < :now', { now: now.toISOString() })
-      .andWhere("status IN ('pendiente','confirmada')")
-      .execute();
-    return result.affected ?? 0;
+  async settlePastReservations(now: Date): Promise<number> {
+    // Reservas cuya ventana ya terminó: las confirmadas se dan por cumplidas; las
+    // que nunca se confirmaron (pendientes) se cancelan (expiran). No se tocan
+    // las ya terminales. Ambas transiciones son válidas en la máquina de estados
+    // (§6.4); el cron nunca ejecuta el prohibido pendiente→cumplida.
+    const fulfilled = await this.repo.update(
+      { endedAt: LessThan(now), status: 'confirmada' },
+      { status: 'cumplida' },
+    );
+    const cancelled = await this.repo.update(
+      { endedAt: LessThan(now), status: 'pendiente' },
+      { status: 'cancelada' },
+    );
+    return (fulfilled.affected ?? 0) + (cancelled.affected ?? 0);
   }
 
   async deleteEndedBefore(cutoff: Date): Promise<void> {

@@ -82,3 +82,28 @@ describe('TypeOrmReservationRepository.save', () => {
     expect(entity.services).toHaveLength(1);
   });
 });
+
+describe('TypeOrmReservationRepository.settlePastReservations', () => {
+  it('da por cumplidas las confirmadas pasadas y cancela las pendientes pasadas (M4)', async () => {
+    // Respeta la máquina de estados: confirmada→cumplida y pendiente→cancelada
+    // son transiciones válidas; el cron nunca hace el prohibido pendiente→cumplida.
+    const updateCalls: Array<{ where: any; set: any }> = [];
+    const repo = {
+      update: jest.fn(async (where: any, set: any) => {
+        updateCalls.push({ where, set });
+        return { affected: 1 };
+      }),
+    };
+    const sut = new TypeOrmReservationRepository(repo as any);
+
+    const total = await sut.settlePastReservations(
+      new Date('2026-08-20T12:00:00.000Z'),
+    );
+
+    expect(total).toBe(2); // 1 (cumplida) + 1 (cancelada)
+    const cumplida = updateCalls.find((c) => c.set.status === 'cumplida');
+    const cancelada = updateCalls.find((c) => c.set.status === 'cancelada');
+    expect(cumplida?.where.status).toBe('confirmada');
+    expect(cancelada?.where.status).toBe('pendiente');
+  });
+});

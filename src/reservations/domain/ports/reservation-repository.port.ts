@@ -41,7 +41,11 @@ export interface ReservationRepositoryPort {
     toYmd: string,
     tz: string,
   ): Promise<OccupancyMinuteRow[]>;
-  /** Marca `cumplida` las reservas activas cuya ventana ya terminó. Devuelve el nº afectado. */
-  markFulfilledEndedBefore(now: Date): Promise<number>;
+  /**
+   * Salda las reservas cuya ventana ya terminó: las confirmadas pasan a
+   * `cumplida` y las pendientes (nunca confirmadas) a `cancelada`. Devuelve el
+   * número total de filas afectadas.
+   */
+  settlePastReservations(now: Date): Promise<number>;
   deleteEndedBefore(cutoff: Date): Promise<void>;
 }

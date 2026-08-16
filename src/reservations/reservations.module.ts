@@ -18,7 +18,7 @@ import { GetMyReservationsUseCase } from './application/get-my-reservations.use-
 import { ConfirmReservationUseCase } from './application/confirm-reservation.use-case';
 import { CancelReservationUseCase } from './application/cancel-reservation.use-case';
 import { PurgeOldReservationsUseCase } from './application/purge-old-reservations.use-case';
-import { MarkPastReservationsFulfilledUseCase } from './application/mark-past-reservations-fulfilled.use-case';
+import { SettlePastReservationsUseCase } from './application/settle-past-reservations.use-case';
 import {
   RESERVATION_REPOSITORY,
   WORKER_AVAILABILITY,
@@ -45,7 +45,7 @@ import {
     ConfirmReservationUseCase,
     CancelReservationUseCase,
     PurgeOldReservationsUseCase,
-    MarkPastReservationsFulfilledUseCase,
+    SettlePastReservationsUseCase,
     ReservationPurgeScheduler,
     { provide: RESERVATION_REPOSITORY, useClass: TypeOrmReservationRepository },
     { provide: WORKER_AVAILABILITY, useClass: WorkersAvailabilityAdapter },
