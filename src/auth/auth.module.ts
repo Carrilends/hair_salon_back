@@ -1,19 +1,105 @@
 import { Module } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
-import { User } from './entities/user.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
-import { JWTStrategy } from './strategies/jwt.strategy';
+
+import { User } from './entities/user.entity';
 import { Review } from 'src/reviews/entities/review.entity';
 import { ReviewByUser } from 'src/reviews/entities/review-by-user.entity';
+import { JWTStrategy } from './strategies/jwt.strategy';
+
+import { AuthController } from './infrastructure/http/auth.controller';
+import { AuthTokenOrmEntity } from './infrastructure/persistence/auth-token.orm-entity';
+
+// Casos de uso (aplicación)
+import { RegisterUserUseCase } from './application/register-user.use-case';
+import { LoginUserUseCase } from './application/login-user.use-case';
+import { GetAuthStatusUseCase } from './application/get-auth-status.use-case';
+import { UpdateProfileUseCase } from './application/update-profile.use-case';
+import { UpdateEmailUseCase } from './application/update-email.use-case';
+import { UpdatePasswordUseCase } from './application/update-password.use-case';
+import { RequestPasswordResetUseCase } from './application/request-password-reset.use-case';
+import { ResetPasswordUseCase } from './application/reset-password.use-case';
+import { VerifyEmailUseCase } from './application/verify-email.use-case';
+import { ResendVerificationUseCase } from './application/resend-verification.use-case';
+import { AuthLinks } from './application/auth-email-composer';
+
+// Adaptadores (infraestructura)
+import { TypeOrmUserRepository } from './infrastructure/persistence/typeorm-user.repository';
+import { TypeOrmAuthTokenRepository } from './infrastructure/persistence/typeorm-auth-token.repository';
+import { BcryptPasswordHasherAdapter } from './infrastructure/security/bcrypt-password-hasher.adapter';
+import { CryptoTokenGeneratorAdapter } from './infrastructure/security/crypto-token-generator.adapter';
+import { JwtTokenIssuerAdapter } from './infrastructure/security/jwt-token-issuer.adapter';
+import { ConsoleEmailSenderAdapter } from './infrastructure/email/console-email-sender.adapter';
+import { ProviderEmailSenderAdapter } from './infrastructure/email/provider-email-sender.adapter';
+import { ReviewAuthorRenamerAdapter } from './infrastructure/reviews/review-author-renamer.adapter';
+import { SystemClockAdapter } from './infrastructure/time/system-clock.adapter';
+
+// Tokens de inyección
+import {
+  USER_REPOSITORY,
+  AUTH_TOKEN_REPOSITORY,
+  PASSWORD_HASHER,
+  TOKEN_ISSUER,
+  SECURE_TOKEN_GENERATOR,
+  EMAIL_SENDER,
+  REVIEW_AUTHOR_RENAMER,
+  AUTH_CLOCK,
+  FRONT_BASE_URL,
+} from './application/tokens';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, JWTStrategy],
+  providers: [
+    JWTStrategy,
+    // Casos de uso
+    RegisterUserUseCase,
+    LoginUserUseCase,
+    GetAuthStatusUseCase,
+    UpdateProfileUseCase,
+    UpdateEmailUseCase,
+    UpdatePasswordUseCase,
+    RequestPasswordResetUseCase,
+    ResetPasswordUseCase,
+    VerifyEmailUseCase,
+    ResendVerificationUseCase,
+    // Puertos -> adaptadores
+    { provide: USER_REPOSITORY, useClass: TypeOrmUserRepository },
+    { provide: AUTH_TOKEN_REPOSITORY, useClass: TypeOrmAuthTokenRepository },
+    { provide: PASSWORD_HASHER, useClass: BcryptPasswordHasherAdapter },
+    { provide: TOKEN_ISSUER, useClass: JwtTokenIssuerAdapter },
+    { provide: SECURE_TOKEN_GENERATOR, useClass: CryptoTokenGeneratorAdapter },
+    { provide: REVIEW_AUTHOR_RENAMER, useClass: ReviewAuthorRenamerAdapter },
+    { provide: AUTH_CLOCK, useClass: SystemClockAdapter },
+    {
+      // La elección del transporte de correo es explícita por variable de
+      // entorno: sin EMAIL_PROVIDER se usa el adaptador de consola (E3).
+      provide: EMAIL_SENDER,
+      useFactory: () => {
+        const provider = (process.env.EMAIL_PROVIDER ?? '').trim();
+        return provider.length > 0
+          ? new ProviderEmailSenderAdapter()
+          : new ConsoleEmailSenderAdapter();
+      },
+    },
+    {
+      // Enlaces del frontend derivados de FRONT_URL (que ya existe para CORS).
+      // FRONT_URL puede ser lista separada por comas: se toma el primero.
+      provide: FRONT_BASE_URL,
+      useFactory: (): AuthLinks => {
+        const base = (process.env.FRONT_URL ?? '')
+          .split(',')[0]
+          .trim()
+          .replace(/\/$/, '');
+        return {
+          resetPasswordUrl: `${base}/auth/restablecer`,
+          verifyEmailUrl: `${base}/auth/verificar-correo`,
+        };
+      },
+    },
+  ],
   imports: [
-    TypeOrmModule.forFeature([User, Review, ReviewByUser]),
+    TypeOrmModule.forFeature([User, Review, ReviewByUser, AuthTokenOrmEntity]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [],
@@ -23,6 +109,8 @@ import { ReviewByUser } from 'src/reviews/entities/review-by-user.entity';
       }),
     }),
   ],
+  // IMPORTANTE: exports idénticos a los previos. Los 11 módulos que importan
+  // AuthModule dependen de este contrato (riesgo nº 1 de la fase).
   exports: [TypeOrmModule, JWTStrategy, PassportModule, JwtModule],
 })
 export class AuthModule {}

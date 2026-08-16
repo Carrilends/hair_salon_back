@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import {
   EmailMessage,
   EmailSenderPort,
@@ -20,10 +19,8 @@ import {
 export class ProviderEmailSenderAdapter implements EmailSenderPort {
   private readonly logger = new Logger('EmailSender:provider');
 
-  constructor(private readonly config: ConfigService) {}
-
   async send(message: EmailMessage): Promise<void> {
-    const provider = this.config.get<string>('EMAIL_PROVIDER');
+    const provider = process.env.EMAIL_PROVIDER;
     this.logger.error(
       `EMAIL_PROVIDER='${provider}' está configurado pero su SDK aún no se ha ` +
         `integrado. No se envió el correo a ${message.to}.`,
