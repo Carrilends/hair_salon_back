@@ -39,6 +39,11 @@ describe('CreateUserDto (NF05 — validación de datos de entrada)', () => {
     );
   });
 
+  it('Caso 4b: acepta password fuerte SIN símbolo (política sin símbolo obligatorio)', async () => {
+    const errors = await validate(buildDto({ password: 'Marlene2024' }));
+    expect(Object.keys(constraintsFor(errors, 'password'))).toHaveLength(0);
+  });
+
   it('Caso 5: rechaza fullName que no es string', async () => {
     const errors = await validate(
       buildDto({ fullName: 12345 as unknown as string }),

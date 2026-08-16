@@ -12,8 +12,10 @@ export class CreateUserDto {
   @IsEmail()
   email: string;
 
+  // Política vigente: min. 8 + mayúscula + minúscula + número, SIN símbolo
+  // obligatorio, alineada con las reglas del formulario del frontend.
   @MinLength(8)
-  @IsStrongPassword()
+  @IsStrongPassword({ minSymbols: 0 })
   password: string;
 
   @IsString()

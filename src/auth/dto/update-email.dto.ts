@@ -1,16 +1,12 @@
-import {
-  IsEmail,
-  IsString,
-  IsStrongPassword,
-  MinLength,
-} from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 
 export class UpdateEmailDto {
   @IsString()
   @IsEmail()
   newEmail: string;
 
-  @MinLength(8)
-  @IsStrongPassword()
+  // Credencial actual: solo se verifica con bcrypt, sin política de fortaleza.
+  @IsString()
+  @IsNotEmpty()
   currentPassword: string;
 }

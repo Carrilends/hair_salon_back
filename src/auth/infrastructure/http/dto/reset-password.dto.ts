@@ -6,6 +6,6 @@ export class ResetPasswordDto {
   token: string;
 
   @MinLength(8)
-  @IsStrongPassword() // misma política que CreateUserDto
+  @IsStrongPassword({ minSymbols: 0 }) // misma política que CreateUserDto (sin símbolo)
   newPassword: string;
 }
