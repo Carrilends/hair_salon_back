@@ -3,7 +3,11 @@ import { Email } from '../domain/email';
 import { UserAccount } from '../domain/user-account';
 import { AuthToken } from '../domain/auth-token';
 import { AuthTokenType, TOKEN_TTL_MINUTES } from '../domain/auth-token-type';
-import { InvalidCredentialsError, UserNotFoundError } from '../domain/errors';
+import {
+  EmailAlreadyInUseError,
+  InvalidCredentialsError,
+  UserNotFoundError,
+} from '../domain/errors';
 import { UserRepositoryPort } from '../domain/ports/user-repository.port';
 import { AuthTokenRepositoryPort } from '../domain/ports/auth-token-repository.port';
 import { PasswordHasherPort } from '../domain/ports/password-hasher.port';
@@ -58,7 +62,13 @@ export class UpdateEmailUseCase {
       throw new InvalidCredentialsError();
 
     // changeEmail lanza SameEmailError si es el mismo y desverifica la cuenta (E5).
-    user.changeEmail(Email.create(command.newEmail));
+    const nextEmail = Email.create(command.newEmail);
+    user.changeEmail(nextEmail);
+    // Comprobar la unicidad DESPUÉS de changeEmail: si el usuario reenvía su
+    // propio correo recibe SameEmailError, no EmailAlreadyInUseError. Sin esto,
+    // el UNIQUE de Postgres lanzaría un error ajeno al dominio → 500 en vez de 400.
+    if (await this.users.existsByEmail(nextEmail))
+      throw new EmailAlreadyInUseError();
     const saved = await this.users.save(user);
     await this.issueVerification(saved, this.clock.now());
     return buildAuthSession(saved, this.issuer);

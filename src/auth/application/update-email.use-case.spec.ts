@@ -1,5 +1,9 @@
 import { UpdateEmailUseCase } from './update-email.use-case';
-import { InvalidCredentialsError, SameEmailError } from '../domain/errors';
+import {
+  EmailAlreadyInUseError,
+  InvalidCredentialsError,
+  SameEmailError,
+} from '../domain/errors';
 import { UserAccount } from '../domain/user-account';
 import { Email } from '../domain/email';
 
@@ -19,7 +23,13 @@ function account(overrides: any = {}) {
   });
 }
 
-function deps({ compare = async () => true }: { compare?: () => Promise<boolean> } = {}) {
+function deps({
+  compare = async () => true,
+  emailTaken = false,
+}: {
+  compare?: () => Promise<boolean>;
+  emailTaken?: boolean;
+} = {}) {
   const saved: any[] = [];
   const sent: any[] = [];
   const issued: any[] = [];
@@ -30,6 +40,7 @@ function deps({ compare = async () => true }: { compare?: () => Promise<boolean>
     uc: new UpdateEmailUseCase(
       {
         findById: async () => account(),
+        existsByEmail: async () => emailTaken,
         save: async (u: any) => {
           saved.push(u);
           return u;
@@ -82,5 +93,16 @@ describe('UpdateEmailUseCase', () => {
     await expect(
       d.uc.execute('u-1', { currentPassword: 'secret', newEmail: 'A@B.com' }),
     ).rejects.toThrow(SameEmailError);
+  });
+
+  it('rechaza si el nuevo correo ya pertenece a otra cuenta', async () => {
+    const d = deps({ emailTaken: true });
+    await expect(
+      d.uc.execute('u-1', {
+        currentPassword: 'secret',
+        newEmail: 'tomado@correo.com',
+      }),
+    ).rejects.toThrow(EmailAlreadyInUseError);
+    expect(d.saved).toHaveLength(0);
   });
 });
