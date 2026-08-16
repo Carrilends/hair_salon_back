@@ -32,18 +32,18 @@ export class VerifyEmailUseCase {
     if (!token) throw new AuthTokenNotFoundError();
 
     const now = this.clock.now();
-    token.assertUsable(now);
-
     const user = await this.users.findById(token.userId);
     if (!user) throw new AuthTokenNotFoundError();
 
-    // Idempotente: si ya estaba verificada, se consume el token igualmente y se
-    // responde con éxito, en vez de fallar ante un doble clic en el enlace.
-    if (!user.isEmailVerified) {
-      user.verifyEmail(now);
-      await this.users.save(user);
-    }
+    // Idempotente: si la cuenta ya está verificada, se responde con éxito sin
+    // más comprobaciones. Cubre el doble clic en el enlace (el token de la
+    // primera vez ya quedó consumido), en vez de mostrar un fallo.
+    if (user.isEmailVerified) return;
 
+    // Solo si aún no está verificada se exige un token vigente y de un solo uso.
+    token.assertUsable(now);
+    user.verifyEmail(now);
+    await this.users.save(user);
     token.markUsed(now);
     await this.authTokens.save(token);
   }

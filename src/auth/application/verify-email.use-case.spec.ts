@@ -3,7 +3,10 @@ import { AuthToken } from '../domain/auth-token';
 import { AuthTokenType } from '../domain/auth-token-type';
 import { UserAccount } from '../domain/user-account';
 import { Email } from '../domain/email';
-import { AuthTokenNotFoundError } from '../domain/errors';
+import {
+  AuthTokenNotFoundError,
+  ExpiredAuthTokenError,
+} from '../domain/errors';
 
 const now = new Date('2026-08-04T10:00:00.000Z');
 
@@ -21,14 +24,16 @@ function account(overrides: any = {}) {
   });
 }
 
-function token(): AuthToken {
+function token(
+  overrides: { usedAt?: Date | null; expiresAt?: Date } = {},
+): AuthToken {
   return AuthToken.fromPersistence({
     id: 't-1',
     userId: 'u-1',
     type: AuthTokenType.EmailVerification,
     tokenHash: 'hash-1',
-    expiresAt: new Date(now.getTime() + 60 * 60 * 1000),
-    usedAt: null,
+    expiresAt: overrides.expiresAt ?? new Date(now.getTime() + 60 * 60 * 1000),
+    usedAt: overrides.usedAt ?? null,
   });
 }
 
@@ -77,9 +82,20 @@ describe('VerifyEmailUseCase', () => {
     );
   });
 
-  it('es idempotente si la cuenta ya estaba verificada', async () => {
-    const d = deps({ user: account({ emailVerifiedAt: now }) });
+  it('rechaza un token expirado si la cuenta no está verificada', async () => {
+    const d = deps({
+      found: token({ expiresAt: new Date(now.getTime() - 1000) }),
+    });
+    await expect(d.uc.execute('raw')).rejects.toThrow(ExpiredAuthTokenError);
+  });
+
+  it('es idempotente ante un doble clic: token ya usado + cuenta ya verificada → éxito', async () => {
+    const d = deps({
+      found: token({ usedAt: now }),
+      user: account({ emailVerifiedAt: now }),
+    });
     await expect(d.uc.execute('raw')).resolves.toBeUndefined();
-    expect(d.savedTokens[0].usedAt).toEqual(now);
+    // No re-guarda al usuario ni re-consume el token: solo confirma el éxito.
+    expect(d.savedUsers).toHaveLength(0);
   });
 });
