@@ -71,6 +71,12 @@ export class RegisterUserUseCase {
   // ResendVerificationUseCase. Extraíble a un servicio de aplicación compartido
   // (application/issue-email-verification.service.ts) en una limpieza posterior.
   private async issueVerification(user: UserAccount, now: Date): Promise<void> {
+    // Invalida cualquier verificación previa (regla 4): un solo enlace vigente.
+    await this.authTokens.invalidateAllOfType(
+      user.id!,
+      AuthTokenType.EmailVerification,
+      now,
+    );
     const { raw, hash } = this.generator.generate();
     await this.authTokens.save(
       AuthToken.issue({

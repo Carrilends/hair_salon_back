@@ -76,6 +76,13 @@ export class UpdateEmailUseCase {
 
   // ### Deuda DRY consciente: idéntica a RegisterUserUseCase#issueVerification.
   private async issueVerification(user: UserAccount, now: Date): Promise<void> {
+    // Invalida cualquier verificación previa (regla 4). Crítico aquí: el enlace
+    // enviado al correo ANTERIOR no debe poder verificar la cuenta ya migrada.
+    await this.authTokens.invalidateAllOfType(
+      user.id!,
+      AuthTokenType.EmailVerification,
+      now,
+    );
     const { raw, hash } = this.generator.generate();
     await this.authTokens.save(
       AuthToken.issue({

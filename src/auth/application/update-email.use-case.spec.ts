@@ -33,10 +33,12 @@ function deps({
   const saved: any[] = [];
   const sent: any[] = [];
   const issued: any[] = [];
+  const invalidated: any[] = [];
   return {
     saved,
     sent,
     issued,
+    invalidated,
     uc: new UpdateEmailUseCase(
       {
         findById: async () => account(),
@@ -51,7 +53,9 @@ function deps({
           issued.push(t);
           return t;
         },
-        invalidateAllOfType: async () => undefined,
+        invalidateAllOfType: async (userId: string, type: string, at: Date) => {
+          invalidated.push({ userId, type, at });
+        },
         findByHash: async () => null,
       } as any,
       { hash: async () => 'x', compare } as any,
@@ -79,6 +83,19 @@ describe('UpdateEmailUseCase', () => {
     expect(s.emailVerified).toBe(false);
     expect(d.issued).toHaveLength(1);
     expect(d.sent[0].to).toBe('nuevo@correo.com');
+  });
+
+  it('invalida los enlaces de verificación viejos antes de emitir el nuevo (M3)', async () => {
+    // Sin esto, el enlace enviado al correo ANTERIOR seguiría vivo 24 h y, como
+    // el token solo lleva userId, verificaría la cuenta con el correo NUEVO.
+    const d = deps();
+    await d.uc.execute('u-1', {
+      currentPassword: 'secret',
+      newEmail: 'nuevo@correo.com',
+    });
+    expect(d.invalidated).toEqual([
+      { userId: 'u-1', type: 'email_verification', at: now },
+    ]);
   });
 
   it('rechaza si la contraseña actual no coincide', async () => {

@@ -53,6 +53,12 @@ export class ResendVerificationUseCase {
 
   // ### Deuda DRY consciente: idéntica a RegisterUserUseCase#issueVerification.
   private async issueVerification(user: UserAccount, now: Date): Promise<void> {
+    // Invalida cualquier verificación previa (regla 4): un solo enlace vigente.
+    await this.authTokens.invalidateAllOfType(
+      user.id!,
+      AuthTokenType.EmailVerification,
+      now,
+    );
     const { raw, hash } = this.generator.generate();
     await this.authTokens.save(
       AuthToken.issue({

@@ -21,9 +21,11 @@ function account(overrides: any = {}) {
 function deps(user: UserAccount | null) {
   const sent: any[] = [];
   const issued: any[] = [];
+  const invalidated: any[] = [];
   return {
     sent,
     issued,
+    invalidated,
     uc: new ResendVerificationUseCase(
       { findByEmail: async () => user } as any,
       {
@@ -31,7 +33,9 @@ function deps(user: UserAccount | null) {
           issued.push(t);
           return t;
         },
-        invalidateAllOfType: async () => undefined,
+        invalidateAllOfType: async (userId: string, type: string, at: Date) => {
+          invalidated.push({ userId, type, at });
+        },
         findByHash: async () => null,
       } as any,
       {
@@ -58,6 +62,14 @@ describe('ResendVerificationUseCase', () => {
     await d.uc.execute('A@B.com');
     expect(d.issued).toHaveLength(1);
     expect(d.sent[0].to).toBe('a@b.com');
+  });
+
+  it('invalida las verificaciones previas antes de emitir una nueva (M3)', async () => {
+    const d = deps(account());
+    await d.uc.execute('a@b.com');
+    expect(d.invalidated).toEqual([
+      { userId: 'u-1', type: 'email_verification', at: now },
+    ]);
   });
 
   it('no revela nada si la cuenta no existe', async () => {

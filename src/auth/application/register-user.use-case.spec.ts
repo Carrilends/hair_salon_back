@@ -8,10 +8,12 @@ function deps(overrides: any = {}) {
   const saved: UserAccount[] = [];
   const sent: any[] = [];
   const issuedTokens: any[] = [];
+  const invalidated: any[] = [];
   return {
     saved,
     sent,
     issuedTokens,
+    invalidated,
     users: {
       existsByEmail: async () => false,
       save: async (u: UserAccount) => {
@@ -34,7 +36,9 @@ function deps(overrides: any = {}) {
         issuedTokens.push(t);
         return t;
       },
-      invalidateAllOfType: async () => undefined,
+      invalidateAllOfType: async (userId: string, type: string, at: Date) => {
+        invalidated.push({ userId, type, at });
+      },
       findByHash: async () => null,
     },
     hasher: { hash: async () => 'hashed', compare: async () => true },
@@ -85,6 +89,19 @@ describe('RegisterUserUseCase', () => {
     expect(d.issuedTokens).toHaveLength(1);
     expect(d.sent[0].to).toBe('nueva@correo.com');
     expect(d.sent[0].text).toContain('raw-token');
+  });
+
+  it('invalida cualquier verificación previa antes de emitir la nueva (M3)', async () => {
+    const d = deps();
+    await build(d).execute({
+      email: 'nueva@correo.com',
+      password: 'Sup3rS3gura!',
+      fullName: 'Nueva',
+      dataPolicyAccepted: true,
+    });
+    expect(d.invalidated).toEqual([
+      { userId: 'u-1', type: 'email_verification', at: now },
+    ]);
   });
 
   it('rechaza correos ya registrados', async () => {
