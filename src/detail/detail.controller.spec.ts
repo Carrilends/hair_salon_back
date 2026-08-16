@@ -1,20 +1,27 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import 'reflect-metadata';
+import { META_ROLES } from 'src/auth/decorators/role-protected.decorator';
+import { ValidRoles } from 'src/auth/interfaces/valid-roles';
 import { DetailController } from './detail.controller';
-import { DetailService } from './detail.service';
 
-describe('DetailController', () => {
-  let controller: DetailController;
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [DetailController],
-      providers: [DetailService],
-    }).compile();
-
-    controller = module.get<DetailController>(DetailController);
+describe('DetailController (autorización)', () => {
+  it('exige rol admin para crear, actualizar y borrar', () => {
+    expect(
+      Reflect.getMetadata(META_ROLES, DetailController.prototype.create),
+    ).toEqual([ValidRoles.admin]);
+    expect(
+      Reflect.getMetadata(META_ROLES, DetailController.prototype.update),
+    ).toEqual([ValidRoles.admin]);
+    expect(
+      Reflect.getMetadata(META_ROLES, DetailController.prototype.remove),
+    ).toEqual([ValidRoles.admin]);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
+  it('deja públicas las lecturas', () => {
+    expect(
+      Reflect.getMetadata(META_ROLES, DetailController.prototype.findAll),
+    ).toBeUndefined();
+    expect(
+      Reflect.getMetadata(META_ROLES, DetailController.prototype.findOne),
+    ).toBeUndefined();
   });
 });

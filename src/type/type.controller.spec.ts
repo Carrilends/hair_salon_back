@@ -1,20 +1,27 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import 'reflect-metadata';
+import { META_ROLES } from 'src/auth/decorators/role-protected.decorator';
+import { ValidRoles } from 'src/auth/interfaces/valid-roles';
 import { TypeController } from './type.controller';
-import { TypeService } from './type.service';
 
-describe('TypeController', () => {
-  let controller: TypeController;
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      controllers: [TypeController],
-      providers: [TypeService],
-    }).compile();
-
-    controller = module.get<TypeController>(TypeController);
+describe('TypeController (autorización)', () => {
+  it('exige rol admin para crear, actualizar y borrar', () => {
+    expect(
+      Reflect.getMetadata(META_ROLES, TypeController.prototype.create),
+    ).toEqual([ValidRoles.admin]);
+    expect(
+      Reflect.getMetadata(META_ROLES, TypeController.prototype.update),
+    ).toEqual([ValidRoles.admin]);
+    expect(
+      Reflect.getMetadata(META_ROLES, TypeController.prototype.remove),
+    ).toEqual([ValidRoles.admin]);
   });
 
-  it('should be defined', () => {
-    expect(controller).toBeDefined();
+  it('deja públicas las lecturas', () => {
+    expect(
+      Reflect.getMetadata(META_ROLES, TypeController.prototype.findAll),
+    ).toBeUndefined();
+    expect(
+      Reflect.getMetadata(META_ROLES, TypeController.prototype.findOne),
+    ).toBeUndefined();
   });
 });

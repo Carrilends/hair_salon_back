@@ -10,11 +10,14 @@ import {
 import { TypeService } from './type.service';
 import { CreateTypeDto } from './dto/create-type.dto';
 import { UpdateTypeDto } from './dto/update-type.dto';
+import { Auth } from 'src/auth/decorators/auth.decorator';
+import { ValidRoles } from 'src/auth/interfaces/valid-roles';
 
 @Controller('type')
 export class TypeController {
   constructor(private readonly typeService: TypeService) {}
 
+  @Auth(ValidRoles.admin)
   @Post()
   create(@Body() createTypeDto: CreateTypeDto) {
     return this.typeService.create(createTypeDto);
@@ -30,11 +33,13 @@ export class TypeController {
     return this.typeService.findOne(+id);
   }
 
+  @Auth(ValidRoles.admin)
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateTypeDto: UpdateTypeDto) {
     return this.typeService.update(+id, updateTypeDto);
   }
 
+  @Auth(ValidRoles.admin)
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.typeService.remove(+id);
