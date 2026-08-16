@@ -18,13 +18,27 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
   ) {}
 
   async save(reservation: Reservation): Promise<Reservation> {
-    const entity = this.repo.create(ReservationMapper.toOrm(reservation));
-    const saved = await this.repo.save(entity);
+    let id: string;
+    if (reservation.id) {
+      // Reserva existente: solo cambian columnas escalares (p. ej. `status`). NO
+      // se tocan las líneas de servicio: son inmutables y, con `cascade: true`
+      // sin `orphanedRowAction`, volver a pasarlas por `save` las reinsertaría,
+      // duplicando `reservation_services` en cada confirm/cancel (hallazgo A1).
+      await this.repo.update(
+        reservation.id,
+        ReservationMapper.toOrmScalars(reservation),
+      );
+      id = reservation.id;
+    } else {
+      const entity = this.repo.create(ReservationMapper.toOrm(reservation));
+      const saved = await this.repo.save(entity);
+      id = saved.id;
+    }
     const full = await this.repo.findOne({
-      where: { id: saved.id },
+      where: { id },
       relations: ['services'],
     });
-    return ReservationMapper.toDomain(full ?? saved);
+    return ReservationMapper.toDomain(full!);
   }
 
   async findById(id: string): Promise<Reservation | null> {

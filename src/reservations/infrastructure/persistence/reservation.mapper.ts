@@ -29,11 +29,14 @@ export const ReservationMapper = {
     });
   },
 
-  // `DeepPartial` permite entregar líneas como objetos planos; `repo.create` las
-  // materializa como entidades y la cascada (`cascade: true`) las persiste.
-  toOrm(reservation: Reservation): DeepPartial<ReservationOrmEntity> {
+  /**
+   * Columnas escalares del agregado (sin la relación `services`). Es lo único
+   * mutable tras la creación (el ciclo de vida solo cambia `status`); la ruta de
+   * actualización del repositorio persiste solo esto para no reescribir las
+   * líneas de servicio inmutables.
+   */
+  toOrmScalars(reservation: Reservation): DeepPartial<ReservationOrmEntity> {
     return {
-      ...(reservation.id ? { id: reservation.id } : {}),
       scheduledAt: reservation.scheduledAt,
       endedAt: reservation.endedAt,
       workerId: reservation.workerId,
@@ -43,6 +46,17 @@ export const ReservationMapper = {
       customerName: reservation.contact?.name ?? null,
       customerPhone: reservation.contact?.phone ?? null,
       customerEmail: reservation.contact?.email ?? null,
+    };
+  },
+
+  // `DeepPartial` permite entregar líneas como objetos planos; `repo.create` las
+  // materializa como entidades y la cascada (`cascade: true`) las persiste. Solo
+  // se usa al INSERTAR: en una actualización, reescribir las líneas sin id las
+  // reinsertaría (no hay `orphanedRowAction`).
+  toOrm(reservation: Reservation): DeepPartial<ReservationOrmEntity> {
+    return {
+      ...(reservation.id ? { id: reservation.id } : {}),
+      ...this.toOrmScalars(reservation),
       services: reservation.lines.map((l) => ({
         serviceId: l.serviceId,
         name: l.name,
