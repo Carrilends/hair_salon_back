@@ -47,6 +47,13 @@ export class User {
   @Column('timestamptz', { name: 'data_policy_accepted_at', nullable: true })
   dataPolicyAcceptedAt: Date | null;
 
+  /**
+   * Momento en que el titular confirmó su correo mediante el enlace de
+   * verificación. Nulo mientras no lo haya hecho. Ver Fase 3a.
+   */
+  @Column('timestamptz', { name: 'email_verified_at', nullable: true })
+  emailVerifiedAt: Date | null;
+
   @OneToMany(() => ReviewByUser, (reviewByUser) => reviewByUser.user)
   reviewsByUser: ReviewByUser[];
 
