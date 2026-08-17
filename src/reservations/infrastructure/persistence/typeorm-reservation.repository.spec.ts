@@ -1,6 +1,7 @@
 import { TypeOrmReservationRepository } from './typeorm-reservation.repository';
 import { Reservation } from '../../domain/reservation';
 import { ReservationStatus } from '../../domain/reservation-status';
+import { WorkerOverlapError } from '../../domain/errors';
 
 const line = {
   serviceId: 's-1',
@@ -80,6 +81,33 @@ describe('TypeOrmReservationRepository.save', () => {
     expect(repo.update).not.toHaveBeenCalled();
     const entity = repo.create.mock.calls[0][0];
     expect(entity.services).toHaveLength(1);
+  });
+
+  it('traduce la violación de exclusión de solape (23P01) a WorkerOverlapError (M5)', async () => {
+    // El constraint de exclusión (btree_gist) es el backstop de la carrera: si
+    // dos reservas concurrentes intentan solapar al mismo estilista, Postgres
+    // rechaza la segunda; el repositorio la traduce a un error de dominio (409).
+    const pgErr: any = new Error(
+      'conflicting key value violates exclusion constraint',
+    );
+    pgErr.code = '23P01';
+    const repo = {
+      create: jest.fn((x: any) => x),
+      save: jest.fn(async () => {
+        throw pgErr;
+      }),
+      update: jest.fn(),
+      findOne: jest.fn(),
+    };
+    const sut = new TypeOrmReservationRepository(repo as any);
+    const nueva = Reservation.schedule({
+      scheduledAt: new Date('2026-08-20T14:00:00.000Z'),
+      workerId: 'w-1',
+      userId: 'u-1',
+      lines: [{ ...line }],
+    });
+
+    await expect(sut.save(nueva)).rejects.toThrow(WorkerOverlapError);
   });
 });
 

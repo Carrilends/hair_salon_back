@@ -4,11 +4,15 @@ import { LessThan, MoreThan, Repository } from 'typeorm';
 import { ReservationOrmEntity } from './reservation.orm-entity';
 import { ReservationMapper } from './reservation.mapper';
 import { Reservation } from '../../domain/reservation';
+import { WorkerOverlapError } from '../../domain/errors';
 import {
   OccupancyMinuteRow,
   ReservationRepositoryPort,
   ReservationView,
 } from '../../domain/ports/reservation-repository.port';
+
+/** Código SQLSTATE de Postgres para violación de constraint de exclusión. */
+const PG_EXCLUSION_VIOLATION = '23P01';
 
 @Injectable()
 export class TypeOrmReservationRepository implements ReservationRepositoryPort {
@@ -30,9 +34,20 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
       );
       id = reservation.id;
     } else {
-      const entity = this.repo.create(ReservationMapper.toOrm(reservation));
-      const saved = await this.repo.save(entity);
-      id = saved.id;
+      try {
+        const entity = this.repo.create(ReservationMapper.toOrm(reservation));
+        const saved = await this.repo.save(entity);
+        id = saved.id;
+      } catch (err) {
+        // El constraint de exclusión (btree_gist) rechaza dos reservas no
+        // canceladas que se solapan en el mismo estilista: es el backstop de la
+        // carrera entre countOverlaps y el insert. Se traduce a error de dominio.
+        const code =
+          (err as { driverError?: { code?: string } })?.driverError?.code ??
+          (err as { code?: string })?.code;
+        if (code === PG_EXCLUSION_VIOLATION) throw new WorkerOverlapError();
+        throw err;
+      }
     }
     const full = await this.repo.findOne({
       where: { id },
