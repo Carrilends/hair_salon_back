@@ -66,3 +66,21 @@ export class EmailAlreadyVerifiedError extends AuthDomainError {
     this.name = 'EmailAlreadyVerifiedError';
   }
 }
+export class InvalidRefreshTokenError extends AuthDomainError {
+  constructor() {
+    super('La sesión no es válida; inicia sesión de nuevo');
+    this.name = 'InvalidRefreshTokenError';
+  }
+}
+
+/**
+ * Se presentó un refresh token que ya había sido rotado. O bien la cookie fue
+ * robada, o bien el cliente reintentó con un valor viejo. En ambos casos la
+ * respuesta correcta es revocar la familia completa (S2).
+ */
+export class RefreshTokenReuseDetectedError extends AuthDomainError {
+  constructor() {
+    super('Se detectó un uso indebido de la sesión; vuelve a iniciar sesión');
+    this.name = 'RefreshTokenReuseDetectedError';
+  }
+}
