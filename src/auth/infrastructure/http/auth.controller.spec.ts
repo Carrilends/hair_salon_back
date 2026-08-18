@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { UnauthorizedException } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 
 describe('AuthController (hexagonal)', () => {
@@ -13,6 +14,12 @@ describe('AuthController (hexagonal)', () => {
   let performPasswordReset: { execute: jest.Mock };
   let confirmEmail: { execute: jest.Mock };
   let resendConfirmation: { execute: jest.Mock };
+  let refreshSession: { execute: jest.Mock };
+  let logoutUseCase: { execute: jest.Mock };
+  let logoutAll: { execute: jest.Mock };
+  let loginWithGoogle: { execute: jest.Mock };
+
+  const makeRes = () => ({ cookie: jest.fn(), clearCookie: jest.fn() }) as any;
 
   beforeEach(() => {
     registerUser = { execute: jest.fn() };
@@ -25,6 +32,10 @@ describe('AuthController (hexagonal)', () => {
     performPasswordReset = { execute: jest.fn() };
     confirmEmail = { execute: jest.fn() };
     resendConfirmation = { execute: jest.fn() };
+    refreshSession = { execute: jest.fn() };
+    logoutUseCase = { execute: jest.fn() };
+    logoutAll = { execute: jest.fn() };
+    loginWithGoogle = { execute: jest.fn() };
     controller = new AuthController(
       registerUser as any,
       loginUser as any,
@@ -36,6 +47,11 @@ describe('AuthController (hexagonal)', () => {
       performPasswordReset as any,
       confirmEmail as any,
       resendConfirmation as any,
+      refreshSession as any,
+      logoutUseCase as any,
+      logoutAll as any,
+      loginWithGoogle as any,
+      { refreshTtlDays: 30, refreshTtlMs: 2592000000 } as any,
     );
   });
 
@@ -52,7 +68,8 @@ describe('AuthController (hexagonal)', () => {
       fullName: 'A',
       dataPolicyAccepted: true,
     };
-    await expect(controller.register(dto as any)).resolves.toEqual({
+    const res = makeRes();
+    await expect(controller.register(dto as any, res)).resolves.toEqual({
       id: 'u-1',
     });
     expect(registerUser.execute).toHaveBeenCalledWith({
@@ -61,20 +78,104 @@ describe('AuthController (hexagonal)', () => {
       fullName: 'A',
       dataPolicyAccepted: true,
     });
+    // El refresh viaja en cookie, no en el cuerpo.
+    expect(res.cookie).toHaveBeenCalledWith(
+      'marlene_rt',
+      'rt',
+      expect.any(Object),
+    );
   });
 
-  it('login delega al caso de uso', async () => {
+  it('login delega al caso de uso y fija la cookie de refresh', async () => {
     loginUser.execute.mockResolvedValue({
       session: { token: 't' },
       refreshToken: 'rt',
     });
+    const res = makeRes();
     await expect(
-      controller.login({ email: 'a@b.com', password: 'x' } as any),
+      controller.login({ email: 'a@b.com', password: 'x' } as any, res),
     ).resolves.toEqual({ token: 't' });
     expect(loginUser.execute).toHaveBeenCalledWith({
       email: 'a@b.com',
       password: 'x',
     });
+    expect(res.cookie).toHaveBeenCalledWith(
+      'marlene_rt',
+      'rt',
+      expect.any(Object),
+    );
+  });
+
+  it('refresh rota la sesión con la cookie y fija la nueva', async () => {
+    refreshSession.execute.mockResolvedValue({
+      session: { token: 'nuevo' },
+      refreshToken: 'rt2',
+    });
+    const res = makeRes();
+    const req = { cookies: { marlene_rt: 'rt1' } } as any;
+    await expect(controller.refresh(req, res)).resolves.toEqual({
+      token: 'nuevo',
+    });
+    expect(refreshSession.execute).toHaveBeenCalledWith('rt1');
+    expect(res.cookie).toHaveBeenCalledWith(
+      'marlene_rt',
+      'rt2',
+      expect.any(Object),
+    );
+  });
+
+  it('refresh sin cookie responde 401 sin tocar el caso de uso', async () => {
+    const req = { cookies: {} } as any;
+    await expect(controller.refresh(req, makeRes())).rejects.toThrow(
+      UnauthorizedException,
+    );
+    expect(refreshSession.execute).not.toHaveBeenCalled();
+  });
+
+  it('logout revoca y limpia la cookie aunque no exista sesión', async () => {
+    const res = makeRes();
+    await controller.logout({ cookies: {} } as any, res);
+    expect(logoutUseCase.execute).not.toHaveBeenCalled();
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      'marlene_rt',
+      expect.any(Object),
+    );
+  });
+
+  it('logout con cookie revoca en servidor y limpia', async () => {
+    const res = makeRes();
+    await controller.logout({ cookies: { marlene_rt: 'rt1' } } as any, res);
+    expect(logoutUseCase.execute).toHaveBeenCalledWith('rt1');
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      'marlene_rt',
+      expect.any(Object),
+    );
+  });
+
+  it('google delega al caso de uso y fija la cookie', async () => {
+    loginWithGoogle.execute.mockResolvedValue({
+      session: { email: 'ana@gmail.com' },
+      refreshToken: 'rt',
+    });
+    const res = makeRes();
+    await expect(
+      controller.loginWithGoogle(
+        {
+          idToken: 'id-token-largo-de-google',
+          dataPolicyAccepted: true,
+        } as any,
+        res,
+      ),
+    ).resolves.toEqual({ email: 'ana@gmail.com' });
+    expect(loginWithGoogle.execute).toHaveBeenCalledWith({
+      idToken: 'id-token-largo-de-google',
+      dataPolicyAccepted: true,
+    });
+    expect(res.cookie).toHaveBeenCalledWith(
+      'marlene_rt',
+      'rt',
+      expect.any(Object),
+    );
   });
 
   it('check-status delega con el id del usuario autenticado', async () => {

@@ -11,6 +11,8 @@ import {
   AuthDomainError,
   InactiveUserError,
   InvalidCredentialsError,
+  InvalidRefreshTokenError,
+  RefreshTokenReuseDetectedError,
   UserNotFoundError,
 } from '../../domain/errors';
 
@@ -31,7 +33,11 @@ export class AuthDomainExceptionFilter implements ExceptionFilter {
     let http: HttpException;
     if (
       error instanceof InvalidCredentialsError ||
-      error instanceof InactiveUserError
+      error instanceof InactiveUserError ||
+      error instanceof InvalidRefreshTokenError ||
+      // El reuso se responde igual que una sesión inválida: no confirmar nada a
+      // quien esté probando tokens. El detalle queda en el log del servidor.
+      error instanceof RefreshTokenReuseDetectedError
     ) {
       http = new UnauthorizedException(error.message);
     } else if (error instanceof UserNotFoundError) {

@@ -2,10 +2,13 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { useContainer } from 'class-validator';
+import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
+  // Lee la cookie httpOnly del refresh token (Fase 3b) en req.cookies.
+  app.use(cookieParser());
 
   app.useGlobalPipes(
     new ValidationPipe({

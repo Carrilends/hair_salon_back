@@ -12,6 +12,7 @@ import { JWTStrategy } from './strategies/jwt.strategy';
 
 import { AuthController } from './infrastructure/http/auth.controller';
 import { AuthTokenOrmEntity } from './infrastructure/persistence/auth-token.orm-entity';
+import { RefreshTokenOrmEntity } from './infrastructure/persistence/refresh-token.orm-entity';
 
 // Casos de uso (aplicación)
 import { RegisterUserUseCase } from './application/register-user.use-case';
@@ -24,14 +25,21 @@ import { RequestPasswordResetUseCase } from './application/request-password-rese
 import { ResetPasswordUseCase } from './application/reset-password.use-case';
 import { VerifyEmailUseCase } from './application/verify-email.use-case';
 import { ResendVerificationUseCase } from './application/resend-verification.use-case';
+import { RefreshSessionUseCase } from './application/refresh-session.use-case';
+import { LogoutUseCase } from './application/logout.use-case';
+import { LogoutAllUseCase } from './application/logout-all.use-case';
+import { LoginWithGoogleUseCase } from './application/login-with-google.use-case';
 import { AuthLinks } from './application/auth-email-composer';
+import { SessionConfig } from './application/session-config';
 
 // Adaptadores (infraestructura)
 import { TypeOrmUserRepository } from './infrastructure/persistence/typeorm-user.repository';
 import { TypeOrmAuthTokenRepository } from './infrastructure/persistence/typeorm-auth-token.repository';
+import { TypeOrmRefreshTokenRepository } from './infrastructure/persistence/typeorm-refresh-token.repository';
 import { BcryptPasswordHasherAdapter } from './infrastructure/security/bcrypt-password-hasher.adapter';
 import { CryptoTokenGeneratorAdapter } from './infrastructure/security/crypto-token-generator.adapter';
 import { JwtTokenIssuerAdapter } from './infrastructure/security/jwt-token-issuer.adapter';
+import { GoogleIdentityAdapter } from './infrastructure/security/google-identity.adapter';
 import { ConsoleEmailSenderAdapter } from './infrastructure/email/console-email-sender.adapter';
 import { ProviderEmailSenderAdapter } from './infrastructure/email/provider-email-sender.adapter';
 import { ReviewAuthorRenamerAdapter } from './infrastructure/reviews/review-author-renamer.adapter';
@@ -48,6 +56,9 @@ import {
   REVIEW_AUTHOR_RENAMER,
   AUTH_CLOCK,
   FRONT_BASE_URL,
+  REFRESH_TOKEN_REPOSITORY,
+  GOOGLE_IDENTITY,
+  SESSION_CONFIG,
 } from './application/tokens';
 
 @Module({
@@ -65,9 +76,17 @@ import {
     ResetPasswordUseCase,
     VerifyEmailUseCase,
     ResendVerificationUseCase,
+    RefreshSessionUseCase,
+    LogoutUseCase,
+    LogoutAllUseCase,
+    LoginWithGoogleUseCase,
     // Puertos -> adaptadores
     { provide: USER_REPOSITORY, useClass: TypeOrmUserRepository },
     { provide: AUTH_TOKEN_REPOSITORY, useClass: TypeOrmAuthTokenRepository },
+    {
+      provide: REFRESH_TOKEN_REPOSITORY,
+      useClass: TypeOrmRefreshTokenRepository,
+    },
     { provide: PASSWORD_HASHER, useClass: BcryptPasswordHasherAdapter },
     {
       // La vigencia del access token se deriva de JWT_EXPIRES_IN (default 15m,
@@ -110,9 +129,35 @@ import {
         };
       },
     },
+    {
+      // El client id de Google es público (viaja al navegador). Puede faltar en
+      // desarrollo sin Google configurado: el módulo arranca igual y solo el
+      // inicio de sesión con Google fallaría al verificar el token.
+      provide: GOOGLE_IDENTITY,
+      useFactory: () =>
+        new GoogleIdentityAdapter((process.env.GOOGLE_CLIENT_ID ?? '').trim()),
+    },
+    {
+      // Vigencia del refresh (S6, default 30 días); refreshTtlMs alimenta el
+      // maxAge de la cookie.
+      provide: SESSION_CONFIG,
+      useFactory: (): SessionConfig => {
+        const days = Number(process.env.REFRESH_TOKEN_TTL_DAYS ?? '30');
+        return {
+          refreshTtlDays: days,
+          refreshTtlMs: days * 24 * 60 * 60 * 1000,
+        };
+      },
+    },
   ],
   imports: [
-    TypeOrmModule.forFeature([User, Review, ReviewByUser, AuthTokenOrmEntity]),
+    TypeOrmModule.forFeature([
+      User,
+      Review,
+      ReviewByUser,
+      AuthTokenOrmEntity,
+      RefreshTokenOrmEntity,
+    ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [],

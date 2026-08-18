@@ -3,10 +3,15 @@ import {
   Controller,
   Get,
   HttpCode,
+  Inject,
   Patch,
   Post,
+  Req,
+  Res,
+  UnauthorizedException,
   UseFilters,
 } from '@nestjs/common';
+import { Request, Response } from 'express';
 import { Auth } from '../../decorators/auth.decorator';
 import { GetUser } from '../../decorators/get-user.decorator';
 import { User } from '../../entities/user.entity';
@@ -19,7 +24,13 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
+import { GoogleLoginDto } from './dto/google-login.dto';
 import { AuthDomainExceptionFilter } from './auth-domain-exception.filter';
+import {
+  REFRESH_COOKIE_NAME,
+  setRefreshCookie,
+  clearRefreshCookie,
+} from './session-cookie';
 import { RegisterUserUseCase } from '../../application/register-user.use-case';
 import { LoginUserUseCase } from '../../application/login-user.use-case';
 import { GetAuthStatusUseCase } from '../../application/get-auth-status.use-case';
@@ -30,6 +41,12 @@ import { RequestPasswordResetUseCase } from '../../application/request-password-
 import { ResetPasswordUseCase } from '../../application/reset-password.use-case';
 import { VerifyEmailUseCase } from '../../application/verify-email.use-case';
 import { ResendVerificationUseCase } from '../../application/resend-verification.use-case';
+import { RefreshSessionUseCase } from '../../application/refresh-session.use-case';
+import { LogoutUseCase } from '../../application/logout.use-case';
+import { LogoutAllUseCase } from '../../application/logout-all.use-case';
+import { LoginWithGoogleUseCase } from '../../application/login-with-google.use-case';
+import { SESSION_CONFIG } from '../../application/tokens';
+import { SessionConfig } from '../../application/session-config';
 
 @Controller('auth')
 @UseFilters(AuthDomainExceptionFilter)
@@ -45,27 +62,88 @@ export class AuthController {
     private readonly performPasswordReset: ResetPasswordUseCase,
     private readonly confirmEmail: VerifyEmailUseCase,
     private readonly resendConfirmation: ResendVerificationUseCase,
+    private readonly refreshSession: RefreshSessionUseCase,
+    private readonly logoutUseCase: LogoutUseCase,
+    private readonly logoutAllUseCase: LogoutAllUseCase,
+    private readonly loginWithGoogleUseCase: LoginWithGoogleUseCase,
+    @Inject(SESSION_CONFIG) private readonly sessionConfig: SessionConfig,
   ) {}
 
   @Post('register')
-  async register(@Body() dto: CreateUserDto) {
-    // El refresh token viaja en cookie (T6), nunca en el cuerpo: se desempaqueta
-    // aquí y se devuelve solo la sesión.
-    const { session } = await this.registerUser.execute({
+  async register(
+    @Body() dto: CreateUserDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { session, refreshToken } = await this.registerUser.execute({
       email: dto.email,
       password: dto.password,
       fullName: dto.fullName,
       dataPolicyAccepted: dto.dataPolicyAccepted,
     });
+    // El refresh token viaja en cookie httpOnly, nunca en el cuerpo.
+    setRefreshCookie(res, refreshToken, this.sessionConfig.refreshTtlMs);
     return session;
   }
 
   @Post('login')
-  async login(@Body() dto: LoginUserDto) {
-    const { session } = await this.loginUser.execute({
+  async login(
+    @Body() dto: LoginUserDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { session, refreshToken } = await this.loginUser.execute({
       email: dto.email,
       password: dto.password,
     });
+    setRefreshCookie(res, refreshToken, this.sessionConfig.refreshTtlMs);
+    return session;
+  }
+
+  @Post('refresh')
+  @HttpCode(200)
+  async refresh(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const raw = req.cookies?.[REFRESH_COOKIE_NAME];
+    if (!raw) throw new UnauthorizedException('Sesión no disponible');
+    const { session, refreshToken } = await this.refreshSession.execute(raw);
+    setRefreshCookie(res, refreshToken, this.sessionConfig.refreshTtlMs);
+    return session;
+  }
+
+  @Post('logout')
+  @HttpCode(204)
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const raw = req.cookies?.[REFRESH_COOKIE_NAME];
+    if (raw) await this.logoutUseCase.execute(raw);
+    // Siempre se limpia la cookie, exista o no la sesión en base de datos.
+    clearRefreshCookie(res);
+  }
+
+  @Post('logout-all')
+  @Auth()
+  @HttpCode(204)
+  async logoutAll(
+    @GetUser() user: User,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.logoutAllUseCase.execute(user.id);
+    clearRefreshCookie(res);
+  }
+
+  @Post('google')
+  @HttpCode(200)
+  async loginWithGoogle(
+    @Body() dto: GoogleLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { session, refreshToken } = await this.loginWithGoogleUseCase.execute(
+      {
+        idToken: dto.idToken,
+        dataPolicyAccepted: dto.dataPolicyAccepted,
+      },
+    );
+    setRefreshCookie(res, refreshToken, this.sessionConfig.refreshTtlMs);
     return session;
   }
 
