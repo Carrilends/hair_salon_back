@@ -4,6 +4,7 @@ import {
   WorkerOverlapError,
   MissingContactError,
   InvalidReservationError,
+  ReservationInThePastError,
 } from '../domain/errors';
 import { Reservation } from '../domain/reservation';
 
@@ -21,6 +22,10 @@ const workers = {
   countParallelStylists: async () => 3,
   getDefaultWorkerId: async () => 'default-w',
 };
+
+// "ahora" fijado antes de las fechas de prueba (2026-04-20): las reservas no
+// son pasadas salvo que un test lo fuerce con su propio reloj.
+const clock = { now: () => new Date('2026-04-01T00:00:00.000Z') };
 
 function repo() {
   return {
@@ -52,6 +57,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       repo(),
       workers as any,
       catalog as any,
+      clock as any,
     );
     const result = await uc.execute({
       scheduledAt: '2026-04-20T15:00:00.000Z',
@@ -67,6 +73,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       repo(),
       workers as any,
       catalog as any,
+      clock as any,
     );
     const result = await uc.execute({
       scheduledAt: '2026-04-20T15:00:00.000Z',
@@ -81,6 +88,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       repo(),
       workers as any,
       catalog as any,
+      clock as any,
     );
     await expect(
       uc.execute({
@@ -96,6 +104,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       repo(),
       workers as any,
       emptyCatalog as any,
+      clock as any,
     );
     await expect(
       uc.execute({
@@ -111,6 +120,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       repo(),
       workers as any,
       catalog as any,
+      clock as any,
     );
     await expect(
       uc.execute({
@@ -121,10 +131,33 @@ describe('CreateReservationUseCase (maduro)', () => {
     ).rejects.toThrow(OutOfBusinessHoursError);
   });
 
+  it('rechaza una reserva cuya hora de inicio ya pasó', async () => {
+    // "ahora" es una hora posterior al inicio solicitado: la reserva es pasada.
+    const lateClock = { now: () => new Date('2026-04-20T16:00:00.000Z') };
+    const uc = new CreateReservationUseCase(
+      repo(),
+      workers as any,
+      catalog as any,
+      lateClock as any,
+    );
+    await expect(
+      uc.execute({
+        scheduledAt: '2026-04-20T15:00:00.000Z', // 10:00 Bogotá, una hora antes de "ahora"
+        serviceIds: ['s1'],
+        userId: 'u-1',
+      }),
+    ).rejects.toThrow(ReservationInThePastError);
+  });
+
   it('rechaza por solapamiento', async () => {
     const r = repo();
     r.overlaps = 1;
-    const uc = new CreateReservationUseCase(r, workers as any, catalog as any);
+    const uc = new CreateReservationUseCase(
+      r,
+      workers as any,
+      catalog as any,
+      clock as any,
+    );
     await expect(
       uc.execute({
         scheduledAt: '2026-04-20T15:00:00.000Z',

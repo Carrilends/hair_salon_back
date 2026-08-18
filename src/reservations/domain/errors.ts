@@ -50,3 +50,10 @@ export class CancellationTooLateError extends DomainError {
     this.name = 'CancellationTooLateError';
   }
 }
+
+export class ReservationInThePastError extends DomainError {
+  constructor() {
+    super('La reserva no puede programarse en el pasado');
+    this.name = 'ReservationInThePastError';
+  }
+}

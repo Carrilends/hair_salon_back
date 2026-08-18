@@ -5,10 +5,12 @@ import { WorkerOverlapError, InvalidReservationError } from '../domain/errors';
 import { ReservationRepositoryPort } from '../domain/ports/reservation-repository.port';
 import { WorkerAvailabilityPort } from '../domain/ports/worker-availability.port';
 import { ServiceCatalogPort } from '../domain/ports/service-catalog.port';
+import { ClockPort } from '../domain/ports/clock.port';
 import {
   RESERVATION_REPOSITORY,
   WORKER_AVAILABILITY,
   SERVICE_CATALOG,
+  CLOCK,
 } from './tokens';
 
 export interface CreateReservationCommand {
@@ -30,6 +32,8 @@ export class CreateReservationUseCase {
     private readonly workers: WorkerAvailabilityPort,
     @Inject(SERVICE_CATALOG)
     private readonly catalog: ServiceCatalogPort,
+    @Inject(CLOCK)
+    private readonly clock: ClockPort,
   ) {}
 
   async execute(command: CreateReservationCommand): Promise<Reservation> {
@@ -57,6 +61,7 @@ export class CreateReservationUseCase {
     });
 
     this.scheduling.assertWithinBusinessHours(reservation, tz);
+    this.scheduling.assertNotInThePast(reservation, this.clock.now());
 
     const overlaps = await this.repository.countOverlaps(
       workerId,

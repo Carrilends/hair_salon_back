@@ -1,5 +1,5 @@
 import { Reservation } from './reservation';
-import { OutOfBusinessHoursError } from './errors';
+import { OutOfBusinessHoursError, ReservationInThePastError } from './errors';
 import { getDatePartsInTz, getDayBounds } from '../salon-time';
 
 function pad2(n: number): string {
@@ -18,6 +18,13 @@ export class ReservationScheduling {
     // no después. (Misma convención que el front: `end <= closeMin`.)
     if (startMin < bounds.openMin || endMin > bounds.closeMin) {
       throw new OutOfBusinessHoursError();
+    }
+  }
+
+  /** Regla pura: no se puede programar una reserva cuyo inicio ya pasó. */
+  assertNotInThePast(reservation: Reservation, now: Date): void {
+    if (reservation.scheduledAt.getTime() < now.getTime()) {
+      throw new ReservationInThePastError();
     }
   }
 }
