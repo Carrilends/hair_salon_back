@@ -19,11 +19,16 @@ export class User {
   })
   email: string;
 
+  // S8: nullable porque las cuentas creadas con Google no tienen contraseña
+  // local. `select: false` mantiene el hash fuera de las lecturas por defecto.
   @Column('text', {
-    nullable: false,
+    nullable: true,
     select: false,
   })
-  password: string;
+  password: string | null;
+
+  @Column('text', { name: 'google_id', nullable: true, unique: true })
+  googleId: string | null;
 
   @Column('text', { nullable: false })
   fullName: string;

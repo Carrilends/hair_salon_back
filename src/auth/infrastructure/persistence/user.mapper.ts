@@ -7,12 +7,13 @@ export class UserMapper {
     return UserAccount.fromPersistence({
       id: row.id,
       email: Email.create(row.email),
-      passwordHash: row.password,
+      passwordHash: row.password ?? null,
       fullName: row.fullName,
       roles: row.roles,
       isActive: row.isActive,
       emailVerifiedAt: row.emailVerifiedAt ?? null,
       dataPolicyAcceptedAt: row.dataPolicyAcceptedAt ?? null,
+      googleId: row.googleId ?? null,
     });
   }
 
@@ -25,6 +26,7 @@ export class UserMapper {
     const orm: Partial<User> = {
       email: user.email.value,
       password: user.passwordHash,
+      googleId: user.googleId,
       fullName: user.fullName,
       roles: user.roles,
       isActive: user.isActive,

@@ -40,14 +40,21 @@ describe('AuthController (hexagonal)', () => {
   });
 
   it('register delega al caso de uso con el comando mapeado', async () => {
-    registerUser.execute.mockResolvedValue({ id: 'u-1' });
+    // El caso de uso devuelve sesión + refresh; el controller solo expone la
+    // sesión (el refresh viaja en cookie, T6).
+    registerUser.execute.mockResolvedValue({
+      session: { id: 'u-1' },
+      refreshToken: 'rt',
+    });
     const dto = {
       email: 'a@b.com',
       password: 'Str0ngP@ss!',
       fullName: 'A',
       dataPolicyAccepted: true,
     };
-    await expect(controller.register(dto as any)).resolves.toEqual({ id: 'u-1' });
+    await expect(controller.register(dto as any)).resolves.toEqual({
+      id: 'u-1',
+    });
     expect(registerUser.execute).toHaveBeenCalledWith({
       email: 'a@b.com',
       password: 'Str0ngP@ss!',
@@ -57,7 +64,10 @@ describe('AuthController (hexagonal)', () => {
   });
 
   it('login delega al caso de uso', async () => {
-    loginUser.execute.mockResolvedValue({ token: 't' });
+    loginUser.execute.mockResolvedValue({
+      session: { token: 't' },
+      refreshToken: 'rt',
+    });
     await expect(
       controller.login({ email: 'a@b.com', password: 'x' } as any),
     ).resolves.toEqual({ token: 't' });
@@ -75,10 +85,13 @@ describe('AuthController (hexagonal)', () => {
 
   it('me/email delega con el id y el comando', async () => {
     updateEmail.execute.mockResolvedValue({ id: 'u-1' });
-    await controller.updateEmail({ id: 'u-1' } as any, {
-      currentPassword: 'c',
-      newEmail: 'n@n.com',
-    } as any);
+    await controller.updateEmail(
+      { id: 'u-1' } as any,
+      {
+        currentPassword: 'c',
+        newEmail: 'n@n.com',
+      } as any,
+    );
     expect(updateEmail.execute).toHaveBeenCalledWith('u-1', {
       currentPassword: 'c',
       newEmail: 'n@n.com',
@@ -98,7 +111,10 @@ describe('AuthController (hexagonal)', () => {
       token: 'tok',
       newPassword: 'New-1234!',
     } as any);
-    expect(performPasswordReset.execute).toHaveBeenCalledWith('tok', 'New-1234!');
+    expect(performPasswordReset.execute).toHaveBeenCalledWith(
+      'tok',
+      'New-1234!',
+    );
     expect(res.message).toMatch(/actualizada/);
   });
 
@@ -111,7 +127,9 @@ describe('AuthController (hexagonal)', () => {
 
   it('resend-verification responde mensaje genérico y delega', async () => {
     resendConfirmation.execute.mockResolvedValue(undefined);
-    const res = await controller.resendVerification({ email: 'a@b.com' } as any);
+    const res = await controller.resendVerification({
+      email: 'a@b.com',
+    } as any);
     expect(resendConfirmation.execute).toHaveBeenCalledWith('a@b.com');
     expect(res.message).toMatch(/Si la cuenta existe/);
   });

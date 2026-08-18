@@ -59,8 +59,14 @@ function deps({
         findByHash: async () => null,
       } as any,
       { hash: async () => 'x', compare } as any,
-      { issueAccessToken: () => 'jwt' } as any,
-      { generate: () => ({ raw: 'raw', hash: 'hash' }), hash: () => 'hash' } as any,
+      {
+        issueAccessToken: () => 'jwt',
+        accessTokenTtlSeconds: () => 900,
+      } as any,
+      {
+        generate: () => ({ raw: 'raw', hash: 'hash' }),
+        hash: () => 'hash',
+      } as any,
       {
         send: async (m: any) => {
           sent.push(m);

@@ -13,6 +13,7 @@ const SELECT_WITH_PASSWORD: (keyof User)[] = [
   'id',
   'email',
   'password',
+  'googleId',
   'fullName',
   'roles',
   'isActive',
@@ -42,13 +43,23 @@ export class TypeOrmUserRepository implements UserRepositoryPort {
     return row ? UserMapper.toDomain(row) : null;
   }
 
+  async findByGoogleId(googleId: string): Promise<UserAccount | null> {
+    const row = await this.repo.findOne({
+      where: { googleId },
+      select: SELECT_WITH_PASSWORD,
+    });
+    return row ? UserMapper.toDomain(row) : null;
+  }
+
   async existsByEmail(email: Email): Promise<boolean> {
     const count = await this.repo.count({ where: { email: email.value } });
     return count > 0;
   }
 
   async save(user: UserAccount): Promise<UserAccount> {
-    const saved = await this.repo.save(this.repo.create(UserMapper.toOrm(user)));
+    const saved = await this.repo.save(
+      this.repo.create(UserMapper.toOrm(user)),
+    );
     // Recargar con la contraseña para devolver un agregado consistente.
     const row = await this.repo.findOne({
       where: { id: saved.id },

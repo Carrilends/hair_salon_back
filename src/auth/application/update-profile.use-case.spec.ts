@@ -32,7 +32,10 @@ describe('UpdateProfileUseCase', () => {
           renamed.push({ id, name });
         },
       } as any,
-      { issueAccessToken: () => 'jwt' } as any,
+      {
+        issueAccessToken: () => 'jwt',
+        accessTokenTtlSeconds: () => 900,
+      } as any,
     );
     const s = await uc.execute('u-1', { fullName: '  Ana María  ' });
     expect(s.fullName).toBe('Ana María');

@@ -42,7 +42,17 @@ function deps(overrides: any = {}) {
       findByHash: async () => null,
     },
     hasher: { hash: async () => 'hashed', compare: async () => true },
-    issuer: { issueAccessToken: () => 'jwt-token' },
+    issuer: {
+      issueAccessToken: () => 'jwt-token',
+      accessTokenTtlSeconds: () => 900,
+      issueRefreshToken: () => ({
+        raw: 'raw-rt',
+        hash: 'hash-rt',
+        familyId: 'fam',
+      }),
+      hashRefreshToken: (r: string) => `h-${r}`,
+    },
+    refreshTokens: { save: async (t: any) => t },
     generator: {
       generate: () => ({ raw: 'raw-token', hash: 'hash-token' }),
       hash: () => 'hash-token',
@@ -69,21 +79,24 @@ function build(d: any) {
       verifyEmailUrl: 'https://front/auth/verificar-correo',
       resetPasswordUrl: 'https://front/auth/restablecer',
     } as any,
+    d.refreshTokens,
+    { refreshTtlDays: 30, refreshTtlMs: 30 * 24 * 60 * 60 * 1000 },
   );
 }
 
 describe('RegisterUserUseCase', () => {
   it('crea la cuenta, devuelve sesión y envía la verificación', async () => {
     const d = deps();
-    const session = await build(d).execute({
+    const result = await build(d).execute({
       email: 'Nueva@Correo.com',
       password: 'Sup3rS3gura!',
       fullName: 'Nueva',
       dataPolicyAccepted: true,
     });
-    expect(session.id).toBe('u-1');
-    expect(session.emailVerified).toBe(false);
-    expect(session.token).toBe('jwt-token');
+    expect(result.session.id).toBe('u-1');
+    expect(result.session.emailVerified).toBe(false);
+    expect(result.session.token).toBe('jwt-token');
+    expect(result.refreshToken).toBe('raw-rt');
     expect(d.saved[0].passwordHash).toBe('hashed');
     expect(d.saved[0].email.value).toBe('nueva@correo.com');
     expect(d.issuedTokens).toHaveLength(1);
@@ -121,12 +134,12 @@ describe('RegisterUserUseCase', () => {
     d.mailer.send = async () => {
       throw new Error('proveedor caído');
     };
-    const session = await build(d).execute({
+    const result = await build(d).execute({
       email: 'a@b.com',
       password: 'Sup3rS3gura!',
       fullName: 'A',
       dataPolicyAccepted: true,
     });
-    expect(session.id).toBe('u-1');
+    expect(result.session.id).toBe('u-1');
   });
 });

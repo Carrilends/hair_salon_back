@@ -6,12 +6,14 @@ import { AuthTokenRepositoryPort } from '../domain/ports/auth-token-repository.p
 import { PasswordHasherPort } from '../domain/ports/password-hasher.port';
 import { SecureTokenGeneratorPort } from '../domain/ports/secure-token-generator.port';
 import { ClockPort } from '../domain/ports/clock.port';
+import { RefreshTokenRepositoryPort } from '../domain/ports/refresh-token-repository.port';
 import {
   USER_REPOSITORY,
   AUTH_TOKEN_REPOSITORY,
   PASSWORD_HASHER,
   SECURE_TOKEN_GENERATOR,
   AUTH_CLOCK,
+  REFRESH_TOKEN_REPOSITORY,
 } from './tokens';
 
 @Injectable()
@@ -24,6 +26,8 @@ export class ResetPasswordUseCase {
     @Inject(SECURE_TOKEN_GENERATOR)
     private readonly generator: SecureTokenGeneratorPort,
     @Inject(AUTH_CLOCK) private readonly clock: ClockPort,
+    @Inject(REFRESH_TOKEN_REPOSITORY)
+    private readonly refreshTokens: RefreshTokenRepositoryPort,
   ) {}
 
   async execute(rawToken: string, newPassword: string): Promise<void> {
@@ -47,11 +51,13 @@ export class ResetPasswordUseCase {
 
     token.markUsed(now);
     await this.authTokens.save(token);
-    // ### La Fase 3b revocará aquí también los refresh tokens vigentes del usuario.
     await this.authTokens.invalidateAllOfType(
       token.userId,
       AuthTokenType.PasswordReset,
       now,
     );
+    // Cambiar la contraseña invalida todas las sesiones abiertas: es lo que
+    // espera quien restablece porque cree que le robaron la cuenta (Fase 3b).
+    await this.refreshTokens.revokeAllOfUser(user.id!, now);
   }
 }

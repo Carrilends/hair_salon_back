@@ -17,23 +17,50 @@ function account(overrides: any = {}) {
   });
 }
 
+const issuer = {
+  issueAccessToken: () => 'jwt',
+  accessTokenTtlSeconds: () => 900,
+  issueRefreshToken: () => ({
+    raw: 'raw-rt',
+    hash: 'hash-rt',
+    familyId: 'fam',
+  }),
+  hashRefreshToken: (r: string) => `h-${r}`,
+};
+
 function build({
   found = account() as UserAccount | null,
   compare = async () => true,
 }: { found?: UserAccount | null; compare?: () => Promise<boolean> } = {}) {
-  return new LoginUserUseCase(
+  const savedRefresh: any[] = [];
+  const uc = new LoginUserUseCase(
     { findByEmail: async () => found } as any,
     { hash: async () => 'x', compare } as any,
-    { issueAccessToken: () => 'jwt' } as any,
+    issuer as any,
+    { save: async (t: any) => savedRefresh.push(t) } as any,
+    { now: () => new Date('2026-08-04T10:00:00.000Z') } as any,
+    { refreshTtlDays: 30, refreshTtlMs: 30 * 24 * 60 * 60 * 1000 } as any,
   );
+  return Object.assign(uc, { savedRefresh });
 }
 
 describe('LoginUserUseCase', () => {
-  it('devuelve sesión con credenciales válidas', async () => {
-    const s = await build().execute({ email: 'A@B.com', password: 'secret' });
-    expect(s.id).toBe('u-1');
-    expect(s.token).toBe('jwt');
-    expect(s.emailVerified).toBe(false);
+  it('devuelve sesión y refresh con credenciales válidas', async () => {
+    const r = await build().execute({ email: 'A@B.com', password: 'secret' });
+    expect(r.session.id).toBe('u-1');
+    expect(r.session.token).toBe('jwt');
+    expect(r.session.expiresIn).toBe(900);
+    expect(r.session.emailVerified).toBe(false);
+    expect(r.refreshToken).toBe('raw-rt');
+  });
+
+  it('rechaza una cuenta de Google sin contraseña local con el mismo error (S8)', async () => {
+    await expect(
+      build({ found: account({ passwordHash: null }) }).execute({
+        email: 'a@b.com',
+        password: 'x',
+      }),
+    ).rejects.toThrow(InvalidCredentialsError);
   });
 
   it('rechaza con el mismo error cuando el correo no existe', async () => {

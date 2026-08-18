@@ -8,23 +8,26 @@ import {
 export interface UserAccountProps {
   id?: string;
   email: Email;
-  passwordHash: string;
+  // S8: las cuentas creadas con Google no tienen contraseña local.
+  passwordHash: string | null;
   fullName: string;
   roles: string[];
   isActive: boolean;
   emailVerifiedAt: Date | null;
   dataPolicyAcceptedAt: Date | null;
+  googleId?: string | null;
 }
 
 export class UserAccount {
   readonly id?: string;
   private _email: Email;
-  private _passwordHash: string;
+  private _passwordHash: string | null;
   private _fullName: string;
   readonly roles: string[];
   readonly isActive: boolean;
   private _emailVerifiedAt: Date | null;
   readonly dataPolicyAcceptedAt: Date | null;
+  private _googleId: string | null;
 
   private constructor(props: UserAccountProps) {
     this.id = props.id;
@@ -35,13 +38,17 @@ export class UserAccount {
     this.isActive = props.isActive;
     this._emailVerifiedAt = props.emailVerifiedAt;
     this.dataPolicyAcceptedAt = props.dataPolicyAcceptedAt;
+    this._googleId = props.googleId ?? null;
   }
 
   get email(): Email {
     return this._email;
   }
-  get passwordHash(): string {
+  get passwordHash(): string | null {
     return this._passwordHash;
+  }
+  get googleId(): string | null {
+    return this._googleId;
   }
   get fullName(): string {
     return this._fullName;
@@ -72,12 +79,45 @@ export class UserAccount {
     });
   }
 
+  /**
+   * Alta con Google (S3/S8/S9): sin contraseña local, con el correo ya
+   * verificado por Google y el consentimiento de la Ley 1581 registrado en el
+   * mismo instante (el borde exige el consentimiento antes de llegar aquí).
+   */
+  static registerWithGoogle(input: {
+    email: Email;
+    googleId: string;
+    fullName: string;
+    now: Date;
+  }): UserAccount {
+    return new UserAccount({
+      email: input.email,
+      passwordHash: null,
+      fullName: input.fullName.trim(),
+      roles: ['user'],
+      isActive: true,
+      emailVerifiedAt: input.now,
+      dataPolicyAcceptedAt: input.now,
+      googleId: input.googleId,
+    });
+  }
+
   static fromPersistence(props: UserAccountProps): UserAccount {
     return new UserAccount(props);
   }
 
   assertCanAuthenticate(): void {
     if (!this.isActive) throw new InactiveUserError();
+  }
+
+  /**
+   * Vincula una cuenta local existente con Google (RF52). Como Google entrega el
+   * correo ya verificado, la vinculación también da por verificado el correo si
+   * aún no lo estaba.
+   */
+  linkGoogleAccount(googleId: string, now: Date): void {
+    this._googleId = googleId;
+    if (!this.isEmailVerified) this._emailVerifiedAt = now;
   }
 
   verifyEmail(now: Date): void {

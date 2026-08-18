@@ -48,21 +48,25 @@ export class AuthController {
   ) {}
 
   @Post('register')
-  register(@Body() dto: CreateUserDto) {
-    return this.registerUser.execute({
+  async register(@Body() dto: CreateUserDto) {
+    // El refresh token viaja en cookie (T6), nunca en el cuerpo: se desempaqueta
+    // aquí y se devuelve solo la sesión.
+    const { session } = await this.registerUser.execute({
       email: dto.email,
       password: dto.password,
       fullName: dto.fullName,
       dataPolicyAccepted: dto.dataPolicyAccepted,
     });
+    return session;
   }
 
   @Post('login')
-  login(@Body() dto: LoginUserDto) {
-    return this.loginUser.execute({
+  async login(@Body() dto: LoginUserDto) {
+    const { session } = await this.loginUser.execute({
       email: dto.email,
       password: dto.password,
     });
+    return session;
   }
 
   // Antes exigía rol admin (defecto): cualquier autenticado consulta su sesión.
@@ -113,7 +117,9 @@ export class AuthController {
   @HttpCode(200)
   async resetPassword(@Body() dto: ResetPasswordDto) {
     await this.performPasswordReset.execute(dto.token, dto.newPassword);
-    return { message: 'Tu contraseña fue actualizada. Ya puedes iniciar sesión.' };
+    return {
+      message: 'Tu contraseña fue actualizada. Ya puedes iniciar sesión.',
+    };
   }
 
   @Post('verify-email')

@@ -11,8 +11,14 @@ import { TokenIssuerPort } from '../domain/ports/token-issuer.port';
 import { SecureTokenGeneratorPort } from '../domain/ports/secure-token-generator.port';
 import { EmailSenderPort } from '../domain/ports/email-sender.port';
 import { ClockPort } from '../domain/ports/clock.port';
+import { RefreshTokenRepositoryPort } from '../domain/ports/refresh-token-repository.port';
 import { AuthEmailComposer, AuthLinks } from './auth-email-composer';
-import { AuthSession, buildAuthSession } from './auth-session';
+import { SessionConfig } from './session-config';
+import {
+  AuthSessionWithRefresh,
+  buildAuthSession,
+  issueRefreshFor,
+} from './auth-session';
 import {
   USER_REPOSITORY,
   AUTH_TOKEN_REPOSITORY,
@@ -22,6 +28,8 @@ import {
   EMAIL_SENDER,
   AUTH_CLOCK,
   FRONT_BASE_URL,
+  REFRESH_TOKEN_REPOSITORY,
+  SESSION_CONFIG,
 } from './tokens';
 
 export interface RegisterUserCommand {
@@ -46,9 +54,12 @@ export class RegisterUserUseCase {
     @Inject(EMAIL_SENDER) private readonly mailer: EmailSenderPort,
     @Inject(AUTH_CLOCK) private readonly clock: ClockPort,
     @Inject(FRONT_BASE_URL) private readonly links: AuthLinks,
+    @Inject(REFRESH_TOKEN_REPOSITORY)
+    private readonly refreshTokens: RefreshTokenRepositoryPort,
+    @Inject(SESSION_CONFIG) private readonly sessionConfig: SessionConfig,
   ) {}
 
-  async execute(command: RegisterUserCommand): Promise<AuthSession> {
+  async execute(command: RegisterUserCommand): Promise<AuthSessionWithRefresh> {
     const email = Email.create(command.email);
     if (await this.users.existsByEmail(email))
       throw new EmailAlreadyInUseError();
@@ -64,7 +75,15 @@ export class RegisterUserUseCase {
 
     const saved = await this.users.save(account);
     await this.issueVerification(saved, now);
-    return buildAuthSession(saved, this.issuer);
+
+    const refreshToken = await issueRefreshFor(
+      saved,
+      this.issuer,
+      this.refreshTokens,
+      now,
+      this.sessionConfig.refreshTtlDays,
+    );
+    return { session: buildAuthSession(saved, this.issuer), refreshToken };
   }
 
   // ### Deuda DRY consciente: esta rutina se repite en UpdateEmailUseCase y

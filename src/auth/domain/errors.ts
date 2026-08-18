@@ -84,3 +84,15 @@ export class RefreshTokenReuseDetectedError extends AuthDomainError {
     this.name = 'RefreshTokenReuseDetectedError';
   }
 }
+export class GoogleAccountNotVerifiedError extends AuthDomainError {
+  constructor() {
+    super('La cuenta de Google no tiene el correo verificado');
+    this.name = 'GoogleAccountNotVerifiedError';
+  }
+}
+export class DataPolicyConsentRequiredError extends AuthDomainError {
+  constructor() {
+    super('Debe aceptar la Política de Tratamiento de Datos Personales');
+    this.name = 'DataPolicyConsentRequiredError';
+  }
+}

@@ -41,10 +41,12 @@ function deps({ found = token() as AuthToken | null } = {}) {
   const savedUsers: any[] = [];
   const savedTokens: any[] = [];
   const invalidated: any[] = [];
+  const revokedSessions: any[] = [];
   return {
     savedUsers,
     savedTokens,
     invalidated,
+    revokedSessions,
     uc: new ResetPasswordUseCase(
       {
         findById: async () => account(),
@@ -64,8 +66,17 @@ function deps({ found = token() as AuthToken | null } = {}) {
         },
       } as any,
       { hash: async () => 'new-hash', compare: async () => true } as any,
-      { generate: () => ({ raw: 'r', hash: 'h' }), hash: () => 'hash-1' } as any,
+      {
+        generate: () => ({ raw: 'r', hash: 'h' }),
+        hash: () => 'hash-1',
+      } as any,
       { now: () => now } as any,
+      {
+        revokeAllOfUser: async (userId: string, at: Date) => {
+          revokedSessions.push({ userId, at });
+          return 2;
+        },
+      } as any,
     ),
   };
 }
@@ -77,6 +88,8 @@ describe('ResetPasswordUseCase', () => {
     expect(d.savedUsers[0].passwordHash).toBe('new-hash');
     expect(d.savedTokens[0].usedAt).toEqual(now);
     expect(d.invalidated[0]).toEqual({ id: 'u-1', type: 'password_reset' });
+    // Restablecer la contraseña cierra todas las sesiones abiertas (Fase 3b).
+    expect(d.revokedSessions).toEqual([{ userId: 'u-1', at: now }]);
   });
 
   it('rechaza un token inexistente', async () => {
@@ -86,7 +99,9 @@ describe('ResetPasswordUseCase', () => {
   });
 
   it('rechaza un token expirado', async () => {
-    const d = deps({ found: token({ expiresAt: new Date(now.getTime() - 1000) }) });
+    const d = deps({
+      found: token({ expiresAt: new Date(now.getTime() - 1000) }),
+    });
     await expect(d.uc.execute('x', 'New-1234!')).rejects.toThrow(
       ExpiredAuthTokenError,
     );

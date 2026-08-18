@@ -16,7 +16,9 @@ function account() {
   });
 }
 
-function deps({ compare = async () => true }: { compare?: () => Promise<boolean> } = {}) {
+function deps({
+  compare = async () => true,
+}: { compare?: () => Promise<boolean> } = {}) {
   const saved: any[] = [];
   return {
     saved,
@@ -29,7 +31,10 @@ function deps({ compare = async () => true }: { compare?: () => Promise<boolean>
         },
       } as any,
       { hash: async () => 'new-hash', compare } as any,
-      { issueAccessToken: () => 'jwt' } as any,
+      {
+        issueAccessToken: () => 'jwt',
+        accessTokenTtlSeconds: () => 900,
+      } as any,
     ),
   };
 }
