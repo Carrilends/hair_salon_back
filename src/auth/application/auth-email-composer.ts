@@ -1,4 +1,4 @@
-import { EmailMessage } from '../domain/ports/email-sender.port';
+import { EmailMessage } from 'src/notifications/domain/ports/email-sender.port';
 
 export interface AuthLinks {
   resetPasswordUrl: string; // p. ej. https://…/auth/restablecer

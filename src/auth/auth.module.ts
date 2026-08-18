@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 
+import { NotificationsModule } from 'src/notifications/notifications.module';
 import { parseDurationSeconds } from './infrastructure/security/parse-duration-seconds';
 
 import { User } from './entities/user.entity';
@@ -40,8 +41,6 @@ import { BcryptPasswordHasherAdapter } from './infrastructure/security/bcrypt-pa
 import { CryptoTokenGeneratorAdapter } from './infrastructure/security/crypto-token-generator.adapter';
 import { JwtTokenIssuerAdapter } from './infrastructure/security/jwt-token-issuer.adapter';
 import { GoogleIdentityAdapter } from './infrastructure/security/google-identity.adapter';
-import { ConsoleEmailSenderAdapter } from './infrastructure/email/console-email-sender.adapter';
-import { ProviderEmailSenderAdapter } from './infrastructure/email/provider-email-sender.adapter';
 import { ReviewAuthorRenamerAdapter } from './infrastructure/reviews/review-author-renamer.adapter';
 import { SystemClockAdapter } from './infrastructure/time/system-clock.adapter';
 
@@ -52,7 +51,6 @@ import {
   PASSWORD_HASHER,
   TOKEN_ISSUER,
   SECURE_TOKEN_GENERATOR,
-  EMAIL_SENDER,
   REVIEW_AUTHOR_RENAMER,
   AUTH_CLOCK,
   FRONT_BASE_URL,
@@ -104,17 +102,6 @@ import {
     { provide: REVIEW_AUTHOR_RENAMER, useClass: ReviewAuthorRenamerAdapter },
     { provide: AUTH_CLOCK, useClass: SystemClockAdapter },
     {
-      // La elección del transporte de correo es explícita por variable de
-      // entorno: sin EMAIL_PROVIDER se usa el adaptador de consola (E3).
-      provide: EMAIL_SENDER,
-      useFactory: () => {
-        const provider = (process.env.EMAIL_PROVIDER ?? '').trim();
-        return provider.length > 0
-          ? new ProviderEmailSenderAdapter()
-          : new ConsoleEmailSenderAdapter();
-      },
-    },
-    {
       // Enlaces del frontend derivados de FRONT_URL (que ya existe para CORS).
       // FRONT_URL puede ser lista separada por comas: se toma el primero.
       provide: FRONT_BASE_URL,
@@ -151,6 +138,7 @@ import {
     },
   ],
   imports: [
+    NotificationsModule,
     TypeOrmModule.forFeature([
       User,
       Review,

@@ -6,7 +6,7 @@ import { AuthTokenType, TOKEN_TTL_MINUTES } from '../domain/auth-token-type';
 import { UserRepositoryPort } from '../domain/ports/user-repository.port';
 import { AuthTokenRepositoryPort } from '../domain/ports/auth-token-repository.port';
 import { SecureTokenGeneratorPort } from '../domain/ports/secure-token-generator.port';
-import { EmailSenderPort } from '../domain/ports/email-sender.port';
+import { EmailSenderPort } from 'src/notifications/domain/ports/email-sender.port';
 import { ClockPort } from '../domain/ports/clock.port';
 import { AuthEmailComposer, AuthLinks } from './auth-email-composer';
 import {
