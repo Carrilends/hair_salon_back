@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PassportModule } from '@nestjs/passport';
-import { JwtModule } from '@nestjs/jwt';
+import { JwtModule, JwtService } from '@nestjs/jwt';
+
+import { parseDurationSeconds } from './infrastructure/security/parse-duration-seconds';
 
 import { User } from './entities/user.entity';
 import { Review } from 'src/reviews/entities/review.entity';
@@ -67,7 +69,18 @@ import {
     { provide: USER_REPOSITORY, useClass: TypeOrmUserRepository },
     { provide: AUTH_TOKEN_REPOSITORY, useClass: TypeOrmAuthTokenRepository },
     { provide: PASSWORD_HASHER, useClass: BcryptPasswordHasherAdapter },
-    { provide: TOKEN_ISSUER, useClass: JwtTokenIssuerAdapter },
+    {
+      // La vigencia del access token se deriva de JWT_EXPIRES_IN (default 15m,
+      // S6): la misma variable firma el JWT y alimenta accessTokenTtlSeconds(),
+      // así el cliente sabe cuándo renovar antes de que expire.
+      provide: TOKEN_ISSUER,
+      useFactory: (jwtService: JwtService) =>
+        new JwtTokenIssuerAdapter(
+          jwtService,
+          parseDurationSeconds(process.env.JWT_EXPIRES_IN ?? '15m'),
+        ),
+      inject: [JwtService],
+    },
     { provide: SECURE_TOKEN_GENERATOR, useClass: CryptoTokenGeneratorAdapter },
     { provide: REVIEW_AUTHOR_RENAMER, useClass: ReviewAuthorRenamerAdapter },
     { provide: AUTH_CLOCK, useClass: SystemClockAdapter },
@@ -105,7 +118,9 @@ import {
       imports: [],
       useFactory: async () => ({
         secret: process.env.JWT_SECRET,
-        signOptions: { expiresIn: '1d' },
+        // S6: access token corto (15m por defecto). El refresh token en cookie
+        // sostiene la sesión; el JWT deja de durar un día.
+        signOptions: { expiresIn: process.env.JWT_EXPIRES_IN ?? '15m' },
       }),
     }),
   ],
