@@ -57,3 +57,10 @@ export class ReservationInThePastError extends DomainError {
     this.name = 'ReservationInThePastError';
   }
 }
+
+export class DuplicateServicesError extends DomainError {
+  constructor() {
+    super('La reserva no puede repetir el mismo servicio');
+    this.name = 'DuplicateServicesError';
+  }
+}

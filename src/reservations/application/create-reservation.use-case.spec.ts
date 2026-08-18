@@ -5,6 +5,7 @@ import {
   MissingContactError,
   InvalidReservationError,
   ReservationInThePastError,
+  DuplicateServicesError,
 } from '../domain/errors';
 import { Reservation } from '../domain/reservation';
 
@@ -129,6 +130,22 @@ describe('CreateReservationUseCase (maduro)', () => {
         userId: 'u-1',
       }),
     ).rejects.toThrow(OutOfBusinessHoursError);
+  });
+
+  it('rechaza serviceIds duplicados con un error claro (no "no existe")', async () => {
+    const uc = new CreateReservationUseCase(
+      repo(),
+      workers as any,
+      catalog as any,
+      clock as any,
+    );
+    await expect(
+      uc.execute({
+        scheduledAt: '2026-04-20T15:00:00.000Z',
+        serviceIds: ['s1', 's1'],
+        userId: 'u-1',
+      }),
+    ).rejects.toThrow(DuplicateServicesError);
   });
 
   it('rechaza una reserva cuya hora de inicio ya pasó', async () => {

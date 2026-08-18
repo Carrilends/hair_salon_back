@@ -1,7 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Reservation } from '../domain/reservation';
 import { ReservationScheduling } from '../domain/reservation-scheduling';
-import { WorkerOverlapError, InvalidReservationError } from '../domain/errors';
+import {
+  WorkerOverlapError,
+  InvalidReservationError,
+  DuplicateServicesError,
+} from '../domain/errors';
 import { ReservationRepositoryPort } from '../domain/ports/reservation-repository.port';
 import { WorkerAvailabilityPort } from '../domain/ports/worker-availability.port';
 import { ServiceCatalogPort } from '../domain/ports/service-catalog.port';
@@ -40,6 +44,15 @@ export class CreateReservationUseCase {
     const tz = process.env.SALON_TZ ?? 'America/Bogota';
     const workerId =
       command.workerId ?? (await this.workers.getDefaultWorkerId());
+
+    // Se rechazan los duplicados ANTES de consultar el catálogo: `In(ids)`
+    // colapsa repetidos, así que una lista con duplicados daría un falso
+    // "servicio no existe" por descuadre de longitudes. La validación explícita
+    // devuelve el error correcto (400) en su lugar.
+    const uniqueIds = new Set(command.serviceIds);
+    if (uniqueIds.size !== command.serviceIds.length) {
+      throw new DuplicateServicesError();
+    }
 
     const snapshots = await this.catalog.getSnapshots(command.serviceIds);
     if (snapshots.length !== command.serviceIds.length) {
