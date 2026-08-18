@@ -1,3 +1,4 @@
+import { MoreThan, Not } from 'typeorm';
 import { TypeOrmReservationRepository } from './typeorm-reservation.repository';
 import { Reservation } from '../../domain/reservation';
 import { ReservationStatus } from '../../domain/reservation-status';
@@ -108,6 +109,24 @@ describe('TypeOrmReservationRepository.save', () => {
     });
 
     await expect(sut.save(nueva)).rejects.toThrow(WorkerOverlapError);
+  });
+});
+
+describe('TypeOrmReservationRepository.findActiveWithWorker', () => {
+  it('excluye las canceladas de la lista de reservas activas (D4)', async () => {
+    // El panel de administración lista las reservas vigentes; una cancelada,
+    // aunque su ventana aún no haya pasado, no está "activa" y no debe aparecer.
+    const now = new Date('2026-08-20T12:00:00.000Z');
+    const repo = { find: jest.fn(async () => []) };
+    const sut = new TypeOrmReservationRepository(repo as any);
+
+    await sut.findActiveWithWorker(now);
+
+    expect(repo.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { endedAt: MoreThan(now), status: Not('cancelada') },
+      }),
+    );
   });
 });
 

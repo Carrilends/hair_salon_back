@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, MoreThan, Repository } from 'typeorm';
+import { LessThan, MoreThan, Not, Repository } from 'typeorm';
 import { ReservationOrmEntity } from './reservation.orm-entity';
 import { ReservationMapper } from './reservation.mapper';
 import { Reservation } from '../../domain/reservation';
@@ -82,7 +82,9 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
 
   async findActiveWithWorker(now: Date): Promise<ReservationView[]> {
     const rows = await this.repo.find({
-      where: { endedAt: MoreThan(now) },
+      // Vigentes = ventana aún no terminada y NO cancelada. Coherente con
+      // `countOverlaps` y `findOccupancyRows`, que ya excluyen las canceladas.
+      where: { endedAt: MoreThan(now), status: Not('cancelada') },
       relations: ['worker', 'services'],
       order: { scheduledAt: 'DESC' },
     });
@@ -168,7 +170,11 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
             }
           : null,
       worker: r.worker
-        ? { id: r.worker.id, name: r.worker.name, isDefault: r.worker.isDefault }
+        ? {
+            id: r.worker.id,
+            name: r.worker.name,
+            isDefault: r.worker.isDefault,
+          }
         : { id: r.workerId, name: '', isDefault: false },
       services: (r.services ?? []).map((s) => ({
         serviceId: s.serviceId,
