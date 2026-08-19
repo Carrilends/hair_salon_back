@@ -1,0 +1,47 @@
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+import { AssistantMessageOrmEntity } from './assistant-message.orm-entity';
+
+/**
+ * Tabla `assistant_conversations`: la raíz del historial del asistente (A4), con
+ * la telemetría de tokens acumulada por conversación (§6.2). `user_id` es
+ * opcional (conversación anónima) y se desvincula, no se borra, al eliminar la
+ * cuenta (FK ON DELETE SET NULL, definida en la migración).
+ */
+@Entity('assistant_conversations')
+export class ConversationOrmEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column('uuid', { name: 'user_id', nullable: true })
+  userId: string | null;
+
+  @Column('text', { nullable: true })
+  summary: string | null;
+
+  @Column('int', { name: 'prompt_tokens', default: 0 })
+  promptTokens: number;
+
+  @Column('int', { name: 'completion_tokens', default: 0 })
+  completionTokens: number;
+
+  @Column('int', { name: 'message_count', default: 0 })
+  messageCount: number;
+
+  @OneToMany(() => AssistantMessageOrmEntity, (m) => m.conversation, {
+    cascade: true,
+  })
+  messages: AssistantMessageOrmEntity[];
+
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
+  updatedAt: Date;
+}
