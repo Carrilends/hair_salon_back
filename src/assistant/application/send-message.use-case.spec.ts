@@ -36,7 +36,10 @@ class FakeTool implements AssistantTool {
 
 class FakeRepo implements ConversationRepositoryPort {
   saved?: Conversation;
-  constructor(private readonly existing: Conversation | null = null) {}
+  constructor(
+    private readonly existing: Conversation | null = null,
+    private readonly dailyCount = 0,
+  ) {}
   async findById(): Promise<Conversation | null> {
     return this.existing;
   }
@@ -45,7 +48,7 @@ class FakeRepo implements ConversationRepositoryPort {
     return c;
   }
   async countMessagesOfUserSince(): Promise<number> {
-    return 0;
+    return this.dailyCount;
   }
 }
 
@@ -120,7 +123,7 @@ describe('SendMessageUseCase', () => {
     expect(repo.saved!.usage.completionTokens).toBe(60);
   });
 
-  it('corta a las 5 vueltas si el modelo insiste en llamar herramientas', async () => {
+  it('corta a las 5 vueltas y NO ejecuta la herramienta en la última (evita escritura fantasma)', async () => {
     const tool = new FakeTool('listarServicios', []);
     const script: LlmCompletion[] = Array.from({ length: 6 }, () => ({
       message: {
@@ -136,9 +139,28 @@ describe('SendMessageUseCase', () => {
 
     const res = await useCase.execute({ message: 'hola', userId: 'u1' });
 
+    // 5 llamadas al LLM, pero la herramienta solo se ejecuta en las 4 primeras:
+    // en la 5.ª vuelta no habría llamada posterior que consuma su resultado, así
+    // que ejecutarla causaría un efecto (p. ej. una reserva real) sin poder
+    // informar a la clienta. Se corta con cortesía sin ejecutar.
     expect(llm.calls).toHaveLength(5);
-    expect(tool.calls).toBe(5);
+    expect(tool.calls).toBe(4);
     expect(res.reply.length).toBeGreaterThan(0);
+  });
+
+  it('rechaza cuando el usuario supera su presupuesto diario, sin llamar al LLM', async () => {
+    const llm = new FakeLlmAdapter([]);
+    const repo = new FakeRepo(null, 50);
+    const useCase = makeUseCase({
+      llm,
+      repo,
+      budget: { maxMessagesPerConversation: 20, maxMessagesPerUserPerDay: 50 },
+    });
+
+    await expect(
+      useCase.execute({ message: 'otra', userId: 'u1' }),
+    ).rejects.toThrow(BudgetExceededError);
+    expect(llm.calls).toHaveLength(0);
   });
 
   it('rechaza el turno cuando se agotó el presupuesto, sin llamar al LLM', async () => {

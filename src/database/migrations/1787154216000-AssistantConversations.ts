@@ -21,10 +21,12 @@ export class AssistantConversations1787154216000 implements MigrationInterface {
       `CREATE TABLE "assistant_conversations" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "user_id" uuid, "summary" text, "prompt_tokens" integer NOT NULL DEFAULT 0, "completion_tokens" integer NOT NULL DEFAULT 0, "message_count" integer NOT NULL DEFAULT 0, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_assistant_conversations_id" PRIMARY KEY ("id"))`,
     );
     await queryRunner.query(
-      `CREATE TABLE "assistant_messages" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "conversation_id" uuid NOT NULL, "role" text NOT NULL, "content" text NOT NULL, "tool_name" text, "tool_call_id" text, "prompt_tokens" integer, "completion_tokens" integer, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_assistant_messages_id" PRIMARY KEY ("id"))`,
+      `CREATE TABLE "assistant_messages" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "conversation_id" uuid NOT NULL, "seq" BIGSERIAL NOT NULL, "role" text NOT NULL, "content" text NOT NULL, "tool_name" text, "tool_call_id" text, "prompt_tokens" integer, "completion_tokens" integer, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_assistant_messages_id" PRIMARY KEY ("id"))`,
     );
+    // La ventana se lee por `seq` (orden total de inserción), no por `created_at`:
+    // los dos mensajes de un turno comparten timestamp y no darían un orden estable.
     await queryRunner.query(
-      `CREATE INDEX "IDX_assistant_messages_conversation_created" ON "assistant_messages" ("conversation_id", "created_at")`,
+      `CREATE INDEX "IDX_assistant_messages_conversation_seq" ON "assistant_messages" ("conversation_id", "seq")`,
     );
     await queryRunner.query(
       `ALTER TABLE "assistant_conversations" ADD CONSTRAINT "FK_assistant_conversations_user_id" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE NO ACTION`,
@@ -42,7 +44,7 @@ export class AssistantConversations1787154216000 implements MigrationInterface {
       `ALTER TABLE "assistant_conversations" DROP CONSTRAINT "FK_assistant_conversations_user_id"`,
     );
     await queryRunner.query(
-      `DROP INDEX "IDX_assistant_messages_conversation_created"`,
+      `DROP INDEX "IDX_assistant_messages_conversation_seq"`,
     );
     await queryRunner.query(`DROP TABLE "assistant_messages"`);
     await queryRunner.query(`DROP TABLE "assistant_conversations"`);

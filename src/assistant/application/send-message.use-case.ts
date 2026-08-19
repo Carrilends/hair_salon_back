@@ -4,6 +4,7 @@ import { ConversationRepositoryPort } from '../domain/ports/conversation-reposit
 import { ClockPort } from '../domain/ports/clock.port';
 import { Conversation } from '../domain/conversation';
 import { Message } from '../domain/message';
+import { BudgetExceededError } from '../domain/errors';
 import { AssistantContext, AssistantTool } from './tools/assistant-tool';
 import { SYSTEM_PROMPT } from './system-prompt';
 import { AssistantBudget } from './assistant-budget';
@@ -11,6 +12,7 @@ import { ConversationSummarizer } from './summarize-conversation.use-case';
 import {
   ASSISTANT_BUDGET,
   ASSISTANT_CLOCK,
+  ASSISTANT_SUMMARIZER,
   ASSISTANT_TOOLS,
   CONVERSATION_REPOSITORY,
   LLM,
@@ -19,6 +21,7 @@ import {
 const WINDOW_SIZE = 8;
 const SUMMARY_EVERY = 10;
 const MAX_TOOL_ITERATIONS = 5;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const COURTESY_REPLY =
   'Disculpa, no logré completar la solicitud. ¿Quieres intentarlo de otra forma o reservar por el flujo web de siempre?';
 
@@ -50,6 +53,7 @@ export class SendMessageUseCase {
     @Inject(ASSISTANT_TOOLS) private readonly tools: AssistantTool[],
     @Inject(ASSISTANT_CLOCK) private readonly clock: ClockPort,
     @Inject(ASSISTANT_BUDGET) private readonly budget: AssistantBudget,
+    @Inject(ASSISTANT_SUMMARIZER)
     private readonly summarizer: ConversationSummarizer,
   ) {
     this.toolsByName = new Map(this.tools.map((t) => [t.name, t]));
@@ -58,12 +62,30 @@ export class SendMessageUseCase {
   async execute(input: SendMessageInput): Promise<SendMessageResult> {
     const conversation = await this.loadOrStart(input);
 
-    // A7: el presupuesto se comprueba ANTES de la primera llamada, para no pagar
-    // por rechazar.
+    // A7: los dos límites duros se comprueban ANTES de la primera llamada, para no
+    // pagar por rechazar. (1) tope por conversación.
     conversation.assertWithinBudget(this.budget.maxMessagesPerConversation);
+    // (2) tope diario por usuario: sin él, el tope por conversación se eludiría
+    // abriendo conversaciones nuevas. Solo aplica a usuarios con sesión (los
+    // anónimos se acotan por IP en el borde HTTP, T7). La consulta real la
+    // implementa el repositorio TypeORM (T7); el punto de control vive aquí.
+    if (input.userId) {
+      const since = new Date(this.clock.now().getTime() - DAY_MS);
+      const dailyCount = await this.repository.countMessagesOfUserSince(
+        input.userId,
+        since,
+      );
+      if (dailyCount >= this.budget.maxMessagesPerUserPerDay) {
+        throw new BudgetExceededError();
+      }
+    }
 
+    // El contexto de las herramientas sale del solicitante autenticado
+    // (`input.userId`), no del dueño persistido: así un anónimo que inicia sesión
+    // puede reservar en su conversación. La verificación de que este usuario puede
+    // reanudar esta conversación (propiedad) es del borde HTTP (T7).
     const context: AssistantContext = {
-      userId: conversation.userId,
+      userId: input.userId,
       now: this.clock.now(),
     };
     const messages = this.buildContext(conversation, input.message);
@@ -83,6 +105,12 @@ export class SendMessageUseCase {
         reply = completion.message.content;
         break;
       }
+
+      // No ejecutar herramientas en la última vuelta permitida: no habría una
+      // llamada posterior que consuma su resultado, y ejecutarlas causaría un
+      // efecto (p. ej. una reserva real) sin poder informar a la clienta. Se
+      // corta con cortesía sin ejecutar.
+      if (i === MAX_TOOL_ITERATIONS - 1) break;
 
       // La respuesta con llamadas de herramienta y sus resultados viven solo en
       // el contexto del turno (no se persisten): así la ventana rehidratada no

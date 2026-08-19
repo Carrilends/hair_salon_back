@@ -7,3 +7,4 @@ export const CONVERSATION_REPOSITORY = Symbol('ConversationRepositoryPort');
 export const ASSISTANT_TOOLS = Symbol('AssistantTools');
 export const ASSISTANT_CLOCK = Symbol('AssistantClockPort');
 export const ASSISTANT_BUDGET = Symbol('AssistantBudget');
+export const ASSISTANT_SUMMARIZER = Symbol('ConversationSummarizer');

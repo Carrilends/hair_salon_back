@@ -11,20 +11,27 @@ import { ConversationOrmEntity } from './conversation.orm-entity';
 
 /**
  * Tabla `assistant_messages`: cada mensaje del historial. `conversation_id` con
- * ON DELETE CASCADE (los mensajes pertenecen a su conversación). El índice
- * `(conversation_id, created_at)` es el orden en que siempre se lee la ventana.
+ * ON DELETE CASCADE (los mensajes pertenecen a su conversación). La ventana se
+ * lee ordenando por `seq` (bigserial monótono), no por `created_at`: los dos
+ * mensajes de un mismo turno (usuario + respuesta) se persisten juntos y
+ * comparten `created_at`, que no da un orden total. El índice `(conversation_id,
+ * seq)` es el orden en que siempre se lee la ventana.
  */
 @Entity('assistant_messages')
-@Index('IDX_assistant_messages_conversation_created', [
-  'conversationId',
-  'createdAt',
-])
+@Index('IDX_assistant_messages_conversation_seq', ['conversationId', 'seq'])
 export class AssistantMessageOrmEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column('uuid', { name: 'conversation_id' })
   conversationId: string;
+
+  /**
+   * Orden total de inserción, para leer la ventana de forma determinista. Lo
+   * asigna la base de datos (BIGSERIAL); TypeORM nunca lo escribe.
+   */
+  @Column({ type: 'bigint', insert: false, update: false })
+  seq: string;
 
   @ManyToOne(() => ConversationOrmEntity, (c) => c.messages, {
     nullable: false,
