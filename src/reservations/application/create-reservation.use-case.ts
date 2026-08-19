@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Reservation } from '../domain/reservation';
 import { ReservationScheduling } from '../domain/reservation-scheduling';
 import {
@@ -10,11 +10,13 @@ import { ReservationRepositoryPort } from '../domain/ports/reservation-repositor
 import { WorkerAvailabilityPort } from '../domain/ports/worker-availability.port';
 import { ServiceCatalogPort } from '../domain/ports/service-catalog.port';
 import { ClockPort } from '../domain/ports/clock.port';
+import { ReservationNotifierPort } from '../domain/ports/reservation-notifier.port';
 import {
   RESERVATION_REPOSITORY,
   WORKER_AVAILABILITY,
   SERVICE_CATALOG,
   CLOCK,
+  RESERVATION_NOTIFIER,
 } from './tokens';
 
 export interface CreateReservationCommand {
@@ -28,6 +30,7 @@ export interface CreateReservationCommand {
 @Injectable()
 export class CreateReservationUseCase {
   private readonly scheduling = new ReservationScheduling();
+  private readonly logger = new Logger(CreateReservationUseCase.name);
 
   constructor(
     @Inject(RESERVATION_REPOSITORY)
@@ -38,6 +41,8 @@ export class CreateReservationUseCase {
     private readonly catalog: ServiceCatalogPort,
     @Inject(CLOCK)
     private readonly clock: ClockPort,
+    @Inject(RESERVATION_NOTIFIER)
+    private readonly notifier: ReservationNotifierPort,
   ) {}
 
   async execute(command: CreateReservationCommand): Promise<Reservation> {
@@ -83,6 +88,20 @@ export class CreateReservationUseCase {
     );
     if (overlaps > 0) throw new WorkerOverlapError();
 
-    return this.repository.save(reservation);
+    const saved = await this.repository.save(reservation);
+
+    // Se notifica DESPUÉS de persistir: si la persistencia falla no hay nada que
+    // anunciar; si falla la notificación, la reserva ya es un hecho (N8) y el
+    // error no debe propagarse al cliente. El canal durable es la base de datos.
+    try {
+      await this.notifier.reservationCreated(saved);
+    } catch (error) {
+      this.logger.error(
+        `Reserva ${saved.id} creada, pero falló la notificación`,
+        error as Error,
+      );
+    }
+
+    return saved;
   }
 }

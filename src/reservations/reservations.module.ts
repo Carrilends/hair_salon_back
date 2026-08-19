@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { WorkersModule } from 'src/workers/workers.module';
 import { AuthModule } from 'src/auth/auth.module';
+import { NotificationsModule } from 'src/notifications/notifications.module';
 import { Service } from 'src/service/entities/service.entity';
 import { ReservationOrmEntity } from './infrastructure/persistence/reservation.orm-entity';
 import { ReservationServiceOrmEntity } from './infrastructure/persistence/reservation-service.orm-entity';
@@ -10,6 +11,7 @@ import { TypeOrmReservationRepository } from './infrastructure/persistence/typeo
 import { WorkersAvailabilityAdapter } from './infrastructure/workers/workers-availability.adapter';
 import { SystemClock } from './infrastructure/time/system-clock.adapter';
 import { ServiceCatalogAdapter } from './infrastructure/service-catalog/service-catalog.adapter';
+import { ReservationNotifierAdapter } from './infrastructure/notifications/reservation-notifier.adapter';
 import { ReservationPurgeScheduler } from './infrastructure/scheduling/reservation-purge.scheduler';
 import { CreateReservationUseCase } from './application/create-reservation.use-case';
 import { GetOccupancyUseCase } from './application/get-occupancy.use-case';
@@ -24,6 +26,7 @@ import {
   WORKER_AVAILABILITY,
   CLOCK,
   SERVICE_CATALOG,
+  RESERVATION_NOTIFIER,
 } from './application/tokens';
 
 @Module({
@@ -35,6 +38,7 @@ import {
     ]),
     WorkersModule,
     AuthModule,
+    NotificationsModule,
   ],
   controllers: [ReservationsController],
   providers: [
@@ -51,6 +55,7 @@ import {
     { provide: WORKER_AVAILABILITY, useClass: WorkersAvailabilityAdapter },
     { provide: CLOCK, useClass: SystemClock },
     { provide: SERVICE_CATALOG, useClass: ServiceCatalogAdapter },
+    { provide: RESERVATION_NOTIFIER, useClass: ReservationNotifierAdapter },
   ],
 })
 export class ReservationsModule {}

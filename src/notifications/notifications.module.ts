@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
-import { EMAIL_SENDER } from './application/tokens';
+import { EMAIL_SENDER, NOTIFIERS } from './application/tokens';
+import { NotificationDispatcher } from './application/notification-dispatcher';
 import { ConsoleEmailSenderAdapter } from './infrastructure/email/console-email-sender.adapter';
 import { ProviderEmailSenderAdapter } from './infrastructure/email/provider-email-sender.adapter';
 
@@ -27,7 +28,15 @@ import { ProviderEmailSenderAdapter } from './infrastructure/email/provider-emai
           : new ConsoleEmailSenderAdapter();
       },
     },
+    {
+      // Conjunto de canales activos que consume el despachador. Vacío por ahora;
+      // T4 y T5 añaden los notificadores de correo y WebSocket, y T6 los cablea
+      // aquí. Con el arreglo vacío, notificar es un no-op inofensivo.
+      provide: NOTIFIERS,
+      useValue: [],
+    },
+    NotificationDispatcher,
   ],
-  exports: [EMAIL_SENDER],
+  exports: [EMAIL_SENDER, NotificationDispatcher],
 })
 export class NotificationsModule {}

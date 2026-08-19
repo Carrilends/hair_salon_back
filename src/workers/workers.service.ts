@@ -95,6 +95,16 @@ export class WorkersService implements OnModuleInit {
     });
   }
 
+  /**
+   * Nombre del estilista por id, para componer notificaciones. Tolerante:
+   * devuelve cadena vacía si no existe, para no romper el aviso de una reserva
+   * que ya quedó persistida.
+   */
+  async getWorkerName(id: string): Promise<string> {
+    const worker = await this.workerRepository.findOne({ where: { id } });
+    return worker?.name ?? '';
+  }
+
   async create(dto: CreateWorkerDto): Promise<Worker> {
     const name = dto.name.trim();
     const worker = this.workerRepository.create({

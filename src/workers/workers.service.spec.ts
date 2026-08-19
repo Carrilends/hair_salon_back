@@ -43,6 +43,21 @@ describe('WorkersService', () => {
     jest.useRealTimers();
   });
 
+  describe('getWorkerName', () => {
+    it('devuelve el nombre del estilista', async () => {
+      (workerRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 'w-1',
+        name: 'Marlene',
+      });
+      expect(await service.getWorkerName('w-1')).toBe('Marlene');
+    });
+
+    it('devuelve cadena vacía si el estilista no existe', async () => {
+      (workerRepository.findOne as jest.Mock).mockResolvedValue(null);
+      expect(await service.getWorkerName('inexistente')).toBe('');
+    });
+  });
+
   it('computes effective capacity for today and only counts future reservation minutes', async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-04-20T23:00:00.000Z')); // 18:00 Bogota

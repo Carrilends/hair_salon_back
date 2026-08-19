@@ -28,6 +28,9 @@ const workers = {
 // son pasadas salvo que un test lo fuerce con su propio reloj.
 const clock = { now: () => new Date('2026-04-01T00:00:00.000Z') };
 
+// Notificador de no-op para los tests que no verifican la notificación.
+const noopNotifier = { reservationCreated: async () => {} };
+
 function repo() {
   return {
     overlaps: 0,
@@ -59,6 +62,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       workers as any,
       catalog as any,
       clock as any,
+      noopNotifier as any,
     );
     const result = await uc.execute({
       scheduledAt: '2026-04-20T15:00:00.000Z',
@@ -75,6 +79,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       workers as any,
       catalog as any,
       clock as any,
+      noopNotifier as any,
     );
     const result = await uc.execute({
       scheduledAt: '2026-04-20T15:00:00.000Z',
@@ -90,6 +95,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       workers as any,
       catalog as any,
       clock as any,
+      noopNotifier as any,
     );
     await expect(
       uc.execute({
@@ -106,6 +112,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       workers as any,
       emptyCatalog as any,
       clock as any,
+      noopNotifier as any,
     );
     await expect(
       uc.execute({
@@ -122,6 +129,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       workers as any,
       catalog as any,
       clock as any,
+      noopNotifier as any,
     );
     await expect(
       uc.execute({
@@ -138,6 +146,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       workers as any,
       catalog as any,
       clock as any,
+      noopNotifier as any,
     );
     await expect(
       uc.execute({
@@ -156,6 +165,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       workers as any,
       catalog as any,
       lateClock as any,
+      noopNotifier as any,
     );
     await expect(
       uc.execute({
@@ -174,6 +184,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       workers as any,
       catalog as any,
       clock as any,
+      noopNotifier as any,
     );
     await expect(
       uc.execute({
@@ -182,5 +193,52 @@ describe('CreateReservationUseCase (maduro)', () => {
         userId: 'u-1',
       }),
     ).rejects.toThrow(WorkerOverlapError);
+  });
+
+  it('notifica exactamente una vez tras crear la reserva', async () => {
+    const notificadas: Reservation[] = [];
+    const notifier = {
+      reservationCreated: async (r: Reservation) => {
+        notificadas.push(r);
+      },
+    };
+    const uc = new CreateReservationUseCase(
+      repo(),
+      workers as any,
+      catalog as any,
+      clock as any,
+      notifier as any,
+    );
+    const result = await uc.execute({
+      scheduledAt: '2026-04-20T15:00:00.000Z',
+      serviceIds: ['s1'],
+      userId: 'u-1',
+    });
+    expect(notificadas).toHaveLength(1);
+    expect(notificadas[0].id).toBe(result.id);
+  });
+
+  it('crea la reserva aunque la notificación falle (N8)', async () => {
+    // El puerto es una interfaz: aunque el despachador ya aísle fallos, el caso
+    // de uso no debe confiar en ello. Un notificador que lanza NO debe impedir
+    // que la reserva —ya persistida— se devuelva al cliente.
+    const notifier = {
+      reservationCreated: async () => {
+        throw new Error('canal caído');
+      },
+    };
+    const uc = new CreateReservationUseCase(
+      repo(),
+      workers as any,
+      catalog as any,
+      clock as any,
+      notifier as any,
+    );
+    const result = await uc.execute({
+      scheduledAt: '2026-04-20T15:00:00.000Z',
+      serviceIds: ['s1'],
+      userId: 'u-1',
+    });
+    expect(result.id).toBe('r-1');
   });
 });
