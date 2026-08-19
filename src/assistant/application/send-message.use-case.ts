@@ -1,0 +1,152 @@
+import { Inject, Injectable } from '@nestjs/common';
+import { LlmMessage, LlmPort } from '../domain/ports/llm.port';
+import { ConversationRepositoryPort } from '../domain/ports/conversation-repository.port';
+import { ClockPort } from '../domain/ports/clock.port';
+import { Conversation } from '../domain/conversation';
+import { Message } from '../domain/message';
+import { AssistantContext, AssistantTool } from './tools/assistant-tool';
+import { SYSTEM_PROMPT } from './system-prompt';
+import { AssistantBudget } from './assistant-budget';
+import { ConversationSummarizer } from './summarize-conversation.use-case';
+import {
+  ASSISTANT_BUDGET,
+  ASSISTANT_CLOCK,
+  ASSISTANT_TOOLS,
+  CONVERSATION_REPOSITORY,
+  LLM,
+} from './tokens';
+
+const WINDOW_SIZE = 8;
+const SUMMARY_EVERY = 10;
+const MAX_TOOL_ITERATIONS = 5;
+const COURTESY_REPLY =
+  'Disculpa, no logré completar la solicitud. ¿Quieres intentarlo de otra forma o reservar por el flujo web de siempre?';
+
+export interface SendMessageInput {
+  conversationId?: string;
+  message: string;
+  userId: string | null;
+}
+
+export interface SendMessageResult {
+  conversationId?: string;
+  reply: string;
+}
+
+/**
+ * El bucle de un turno: carga la conversación, comprueba el presupuesto, arma el
+ * contexto acotado (system + resumen + ventana + mensaje nuevo) y alterna
+ * modelo↔herramientas hasta la respuesta final o el tope de vueltas. Construido
+ * entero para probarse con un LLM falso, sin gastar un token (A1).
+ */
+@Injectable()
+export class SendMessageUseCase {
+  private readonly toolsByName: Map<string, AssistantTool>;
+
+  constructor(
+    @Inject(LLM) private readonly llm: LlmPort,
+    @Inject(CONVERSATION_REPOSITORY)
+    private readonly repository: ConversationRepositoryPort,
+    @Inject(ASSISTANT_TOOLS) private readonly tools: AssistantTool[],
+    @Inject(ASSISTANT_CLOCK) private readonly clock: ClockPort,
+    @Inject(ASSISTANT_BUDGET) private readonly budget: AssistantBudget,
+    private readonly summarizer: ConversationSummarizer,
+  ) {
+    this.toolsByName = new Map(this.tools.map((t) => [t.name, t]));
+  }
+
+  async execute(input: SendMessageInput): Promise<SendMessageResult> {
+    const conversation = await this.loadOrStart(input);
+
+    // A7: el presupuesto se comprueba ANTES de la primera llamada, para no pagar
+    // por rechazar.
+    conversation.assertWithinBudget(this.budget.maxMessagesPerConversation);
+
+    const context: AssistantContext = {
+      userId: conversation.userId,
+      now: this.clock.now(),
+    };
+    const messages = this.buildContext(conversation, input.message);
+    const toolDefinitions = this.tools.map((t) => t.definition);
+
+    let reply = '';
+    for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+      const completion = await this.llm.complete({
+        messages,
+        tools: toolDefinitions,
+      });
+      // Acumular el consumo en CADA vuelta, no solo en la última.
+      conversation.recordUsage(completion.usage);
+
+      const toolCalls = completion.message.toolCalls ?? [];
+      if (toolCalls.length === 0) {
+        reply = completion.message.content;
+        break;
+      }
+
+      // La respuesta con llamadas de herramienta y sus resultados viven solo en
+      // el contexto del turno (no se persisten): así la ventana rehidratada no
+      // arrastra referencias de herramienta colgantes y se ahorran tokens.
+      messages.push(completion.message);
+      for (const call of toolCalls) {
+        const tool = this.toolsByName.get(call.name);
+        const result = tool
+          ? await tool.execute(call.arguments, context)
+          : { ok: false, motivo: 'herramienta_desconocida' };
+        messages.push({
+          role: 'tool',
+          content: JSON.stringify(result),
+          toolCallId: call.id,
+        });
+      }
+    }
+
+    // Al agotar las vueltas sin respuesta final, se responde con cortesía en vez
+    // de seguir facturando.
+    if (!reply) reply = COURTESY_REPLY;
+
+    // Historia durable: el mensaje de la clienta y la respuesta final.
+    conversation.append(Message.user(input.message));
+    conversation.append(Message.assistant(reply));
+
+    if (conversation.needsSummary(SUMMARY_EVERY)) {
+      const { summary, usage } = await this.summarizer.execute(conversation);
+      conversation.setSummary(summary);
+      conversation.recordUsage(usage);
+    }
+
+    const saved = await this.repository.save(conversation);
+    return { conversationId: saved.id, reply };
+  }
+
+  private async loadOrStart(input: SendMessageInput): Promise<Conversation> {
+    if (input.conversationId) {
+      const existing = await this.repository.findById(input.conversationId);
+      if (existing) return existing;
+    }
+    return Conversation.start({ userId: input.userId });
+  }
+
+  private buildContext(
+    conversation: Conversation,
+    message: string,
+  ): LlmMessage[] {
+    const messages: LlmMessage[] = [{ role: 'system', content: SYSTEM_PROMPT }];
+    if (conversation.summary) {
+      messages.push({
+        role: 'system',
+        content: `Resumen de la conversación anterior: ${conversation.summary}`,
+      });
+    }
+    for (const m of conversation.window(WINDOW_SIZE)) {
+      messages.push({ role: toLlmRole(m.role), content: m.content });
+    }
+    messages.push({ role: 'user', content: message });
+    return messages;
+  }
+}
+
+function toLlmRole(role: string): 'system' | 'user' | 'assistant' | 'tool' {
+  if (role === 'assistant' || role === 'system' || role === 'tool') return role;
+  return 'user';
+}
