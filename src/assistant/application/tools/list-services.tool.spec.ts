@@ -17,6 +17,9 @@ class FakeCatalog implements ServiceCatalogQueryPort {
     this.lastLimit = limit;
     return this.items.slice(0, limit);
   }
+  async findByTagNames(): Promise<Map<string, AssistantServiceSummary[]>> {
+    return new Map();
+  }
 }
 
 const ctx: AssistantContext = {
