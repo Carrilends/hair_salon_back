@@ -4,7 +4,7 @@ import { ConversationRepositoryPort } from '../domain/ports/conversation-reposit
 import { ClockPort } from '../domain/ports/clock.port';
 import { Conversation } from '../domain/conversation';
 import { Message } from '../domain/message';
-import { BudgetExceededError } from '../domain/errors';
+import { BudgetExceededError, ConversationAccessError } from '../domain/errors';
 import { AssistantContext, AssistantTool } from './tools/assistant-tool';
 import { SYSTEM_PROMPT } from './system-prompt';
 import { AssistantBudget } from './assistant-budget';
@@ -150,7 +150,16 @@ export class SendMessageUseCase {
   private async loadOrStart(input: SendMessageInput): Promise<Conversation> {
     if (input.conversationId) {
       const existing = await this.repository.findById(input.conversationId);
-      if (existing) return existing;
+      if (existing) {
+        // Propiedad: una conversación con dueño solo la reanuda su dueño (cierra
+        // la fuga de historial ajeno). Una conversación anónima (userId null) la
+        // puede continuar cualquiera, incluido el mismo visitante tras iniciar
+        // sesión —así puede reservar en la conversación que empezó sin sesión—.
+        if (existing.userId && existing.userId !== input.userId) {
+          throw new ConversationAccessError();
+        }
+        return existing;
+      }
     }
     return Conversation.start({ userId: input.userId });
   }

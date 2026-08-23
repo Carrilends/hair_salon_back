@@ -57,5 +57,7 @@ import {
     { provide: SERVICE_CATALOG, useClass: ServiceCatalogAdapter },
     { provide: RESERVATION_NOTIFIER, useClass: ReservationNotifierAdapter },
   ],
+  // Exportado para que el asistente (Fase 5) reutilice el caso de uso real (A6).
+  exports: [CreateReservationUseCase],
 })
 export class ReservationsModule {}

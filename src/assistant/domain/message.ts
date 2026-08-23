@@ -4,6 +4,8 @@ import { TokenUsage } from './token-usage';
 export type MessageRole = 'system' | 'user' | 'assistant' | 'tool';
 
 export interface MessageProps {
+  /** Presente solo si el mensaje ya está persistido (lo asigna la BD). */
+  id?: string;
   role: MessageRole;
   content: string;
   /** Nombre de la herramienta, si `role = 'tool'`. */
@@ -20,6 +22,7 @@ export interface MessageProps {
  * calcula, no se recorta al guardar (ver `Conversation.window`).
  */
 export class Message {
+  readonly id: string | undefined;
   readonly role: MessageRole;
   readonly content: string;
   readonly toolName: string | null;
@@ -27,6 +30,7 @@ export class Message {
   readonly usage: TokenUsage | null;
 
   private constructor(props: MessageProps) {
+    this.id = props.id;
     this.role = props.role;
     this.content = props.content;
     this.toolName = props.toolName ?? null;

@@ -5,7 +5,7 @@ import { FakeLlmAdapter } from '../infrastructure/llm/fake-llm.adapter';
 import { Conversation } from '../domain/conversation';
 import { Message } from '../domain/message';
 import { TokenUsage } from '../domain/token-usage';
-import { BudgetExceededError } from '../domain/errors';
+import { BudgetExceededError, ConversationAccessError } from '../domain/errors';
 import { AssistantTool } from './tools/assistant-tool';
 import { LlmCompletion, LlmToolDefinition } from '../domain/ports/llm.port';
 import { ConversationRepositoryPort } from '../domain/ports/conversation-repository.port';
@@ -174,6 +174,37 @@ describe('SendMessageUseCase', () => {
       useCase.execute({ conversationId: 'c1', message: 'otra', userId: 'u1' }),
     ).rejects.toThrow(BudgetExceededError);
     expect(llm.calls).toHaveLength(0);
+  });
+
+  it('rechaza reanudar la conversación de otro usuario, sin llamar al LLM', async () => {
+    const ajena = Conversation.start({ userId: 'A' });
+    const llm = new FakeLlmAdapter([]);
+    const repo = new FakeRepo(ajena);
+    const useCase = makeUseCase({ llm, repo });
+
+    await expect(
+      useCase.execute({ conversationId: 'c1', message: 'hola', userId: 'B' }),
+    ).rejects.toThrow(ConversationAccessError);
+    expect(llm.calls).toHaveLength(0);
+  });
+
+  it('permite reanudar una conversación anónima tras iniciar sesión', async () => {
+    const anon = Conversation.start({ userId: null });
+    const llm = new FakeLlmAdapter([
+      {
+        message: { role: 'assistant', content: 'Hola' },
+        usage: TokenUsage.of(10, 5),
+      },
+    ]);
+    const repo = new FakeRepo(anon);
+    const useCase = makeUseCase({ llm, repo });
+
+    const res = await useCase.execute({
+      conversationId: 'c1',
+      message: 'hola',
+      userId: 'B',
+    });
+    expect(res.reply).toBe('Hola');
   });
 
   it('solo envía system + resumen + ventana de 8 + el mensaje nuevo', async () => {

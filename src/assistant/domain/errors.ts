@@ -13,3 +13,14 @@ export class BudgetExceededError extends AssistantDomainError {
     this.name = 'BudgetExceededError';
   }
 }
+
+/**
+ * El solicitante intenta reanudar una conversación que pertenece a otro usuario.
+ * El borde HTTP la traduce a 404 (no se revela la existencia de la conversación).
+ */
+export class ConversationAccessError extends AssistantDomainError {
+  constructor() {
+    super('La conversación no existe o no pertenece a este usuario');
+    this.name = 'ConversationAccessError';
+  }
+}
