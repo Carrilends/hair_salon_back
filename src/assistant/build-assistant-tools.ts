@@ -8,6 +8,7 @@ import { CheckAvailabilityTool } from './application/tools/check-availability.to
 import { CreateReservationTool } from './application/tools/create-reservation.tool';
 import { MyReservationsTool } from './application/tools/my-reservations.tool';
 import { CancelReservationTool } from './application/tools/cancel-reservation.tool';
+import { RecommendServicesTool } from './application/tools/recommend-services.tool';
 import { ServiceCatalogQueryAdapter } from './infrastructure/catalog/service-catalog-query.adapter';
 import { AvailabilityQueryAdapter } from './infrastructure/availability/availability-query.adapter';
 
@@ -30,5 +31,6 @@ export function buildAssistantTools(
     new CreateReservationTool(createReservation),
     new MyReservationsTool(getMyReservations),
     new CancelReservationTool(cancelReservation),
+    new RecommendServicesTool(catalog),
   ];
 }
