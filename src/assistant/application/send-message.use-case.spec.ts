@@ -58,6 +58,29 @@ class ContextCapturingTool implements AssistantTool {
   }
 }
 
+/** Herramienta "presentable": su resultado se surfacea como propuesta estructurada. */
+class FakePresentableTool implements AssistantTool {
+  readonly presentable = true;
+  readonly definition: LlmToolDefinition;
+  constructor(
+    readonly name: string,
+    private readonly result: unknown,
+  ) {
+    this.definition = {
+      name,
+      description: 'x',
+      parameters: {
+        type: 'object',
+        properties: {},
+        additionalProperties: false,
+      },
+    };
+  }
+  async execute(): Promise<unknown> {
+    return this.result;
+  }
+}
+
 class FakeRepo implements ConversationRepositoryPort {
   saved?: Conversation;
   constructor(
@@ -201,6 +224,86 @@ describe('SendMessageUseCase', () => {
     await useCase.execute({ message: 'hola', userId: 'u1' });
 
     expect(tool.lastContext?.isAdmin).toBe(false);
+  });
+
+  it('surfacea la propuesta de una herramienta presentable en el resultado', async () => {
+    const propuesta = {
+      evento: 'boda',
+      lineas: [{ serviceId: 'r1' }],
+      total: 60000,
+    };
+    const tool = new FakePresentableTool('componerPaquete', propuesta);
+    const llm = new FakeLlmAdapter([
+      {
+        message: {
+          role: 'assistant',
+          content: '',
+          toolCalls: [{ id: 't1', name: 'componerPaquete', arguments: {} }],
+        },
+        usage: TokenUsage.of(10, 5),
+      },
+      {
+        message: { role: 'assistant', content: 'Aquí tienes tu paquete.' },
+        usage: TokenUsage.of(10, 5),
+      },
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [tool] });
+
+    const res = await useCase.execute({ message: 'me caso', userId: 'u1' });
+
+    expect(res.propuesta).toEqual(propuesta);
+  });
+
+  it('no surfacea propuesta si la herramienta presentable devuelve un error', async () => {
+    const tool = new FakePresentableTool('componerPaquete', {
+      ok: false,
+      motivo: 'evento_no_disponible',
+    });
+    const llm = new FakeLlmAdapter([
+      {
+        message: {
+          role: 'assistant',
+          content: '',
+          toolCalls: [{ id: 't1', name: 'componerPaquete', arguments: {} }],
+        },
+        usage: TokenUsage.of(10, 5),
+      },
+      {
+        message: { role: 'assistant', content: 'Ese evento no está.' },
+        usage: TokenUsage.of(10, 5),
+      },
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [tool] });
+
+    const res = await useCase.execute({ message: 'me gradúo', userId: 'u1' });
+
+    expect(res.propuesta).toBeUndefined();
+  });
+
+  it('no surfacea propuesta de herramientas no presentables', async () => {
+    const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const llm = new FakeLlmAdapter([
+      {
+        message: {
+          role: 'assistant',
+          content: '',
+          toolCalls: [{ id: 't1', name: 'listarServicios', arguments: {} }],
+        },
+        usage: TokenUsage.of(10, 5),
+      },
+      {
+        message: { role: 'assistant', content: 'Tenemos varios.' },
+        usage: TokenUsage.of(10, 5),
+      },
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [tool] });
+
+    const res = await useCase.execute({ message: 'servicios', userId: 'u1' });
+
+    expect(res.propuesta).toBeUndefined();
   });
 
   it('corta a las 5 vueltas y NO ejecuta la herramienta en la última (evita escritura fantasma)', async () => {

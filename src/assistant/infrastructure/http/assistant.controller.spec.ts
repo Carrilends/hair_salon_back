@@ -74,6 +74,42 @@ describe('AssistantController', () => {
     expect(uc.lastInput!.isAdmin).toBe(false);
   });
 
+  it('incluye la propuesta estructurada cuando el caso de uso la devuelve', async () => {
+    const propuesta = {
+      evento: 'boda',
+      serviciosIds: ['r1', 'm1'],
+      total: 150000,
+    };
+    const uc = new FakeSendMessage(() => ({
+      conversationId: 'c1',
+      reply: 'Aquí tu paquete.',
+      propuesta,
+    }));
+    const ctrl = new AssistantController(uc as never);
+
+    const res = (await ctrl.messages(
+      { conversationId: 'c1', message: 'me caso' },
+      req({ id: 'u1' } as User),
+    )) as { propuesta?: unknown };
+
+    expect(res.propuesta).toEqual(propuesta);
+  });
+
+  it('no incluye propuesta cuando no la hay', async () => {
+    const uc = new FakeSendMessage(() => ({
+      conversationId: 'c1',
+      reply: 'Hola',
+    }));
+    const ctrl = new AssistantController(uc as never);
+
+    const res = (await ctrl.messages(
+      { conversationId: 'c1', message: 'hola' },
+      req({ id: 'u1' } as User),
+    )) as Record<string, unknown>;
+
+    expect('propuesta' in res).toBe(false);
+  });
+
   it('sin sesión pasa userId null', async () => {
     const uc = new FakeSendMessage(() => ({
       conversationId: 'c9',

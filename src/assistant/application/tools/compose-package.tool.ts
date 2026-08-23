@@ -30,6 +30,9 @@ export interface ComposePackageCatalogPort {
 export class ComposePackageTool implements AssistantTool {
   readonly name = 'componerPaquete';
 
+  // El widget pinta la propuesta como tarjeta (T7): el bucle la surfacea.
+  readonly presentable = true;
+
   readonly definition: LlmToolDefinition = {
     name: this.name,
     description:

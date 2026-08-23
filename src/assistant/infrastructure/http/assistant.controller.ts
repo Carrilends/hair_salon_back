@@ -53,6 +53,9 @@ export class AssistantController {
         conversationId: result.conversationId,
         reply: result.reply,
         ...(esNueva ? { aviso: LEGAL_NOTICE } : {}),
+        ...(result.propuesta !== undefined
+          ? { propuesta: result.propuesta }
+          : {}),
       };
     } catch (error) {
       // Presupuesto agotado: no es un error para la clienta; se le comunica como

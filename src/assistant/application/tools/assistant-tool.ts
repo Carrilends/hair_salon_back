@@ -22,6 +22,12 @@ export interface AssistantTool {
   readonly name: string;
   readonly definition: LlmToolDefinition;
   /**
+   * Si es true, el bucle surfacea el resultado (no de error) de esta herramienta
+   * como dato estructurado en la respuesta, para que el widget lo pinte (una
+   * propuesta de paquete, T7). Mantiene el bucle desacoplado del nombre concreto.
+   */
+  readonly presentable?: boolean;
+  /**
    * Devuelve datos ya compactados: lo que retorne aquí se convierte en tokens de
    * entrada de la siguiente llamada. Cada campo de más se paga (§6.2).
    */

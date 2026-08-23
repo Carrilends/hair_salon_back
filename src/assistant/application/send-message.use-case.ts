@@ -39,6 +39,12 @@ export interface SendMessageInput {
 export interface SendMessageResult {
   conversationId?: string;
   reply: string;
+  /**
+   * Dato estructurado que una herramienta "presentable" produjo en el turno (una
+   * propuesta de paquete, T7). El borde HTTP lo devuelve junto al texto para que
+   * el widget lo pinte; ausente si no hubo ninguno.
+   */
+  propuesta?: unknown;
 }
 
 /**
@@ -100,6 +106,7 @@ export class SendMessageUseCase {
     const toolDefinitions = this.tools.map((t) => t.definition);
 
     let reply = '';
+    let propuesta: unknown;
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
       const completion = await this.llm.complete({
         messages,
@@ -129,6 +136,12 @@ export class SendMessageUseCase {
         const result = tool
           ? await tool.execute(call.arguments, context)
           : { ok: false, motivo: 'herramienta_desconocida' };
+        // T7: si la herramienta es "presentable" y no devolvió un error, se
+        // guarda su resultado para surfacearlo como dato estructurado (la última
+        // gana, si hubiera varias en el turno).
+        if (tool?.presentable && isPresentableResult(result)) {
+          propuesta = result;
+        }
         messages.push({
           role: 'tool',
           content: JSON.stringify(result),
@@ -152,7 +165,11 @@ export class SendMessageUseCase {
     }
 
     const saved = await this.repository.save(conversation);
-    return { conversationId: saved.id, reply };
+    return {
+      conversationId: saved.id,
+      reply,
+      ...(propuesta !== undefined ? { propuesta } : {}),
+    };
   }
 
   private async loadOrStart(input: SendMessageInput): Promise<Conversation> {
@@ -194,4 +211,13 @@ export class SendMessageUseCase {
 function toLlmRole(role: string): 'system' | 'user' | 'assistant' | 'tool' {
   if (role === 'assistant' || role === 'system' || role === 'tool') return role;
   return 'user';
+}
+
+/** Un resultado surfaceable: objeto que no es un error (`ok: false`). */
+function isPresentableResult(result: unknown): boolean {
+  return (
+    typeof result === 'object' &&
+    result !== null &&
+    (result as { ok?: unknown }).ok !== false
+  );
 }
