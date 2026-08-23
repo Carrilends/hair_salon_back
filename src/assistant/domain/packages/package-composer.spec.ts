@@ -105,4 +105,52 @@ describe('compose', () => {
     const recogido = r.lineas.find((l) => l.serviceId === 'r1');
     expect(recogido?.categoria).toBe('Recogidos');
   });
+
+  it('no repite el mismo servicio en dos categorías (usa la alternativa)', () => {
+    // 'x' está etiquetado en Recogidos y en Novia; solo debe usarse una vez.
+    const c = candidatos([
+      [
+        'Recogidos',
+        [{ id: 'x', name: 'Compartido', price: 50000, durationMinutes: 60 }],
+      ],
+      [
+        'Novia',
+        [
+          { id: 'x', name: 'Compartido', price: 50000, durationMinutes: 60 },
+          { id: 'm2', name: 'Novia glam', price: 90000, durationMinutes: 90 },
+        ],
+      ],
+    ]);
+
+    const r = compose(EVENT_TEMPLATES.boda, c, 300000);
+
+    const ids = r.lineas.map((l) => l.serviceId);
+    expect(new Set(ids).size).toBe(ids.length); // sin duplicados
+    expect(r.lineas.find((l) => l.categoria === 'Recogidos')?.serviceId).toBe(
+      'x',
+    );
+    expect(r.lineas.find((l) => l.categoria === 'Novia')?.serviceId).toBe('m2');
+  });
+
+  it('si el único candidato de una categoría ya se usó, la categoría se omite', () => {
+    const c = candidatos([
+      [
+        'Recogidos',
+        [{ id: 'x', name: 'Compartido', price: 50000, durationMinutes: 60 }],
+      ],
+      [
+        'Novia',
+        [{ id: 'x', name: 'Compartido', price: 50000, durationMinutes: 60 }],
+      ],
+    ]);
+
+    const r = compose(EVENT_TEMPLATES.boda, c, 300000);
+
+    expect(r.lineas.map((l) => l.serviceId)).toEqual(['x']);
+    expect(r.omitidas).toContainEqual({
+      categoria: 'Novia',
+      motivo: 'sin_candidatos',
+    });
+    expect(r.completa).toBe(false); // Novia es obligatoria
+  });
 });

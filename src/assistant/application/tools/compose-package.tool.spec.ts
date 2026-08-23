@@ -107,4 +107,23 @@ describe('ComposePackageTool', () => {
       motivo: 'sin_candidatos',
     });
   });
+
+  it('acepta el presupuesto como cadena numérica (los LLM a veces la mandan así)', async () => {
+    const catalog = bodaCatalog();
+    const tool = new ComposePackageTool(catalog as never);
+
+    const res = (await tool.execute({
+      evento: 'boda',
+      presupuestoMaximo: '160000',
+    })) as {
+      total: number;
+      omitidas: { categoria: string; motivo: string }[];
+    };
+
+    expect(res.total).toBeLessThanOrEqual(160000);
+    expect(res.omitidas).toContainEqual({
+      categoria: 'Manicure',
+      motivo: 'presupuesto_insuficiente',
+    });
+  });
 });

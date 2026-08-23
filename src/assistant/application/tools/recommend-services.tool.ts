@@ -1,6 +1,7 @@
 import { AssistantTool } from './assistant-tool';
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
 import { AssistantServiceSummary } from '../../domain/ports/service-catalog-query.port';
+import { coerceOptionalNumber } from './coerce';
 
 /** Contrato mínimo del catálogo que la recomendación necesita (recuperación por etiquetas). */
 export interface RecommendCatalogPort {
@@ -60,10 +61,7 @@ export class RecommendServicesTool implements AssistantTool {
       : [];
     if (categorias.length === 0) return { ok: false, motivo: 'sin_categorias' };
 
-    const presupuesto =
-      typeof args.presupuestoMaximo === 'number'
-        ? args.presupuestoMaximo
-        : undefined;
+    const presupuesto = coerceOptionalNumber(args.presupuestoMaximo);
 
     const byTag = await this.catalog.findByTagNames(
       categorias,

@@ -151,8 +151,12 @@ export class SendMessageUseCase {
     }
 
     // Al agotar las vueltas sin respuesta final, se responde con cortesía en vez
-    // de seguir facturando.
-    if (!reply) reply = COURTESY_REPLY;
+    // de seguir facturando. En ese caso NO se surfacea la propuesta: la tarjeta
+    // del paquete junto a un texto de fracaso sería contradictoria.
+    if (!reply) {
+      reply = COURTESY_REPLY;
+      propuesta = undefined;
+    }
 
     // Historia durable: el mensaje de la clienta y la respuesta final.
     conversation.append(Message.user(input.message));

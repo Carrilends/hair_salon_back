@@ -1,5 +1,8 @@
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
 import { AssistantContext, AssistantTool } from './assistant-tool';
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
+import { CreateReservationArgsDto } from './create-reservation-args.dto';
 import {
   CreateReservationExecutor,
   mapDomainErrorToReason,
@@ -47,12 +50,15 @@ export class ReservePackageTool implements AssistantTool {
   ): Promise<unknown> {
     if (!context.userId) return { ok: false, motivo: 'sesion_requerida' };
 
-    const serviciosIds = Array.isArray(args.serviciosIds)
-      ? args.serviciosIds.filter((s): s is string => typeof s === 'string')
-      : [];
-    const fechaHoraIso =
-      typeof args.fechaHoraIso === 'string' ? args.fechaHoraIso : null;
-    if (serviciosIds.length === 0 || !fechaHoraIso) {
+    // Misma validación de formato que `crearReserva` (fecha ISO, IDs UUID, al
+    // menos uno): rechaza argumentos malformados con un motivo limpio y barato,
+    // antes de tocar el caso de uso.
+    const dto = plainToInstance(CreateReservationArgsDto, args);
+    const errors = await validate(dto, {
+      whitelist: true,
+      forbidNonWhitelisted: true,
+    });
+    if (errors.length > 0) {
       return { ok: false, motivo: 'argumentos_invalidos' };
     }
 
@@ -60,8 +66,8 @@ export class ReservePackageTool implements AssistantTool {
       // A6: el paquete es UNA reserva con varias líneas. El asistente no es una vía
       // privilegiada; el caso de uso valida horario y solapamiento sobre el total.
       const reservation = await this.createReservation.execute({
-        scheduledAt: fechaHoraIso,
-        serviceIds: serviciosIds,
+        scheduledAt: dto.fechaHoraIso,
+        serviceIds: dto.serviciosIds,
         userId: context.userId,
       });
       return {

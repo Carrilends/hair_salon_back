@@ -282,6 +282,32 @@ describe('SendMessageUseCase', () => {
     expect(res.propuesta).toBeUndefined();
   });
 
+  it('no surfacea propuesta si el turno acaba en respuesta de cortesía', async () => {
+    // La herramienta compone (propuesta set) pero el modelo insiste con llamadas
+    // hasta agotar las vueltas: la respuesta es de cortesía y NO debe llegar con
+    // la tarjeta del paquete (sería un mensaje contradictorio).
+    const tool = new FakePresentableTool('componerPaquete', {
+      evento: 'boda',
+      lineas: [{ serviceId: 'r1' }],
+    });
+    const script: LlmCompletion[] = Array.from({ length: 6 }, () => ({
+      message: {
+        role: 'assistant' as const,
+        content: '',
+        toolCalls: [{ id: 't', name: 'componerPaquete', arguments: {} }],
+      },
+      usage: TokenUsage.of(10, 5),
+    }));
+    const llm = new FakeLlmAdapter(script);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [tool] });
+
+    const res = await useCase.execute({ message: 'me caso', userId: 'u1' });
+
+    expect(res.reply.length).toBeGreaterThan(0);
+    expect(res.propuesta).toBeUndefined();
+  });
+
   it('no surfacea propuesta de herramientas no presentables', async () => {
     const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
     const llm = new FakeLlmAdapter([

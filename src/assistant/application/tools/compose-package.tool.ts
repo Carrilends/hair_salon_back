@@ -9,6 +9,7 @@ import {
   compose,
   PackageCandidate,
 } from '../../domain/packages/package-composer';
+import { coerceOptionalNumber } from './coerce';
 
 const CANDIDATOS_POR_CATEGORIA = 5;
 
@@ -72,10 +73,7 @@ export class ComposePackageTool implements AssistantTool {
       };
     }
 
-    const presupuesto =
-      typeof args.presupuestoMaximo === 'number'
-        ? args.presupuestoMaximo
-        : undefined;
+    const presupuesto = coerceOptionalNumber(args.presupuestoMaximo);
 
     const categorias = plantilla.map((s) => s.categoria);
     const byTag = await this.catalog.findByTagNames(

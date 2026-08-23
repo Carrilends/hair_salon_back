@@ -47,6 +47,35 @@ describe('ReservePackageTool', () => {
     expect(create.calls).toHaveLength(0);
   });
 
+  it('rechaza serviciosIds no-UUID como argumentos_invalidos sin llamar al caso de uso', async () => {
+    const create = new FakeCreate(() => ({ id: 'x', status: 'pendiente' }));
+    const tool = new ReservePackageTool(create as never);
+
+    const res = await tool.execute(
+      {
+        serviciosIds: ['no-es-uuid'],
+        fechaHoraIso: '2026-08-20T14:00:00.000Z',
+      },
+      ctx('u1'),
+    );
+
+    expect(res).toEqual({ ok: false, motivo: 'argumentos_invalidos' });
+    expect(create.calls).toHaveLength(0);
+  });
+
+  it('rechaza una fecha no-ISO como argumentos_invalidos sin llamar al caso de uso', async () => {
+    const create = new FakeCreate(() => ({ id: 'x', status: 'pendiente' }));
+    const tool = new ReservePackageTool(create as never);
+
+    const res = await tool.execute(
+      { serviciosIds: [UUID_A], fechaHoraIso: 'mañana' },
+      ctx('u1'),
+    );
+
+    expect(res).toEqual({ ok: false, motivo: 'argumentos_invalidos' });
+    expect(create.calls).toHaveLength(0);
+  });
+
   it('reserva el paquete como UNA reserva con varias líneas', async () => {
     const create = new FakeCreate(() => ({ id: 'res1', status: 'pendiente' }));
     const tool = new ReservePackageTool(create as never);

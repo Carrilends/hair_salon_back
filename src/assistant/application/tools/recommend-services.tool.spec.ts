@@ -110,4 +110,18 @@ describe('RecommendServicesTool', () => {
     await tool.execute({ categorias: ['Novia'] });
     expect(catalog.lastLimit).toBe(3);
   });
+
+  it('acepta el presupuesto como cadena numérica', async () => {
+    const catalog = new FakeCatalog(
+      new Map([['Recogidos', [svc('r1', 40000), svc('r2', 90000)]]]),
+    );
+    const tool = new RecommendServicesTool(catalog as never);
+
+    const res = (await tool.execute({
+      categorias: ['Recogidos'],
+      presupuestoMaximo: '50000',
+    })) as { recomendaciones: { servicios: { id: string }[] }[] };
+
+    expect(res.recomendaciones[0].servicios.map((s) => s.id)).toEqual(['r1']);
+  });
 });

@@ -52,13 +52,20 @@ export function compose(
 
   const lineas: ComposedLine[] = [];
   const omitidas: Omission[] = [];
+  const usados = new Set<string>();
   let total = 0;
   let minutos = 0;
   let restante = presupuesto ?? Infinity;
   let completa = true;
 
   for (const slot of slots) {
-    const candidatos = candidatosPorCategoria.get(slot.categoria) ?? [];
+    // Un servicio puede tener DOS de las etiquetas de la plantilla (p. ej.
+    // "Peinados" y "Social y fotográfico"); se descarta el ya elegido para no
+    // repetir una línea (total inflado) ni proponer un paquete que el caso de uso
+    // de Reservas rechazaría por servicios duplicados.
+    const candidatos = (
+      candidatosPorCategoria.get(slot.categoria) ?? []
+    ).filter((c) => !usados.has(c.id));
     if (candidatos.length === 0) {
       omitidas.push({ categoria: slot.categoria, motivo: 'sin_candidatos' });
       if (slot.obligatoria) completa = false;
@@ -80,6 +87,7 @@ export function compose(
       continue;
     }
 
+    usados.add(masBarato.id);
     lineas.push({
       serviceId: masBarato.id,
       nombre: masBarato.name,
