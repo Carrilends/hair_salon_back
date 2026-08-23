@@ -6,7 +6,7 @@ import { Conversation } from '../domain/conversation';
 import { Message } from '../domain/message';
 import { TokenUsage } from '../domain/token-usage';
 import { BudgetExceededError, ConversationAccessError } from '../domain/errors';
-import { AssistantTool } from './tools/assistant-tool';
+import { AssistantContext, AssistantTool } from './tools/assistant-tool';
 import { LlmCompletion, LlmToolDefinition } from '../domain/ports/llm.port';
 import { ConversationRepositoryPort } from '../domain/ports/conversation-repository.port';
 import { ClockPort } from '../domain/ports/clock.port';
@@ -31,6 +31,30 @@ class FakeTool implements AssistantTool {
   async execute(): Promise<unknown> {
     this.calls++;
     return this.result;
+  }
+}
+
+/** Herramienta que captura el contexto recibido, para verificar qué le llega. */
+class ContextCapturingTool implements AssistantTool {
+  lastContext?: AssistantContext;
+  readonly definition: LlmToolDefinition;
+  constructor(readonly name: string) {
+    this.definition = {
+      name,
+      description: 'x',
+      parameters: {
+        type: 'object',
+        properties: {},
+        additionalProperties: false,
+      },
+    };
+  }
+  async execute(
+    _args: Record<string, unknown>,
+    context: AssistantContext,
+  ): Promise<unknown> {
+    this.lastContext = context;
+    return { ok: true };
   }
 }
 
@@ -121,6 +145,62 @@ describe('SendMessageUseCase', () => {
     expect(llm.calls).toHaveLength(2);
     expect(repo.saved!.usage.promptTokens).toBe(300);
     expect(repo.saved!.usage.completionTokens).toBe(60);
+  });
+
+  it('propaga isAdmin del input al contexto que reciben las herramientas', async () => {
+    // Regla de seguridad de la Fase 6: el rol admin sale del solicitante
+    // autenticado (JWT), no de la conversación. El bucle debe trasladarlo al
+    // contexto para que `cancelarReserva` lo consume.
+    const tool = new ContextCapturingTool('marca');
+    const llm = new FakeLlmAdapter([
+      {
+        message: {
+          role: 'assistant',
+          content: '',
+          toolCalls: [{ id: 't1', name: 'marca', arguments: {} }],
+        },
+        usage: TokenUsage.of(10, 5),
+      },
+      {
+        message: { role: 'assistant', content: 'Listo.' },
+        usage: TokenUsage.of(10, 5),
+      },
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [tool] });
+
+    await useCase.execute({
+      message: 'cancela mi reserva',
+      userId: 'admin-1',
+      isAdmin: true,
+    });
+
+    expect(tool.lastContext?.isAdmin).toBe(true);
+    expect(tool.lastContext?.userId).toBe('admin-1');
+  });
+
+  it('sin isAdmin en el input, el contexto lo recibe como false (mínimo privilegio)', async () => {
+    const tool = new ContextCapturingTool('marca');
+    const llm = new FakeLlmAdapter([
+      {
+        message: {
+          role: 'assistant',
+          content: '',
+          toolCalls: [{ id: 't1', name: 'marca', arguments: {} }],
+        },
+        usage: TokenUsage.of(10, 5),
+      },
+      {
+        message: { role: 'assistant', content: 'Listo.' },
+        usage: TokenUsage.of(10, 5),
+      },
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [tool] });
+
+    await useCase.execute({ message: 'hola', userId: 'u1' });
+
+    expect(tool.lastContext?.isAdmin).toBe(false);
   });
 
   it('corta a las 5 vueltas y NO ejecuta la herramienta en la última (evita escritura fantasma)', async () => {

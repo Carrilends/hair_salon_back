@@ -37,8 +37,41 @@ describe('AssistantController', () => {
       conversationId: 'c1',
       message: 'hola',
       userId: 'u1',
+      isAdmin: false,
     });
     expect(res).toEqual({ conversationId: 'c1', reply: 'Hola' });
+  });
+
+  it('deriva isAdmin=true cuando el JWT trae el rol admin', async () => {
+    // El rol admin sale del JWT, nunca de la conversación (regla de seguridad F6).
+    const uc = new FakeSendMessage(() => ({
+      conversationId: 'c1',
+      reply: 'ok',
+    }));
+    const ctrl = new AssistantController(uc as never);
+
+    await ctrl.messages(
+      { conversationId: 'c1', message: 'cancela la reserva' },
+      req({ id: 'admin-1', roles: ['admin'] } as User),
+    );
+
+    expect(uc.lastInput!.isAdmin).toBe(true);
+    expect(uc.lastInput!.userId).toBe('admin-1');
+  });
+
+  it('deriva isAdmin=false para un usuario sin rol admin', async () => {
+    const uc = new FakeSendMessage(() => ({
+      conversationId: 'c1',
+      reply: 'ok',
+    }));
+    const ctrl = new AssistantController(uc as never);
+
+    await ctrl.messages(
+      { conversationId: 'c1', message: 'hola' },
+      req({ id: 'u1', roles: ['user'] } as User),
+    );
+
+    expect(uc.lastInput!.isAdmin).toBe(false);
   });
 
   it('sin sesión pasa userId null', async () => {

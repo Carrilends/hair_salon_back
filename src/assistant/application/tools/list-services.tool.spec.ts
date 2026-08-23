@@ -22,6 +22,7 @@ class FakeCatalog implements ServiceCatalogQueryPort {
 const ctx: AssistantContext = {
   userId: 'u1',
   now: new Date('2026-08-19T14:00:00Z'),
+  isAdmin: false,
 };
 
 describe('ListServicesTool', () => {

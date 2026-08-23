@@ -29,6 +29,11 @@ export interface SendMessageInput {
   conversationId?: string;
   message: string;
   userId: string | null;
+  /**
+   * Rol admin del solicitante, derivado del JWT en el borde HTTP. Opcional en la
+   * entrada (ausente ⇒ `false`, mínimo privilegio); el contexto siempre lo lleva.
+   */
+  isAdmin?: boolean;
 }
 
 export interface SendMessageResult {
@@ -87,6 +92,9 @@ export class SendMessageUseCase {
     const context: AssistantContext = {
       userId: input.userId,
       now: this.clock.now(),
+      // El rol admin viaja desde el borde HTTP (JWT), nunca desde el chat. Ausente
+      // ⇒ false: una omisión nunca concede privilegios.
+      isAdmin: input.isAdmin ?? false,
     };
     const messages = this.buildContext(conversation, input.message);
     const toolDefinitions = this.tools.map((t) => t.definition);

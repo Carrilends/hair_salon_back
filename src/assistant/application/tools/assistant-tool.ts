@@ -5,6 +5,12 @@ export interface AssistantContext {
   /** Null si la conversación es anónima: `crearReserva` lo rechazará (A3). */
   userId: string | null;
   now: Date;
+  /**
+   * Rol de administración del solicitante autenticado. Sale SIEMPRE del JWT en el
+   * borde HTTP, nunca de la conversación: ninguna instrucción escrita en el chat
+   * puede fijarlo. Habilita la cancelación de administración de §6.4 (Fase 6).
+   */
+  isAdmin: boolean;
 }
 
 /**

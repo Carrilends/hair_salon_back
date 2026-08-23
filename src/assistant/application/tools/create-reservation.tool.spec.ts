@@ -14,7 +14,7 @@ class FakeCreateReservation {
 }
 
 function ctx(userId: string | null): AssistantContext {
-  return { userId, now: new Date('2026-08-19T14:00:00Z') };
+  return { userId, now: new Date('2026-08-19T14:00:00Z'), isAdmin: false };
 }
 
 describe('CreateReservationTool', () => {

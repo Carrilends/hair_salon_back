@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { OptionalJwtAuthGuard } from 'src/reservations/infrastructure/http/optional-jwt-auth.guard';
 import { User } from 'src/auth/entities/user.entity';
+import { ValidRoles } from 'src/auth/interfaces/valid-roles';
 import { SendMessageDto } from './dto/send-message.dto';
 import { SendMessageUseCase } from '../../application/send-message.use-case';
 import {
@@ -36,12 +37,17 @@ export class AssistantController {
     @Req() req: { user?: User | null },
   ) {
     const userId = req.user?.id ?? null;
+    // El rol admin sale del JWT, nunca de la conversación (regla de seguridad F6).
+    // Mismo criterio que el borde de Reservas: solo el rol `admin` habilita la
+    // cancelación de administración de §6.4.
+    const isAdmin = req.user?.roles?.includes(ValidRoles.admin) ?? false;
     const esNueva = !dto.conversationId;
     try {
       const result = await this.sendMessage.execute({
         conversationId: dto.conversationId,
         message: dto.message,
         userId,
+        isAdmin,
       });
       return {
         conversationId: result.conversationId,
