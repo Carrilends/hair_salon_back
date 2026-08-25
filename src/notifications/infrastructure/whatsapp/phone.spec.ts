@@ -28,6 +28,10 @@ describe('normalizeCoPhoneToE164', () => {
     expect(normalizeCoPhoneToE164('03001234567')).toBe('573001234567');
   });
 
+  it('combina quitar el cero de troncal y conservar el indicativo 57', () => {
+    expect(normalizeCoPhoneToE164('0573001234567')).toBe('573001234567');
+  });
+
   it('devuelve null para entrada null', () => {
     expect(normalizeCoPhoneToE164(null)).toBeNull();
   });
@@ -47,6 +51,10 @@ describe('normalizeCoPhoneToE164', () => {
 
   it('devuelve null para un fijo de 10 dígitos que no empieza por 3', () => {
     expect(normalizeCoPhoneToE164('6011234567')).toBeNull();
+  });
+
+  it('devuelve null para un móvil con más de 10 dígitos', () => {
+    expect(normalizeCoPhoneToE164('3001234567123')).toBeNull();
   });
 
   it('devuelve null si tras el 57 el local no es un móvil válido', () => {

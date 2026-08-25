@@ -46,6 +46,11 @@ export class CloudApiWhatsAppSender implements WhatsAppSenderPort {
         'WHATSAPP_PHONE_NUMBER_ID no está configurado: no se puede enviar el WhatsApp de confirmación.',
       );
     }
+    if (!this.config.templateName) {
+      throw new Error(
+        'WHATSAPP_TEMPLATE_NAME no está configurado: no se puede enviar el WhatsApp de confirmación.',
+      );
+    }
 
     const url = `https://graph.facebook.com/${this.config.apiVersion}/${this.config.phoneNumberId}/messages`;
     const payload = {

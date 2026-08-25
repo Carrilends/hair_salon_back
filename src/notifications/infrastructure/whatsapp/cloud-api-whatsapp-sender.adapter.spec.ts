@@ -105,6 +105,19 @@ describe('CloudApiWhatsAppSender', () => {
     expect(captured.url).toBeUndefined();
   });
 
+  it('lanza un error claro y no llama a la red si falta el nombre de la plantilla', async () => {
+    const captured: Captured = {};
+    const sender = new CloudApiWhatsAppSender(
+      { ...baseConfig, templateName: undefined },
+      fakeFetch(captured, { ok: true, status: 200 }),
+    );
+
+    await expect(
+      sender.send({ to: '573001234567', bodyParams: ['x'] }),
+    ).rejects.toThrow(/WHATSAPP_TEMPLATE_NAME/);
+    expect(captured.url).toBeUndefined();
+  });
+
   it('propaga un error con el estado y el cuerpo si la respuesta no es 2xx', async () => {
     const captured: Captured = {};
     const sender = new CloudApiWhatsAppSender(

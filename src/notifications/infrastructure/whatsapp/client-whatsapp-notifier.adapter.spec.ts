@@ -86,4 +86,17 @@ describe('ClientWhatsAppNotifier', () => {
     ).resolves.toBeUndefined();
     expect(sent).toHaveLength(0);
   });
+
+  it('propaga el error del transporte para que el despachador lo aísle (NF11)', async () => {
+    const sender = {
+      send: async () => {
+        throw new Error('cloud api 401');
+      },
+    };
+    const notifier = new ClientWhatsAppNotifier(sender as never, config);
+
+    // A diferencia del teléfono inválido (que se salta sin lanzar), un fallo de
+    // red debe subir: el despachador lo aísla con Promise.allSettled.
+    await expect(notifier.notify(makeEvent())).rejects.toThrow(/401/);
+  });
 });
