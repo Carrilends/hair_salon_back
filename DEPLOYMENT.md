@@ -18,6 +18,7 @@ Notas importantes:
 
 - Dentro de Docker, la API se conecta al Postgres por red interna usando `DB_HOST=db` y `DB_PORT=5432` (esto lo fuerza `docker-compose.yml`).
 - `DB_PUBLIC_PORT` controla el puerto publicado hacia tu máquina (por defecto `3334 -> 5432`).
+- Notificaciones opcionales con arranque perezoso: sin `EMAIL_PROVIDER` los correos se imprimen en el log (adaptador de consola) y sin `WHATSAPP_TOKEN` la confirmación por WhatsApp también (no llama a la Cloud API de Meta). La app **arranca sin esas credenciales**; solo un envío real falla, con mensaje claro, si faltan. El envío en vivo por WhatsApp requiere además una WABA verificada, un número dedicado y una plantilla aprobada por Meta (ver `.env.example`).
 
 ## Levantar en local con Docker
 
