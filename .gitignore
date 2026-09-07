@@ -43,6 +43,8 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.local
+# Respaldos locales del .env (contienen secretos reales)
+.env.bak-*
 
 # temp directory
 .temp

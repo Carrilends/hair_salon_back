@@ -12,7 +12,7 @@ import { TypeOrmConversationRepository } from './infrastructure/persistence/type
 import { SystemClock } from './infrastructure/time/system-clock.adapter';
 import { ServiceCatalogQueryAdapter } from './infrastructure/catalog/service-catalog-query.adapter';
 import { AvailabilityQueryAdapter } from './infrastructure/availability/availability-query.adapter';
-import { OpenAiLlmAdapter } from './infrastructure/llm/openai-llm.adapter';
+import { GeminiLlmAdapter } from './infrastructure/llm/gemini-llm.adapter';
 import { AssistantController } from './infrastructure/http/assistant.controller';
 
 import { SendMessageUseCase } from './application/send-message.use-case';
@@ -29,9 +29,12 @@ import {
   LLM,
 } from './application/tokens';
 
-// Modelo por defecto: uno económico con function calling y prompt caching. El id
-// exacto lo confirma Luis vía OPENAI_MODEL_ROUTER/_MAIN (A2, decisión de catálogo).
-const DEFAULT_MODEL = 'gpt-4o-mini';
+// Dos modelos, no uno: es lo que hace real el enrutamiento por coste de §6.2 (D4).
+// El `router` atiende la conversación normal y debe ser el barato; el `main` queda
+// reservado a las tareas complejas de la Fase 6 y hoy no se usa. Los ids exactos los
+// confirma Luis vía GEMINI_MODEL_ROUTER/_MAIN (A2, decisión de catálogo).
+const DEFAULT_ROUTER_MODEL = 'gemini-3.5-flash-lite';
+const DEFAULT_MAIN_MODEL = 'gemini-3.8-flash';
 
 @Module({
   imports: [
@@ -61,13 +64,13 @@ const DEFAULT_MODEL = 'gpt-4o-mini';
     },
     {
       // Único punto que construye el proveedor real. Arranque perezoso: la app
-      // arranca sin OPENAI_API_KEY; solo una conversación real falla si falta.
+      // arranca sin GEMINI_API_KEY; solo una conversación real falla si falta.
       provide: LLM,
       useFactory: () =>
-        new OpenAiLlmAdapter({
-          apiKey: process.env.OPENAI_API_KEY,
-          routerModel: process.env.OPENAI_MODEL_ROUTER ?? DEFAULT_MODEL,
-          mainModel: process.env.OPENAI_MODEL_MAIN ?? DEFAULT_MODEL,
+        new GeminiLlmAdapter({
+          apiKey: process.env.GEMINI_API_KEY,
+          routerModel: process.env.GEMINI_MODEL_ROUTER ?? DEFAULT_ROUTER_MODEL,
+          mainModel: process.env.GEMINI_MODEL_MAIN ?? DEFAULT_MAIN_MODEL,
         }),
     },
     {

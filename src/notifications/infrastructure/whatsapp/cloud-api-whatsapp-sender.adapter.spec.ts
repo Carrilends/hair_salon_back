@@ -8,7 +8,7 @@ import {
  * `POST /{version}/{phoneNumberId}/messages`. Arranque perezoso: la app arranca
  * sin credenciales; solo un envío real falla, con mensaje claro, si faltan. El
  * `fetch` se inyecta para probar sin red (como el cliente opcional del adaptador
- * de OpenAI).
+ * del proveedor de IA).
  */
 const baseConfig: CloudApiWhatsAppConfig = {
   token: 'TOK',

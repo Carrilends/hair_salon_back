@@ -19,7 +19,7 @@ export interface CloudApiWhatsAppConfig {
 /**
  * Adaptador real: envía la plantilla de confirmación por la Cloud API de Meta.
  * Único archivo que conoce el endpoint de Graph (regla de dependencias, espejo
- * del adaptador de OpenAI).
+ * del adaptador del proveedor de IA).
  *
  * **Arranque perezoso:** el constructor no toca la red ni valida credenciales;
  * la app arranca aunque falten. Solo un envío real falla, con mensaje claro, si
