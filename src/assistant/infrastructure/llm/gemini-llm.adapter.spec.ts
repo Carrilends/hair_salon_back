@@ -135,8 +135,12 @@ describe('GeminiLlmAdapter', () => {
             },
           ],
         },
-        { role: 'tool', content: '[{"id":"s1"}]', toolCallId: 't1' },
+        // Deliberadamente en orden INVERSO al de las llamadas: si el
+        // emparejamiento fuera por posición y no por `call_id`, aquí se
+        // cruzaría. Gemini devuelve de verdad dos llamadas en una sola
+        // respuesta (verificado contra la API real el 2026-09-08).
         { role: 'tool', content: '["09:00"]', toolCallId: 't2' },
+        { role: 'tool', content: '[{"id":"s1"}]', toolCallId: 't1' },
       ],
     });
     const pasos = cliente.lastParams!.input as Array<Record<string, unknown>>;
@@ -154,15 +158,15 @@ describe('GeminiLlmAdapter', () => {
     // en vuelo, emparejar mal es un fallo silencioso.
     expect(pasos[3]).toEqual({
       type: 'function_result',
-      call_id: 't1',
-      name: 'listarServicios',
-      result: [{ type: 'text', text: '[{"id":"s1"}]' }],
-    });
-    expect(pasos[4]).toEqual({
-      type: 'function_result',
       call_id: 't2',
       name: 'consultarDisponibilidad',
       result: [{ type: 'text', text: '["09:00"]' }],
+    });
+    expect(pasos[4]).toEqual({
+      type: 'function_result',
+      call_id: 't1',
+      name: 'listarServicios',
+      result: [{ type: 'text', text: '[{"id":"s1"}]' }],
     });
   });
 
