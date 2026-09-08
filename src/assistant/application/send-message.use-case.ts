@@ -7,6 +7,7 @@ import { Message } from '../domain/message';
 import { BudgetExceededError, ConversationAccessError } from '../domain/errors';
 import { AssistantContext, AssistantTool } from './tools/assistant-tool';
 import { SYSTEM_PROMPT } from './system-prompt';
+import { getDatePartsInTz } from 'src/reservations/salon-time';
 import { AssistantBudget } from './assistant-budget';
 import { ConversationSummarizer } from './summarize-conversation.use-case';
 import {
@@ -88,7 +89,7 @@ export class SendMessageUseCase {
       userId: input.userId,
       now: this.clock.now(),
     };
-    const messages = this.buildContext(conversation, input.message);
+    const messages = this.buildContext(conversation, input.message, context.now);
     const toolDefinitions = this.tools.map((t) => t.definition);
 
     let reply = '';
@@ -167,8 +168,16 @@ export class SendMessageUseCase {
   private buildContext(
     conversation: Conversation,
     message: string,
+    now: Date,
   ): LlmMessage[] {
     const messages: LlmMessage[] = [{ role: 'system', content: SYSTEM_PROMPT }];
+    // La fecha va DESPUÉS del prefijo constante, nunca dentro: así el prefijo
+    // sigue siendo cacheable (§6.2) y el modelo puede resolver "mañana" o "el
+    // viernes". Sin ella no entiende ninguna fecha relativa.
+    messages.push({
+      role: 'system',
+      content: `Hoy es ${fechaDelSalon(now)} (hora de Colombia).`,
+    });
     if (conversation.summary) {
       messages.push({
         role: 'system',
@@ -186,4 +195,12 @@ export class SendMessageUseCase {
 function toLlmRole(role: string): 'system' | 'user' | 'assistant' | 'tool' {
   if (role === 'assistant' || role === 'system' || role === 'tool') return role;
   return 'user';
+}
+
+/** Fecha de hoy en la zona del salón, en el mismo formato que espera `consultarDisponibilidad`. */
+function fechaDelSalon(now: Date): string {
+  const tz = process.env.SALON_TZ ?? 'America/Bogota';
+  const { year, month, day } = getDatePartsInTz(now, tz);
+  const dosDigitos = (n: number) => String(n).padStart(2, '0');
+  return `${year}-${dosDigitos(month)}-${dosDigitos(day)}`;
 }

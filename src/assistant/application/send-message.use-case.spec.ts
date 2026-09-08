@@ -10,6 +10,7 @@ import { AssistantTool } from './tools/assistant-tool';
 import { LlmCompletion, LlmToolDefinition } from '../domain/ports/llm.port';
 import { ConversationRepositoryPort } from '../domain/ports/conversation-repository.port';
 import { ClockPort } from '../domain/ports/clock.port';
+import { SYSTEM_PROMPT } from './system-prompt';
 
 class FakeTool implements AssistantTool {
   calls = 0;
@@ -207,7 +208,7 @@ describe('SendMessageUseCase', () => {
     expect(res.reply).toBe('Hola');
   });
 
-  it('solo envía system + resumen + ventana de 8 + el mensaje nuevo', async () => {
+  it('solo envía system + fecha + resumen + ventana de 8 + el mensaje nuevo', async () => {
     const conversation = Conversation.start({ userId: 'u1' });
     for (let i = 0; i < 30; i++)
       conversation.append(Message.user(`mensaje ${i}`));
@@ -235,11 +236,34 @@ describe('SendMessageUseCase', () => {
     });
 
     const sent = llm.calls[0].messages;
-    expect(sent).toHaveLength(11);
+    // prefijo + fecha de hoy + resumen + ventana de 8 + el mensaje nuevo.
+    expect(sent).toHaveLength(12);
     expect(sent[0].role).toBe('system');
-    expect(sent[1].content).toContain('resumen previo');
-    expect(sent[2].content).toBe('mensaje 22');
-    expect(sent[9].content).toBe('mensaje 29');
-    expect(sent[10].content).toBe('hola');
+    expect(sent[1].content).toContain('Hoy es');
+    expect(sent[2].content).toContain('resumen previo');
+    expect(sent[3].content).toBe('mensaje 22');
+    expect(sent[10].content).toBe('mensaje 29');
+    expect(sent[11].content).toBe('hola');
+  });
+
+  it('le dice al modelo qué día es hoy, después del prefijo cacheable', async () => {
+    const llm = new FakeLlmAdapter([
+      {
+        message: { role: 'assistant', content: 'ok' },
+        usage: TokenUsage.of(10, 5),
+      },
+    ]);
+    const useCase = makeUseCase({ llm, repo: new FakeRepo(null) });
+
+    await useCase.execute({ message: '¿hay espacio mañana?', userId: 'u1' });
+
+    const messages = llm.calls[0].messages;
+    // El prefijo constante va PRIMERO: es lo que el proveedor cachea (§6.2).
+    // La fecha cambia cada día, así que viaja después para no invalidarlo.
+    expect(messages[0].content).toBe(SYSTEM_PROMPT);
+    // Sin esto el asistente no entiende "mañana" ni "el viernes", que es como
+    // pide cita la gente (verificado contra la API real el 2026-09-08).
+    expect(messages[1].role).toBe('system');
+    expect(messages[1].content).toContain('2026-08-19');
   });
 });

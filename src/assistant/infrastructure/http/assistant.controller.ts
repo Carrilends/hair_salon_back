@@ -1,9 +1,11 @@
 import {
   Body,
   Controller,
+  Logger,
   NotFoundException,
   Post,
   Req,
+  ServiceUnavailableException,
   UseGuards,
 } from '@nestjs/common';
 import { OptionalJwtAuthGuard } from 'src/reservations/infrastructure/http/optional-jwt-auth.guard';
@@ -13,6 +15,7 @@ import { SendMessageUseCase } from '../../application/send-message.use-case';
 import {
   BudgetExceededError,
   ConversationAccessError,
+  LlmUnavailableError,
 } from '../../domain/errors';
 
 /**
@@ -24,6 +27,8 @@ export const LEGAL_NOTICE =
 
 @Controller('assistant')
 export class AssistantController {
+  private readonly logger = new Logger(AssistantController.name);
+
   constructor(private readonly sendMessage: SendMessageUseCase) {}
 
   // Auth OPCIONAL: consultar es público (A3); crear reserva exige sesión, y eso
@@ -60,6 +65,16 @@ export class AssistantController {
       // Conversación ajena: 404 (no se revela que existe).
       if (error instanceof ConversationAccessError) {
         throw new NotFoundException('Conversación no encontrada');
+      }
+      // Proveedor caído, sin credencial o sin cuota: 503 con mensaje seguro. El
+      // diagnóstico se registra aquí porque es el único sitio que lo ve antes
+      // de que se pierda.
+      if (error instanceof LlmUnavailableError) {
+        this.logger.error(
+          `El proveedor de IA rechazó la petición: ${error.causa.message}`,
+          error.causa.stack,
+        );
+        throw new ServiceUnavailableException(error.message);
       }
       throw error;
     }

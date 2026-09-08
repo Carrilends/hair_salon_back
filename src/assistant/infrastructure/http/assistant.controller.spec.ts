@@ -1,9 +1,10 @@
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { AssistantController, LEGAL_NOTICE } from './assistant.controller';
 import { User } from 'src/auth/entities/user.entity';
 import {
   BudgetExceededError,
   ConversationAccessError,
+  LlmUnavailableError,
 } from '../../domain/errors';
 import { SendMessageInput } from '../../application/send-message.use-case';
 
@@ -91,5 +92,22 @@ describe('AssistantController', () => {
         req({ id: 'u1' } as User),
       ),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('un fallo del proveedor se traduce en 503 sin filtrar el detalle', async () => {
+    const causa = new Error('400 Request contains an invalid argument.');
+    const uc = new FakeSendMessage(() => {
+      throw new LlmUnavailableError(causa);
+    });
+    const ctrl = new AssistantController(uc as never);
+
+    const error = await ctrl
+      .messages({ message: 'hola' }, req(null))
+      .then(() => null)
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ServiceUnavailableException);
+    // El detalle del proveedor no viaja al cliente: queda para el log.
+    expect(JSON.stringify(error)).not.toMatch(/invalid argument/);
   });
 });

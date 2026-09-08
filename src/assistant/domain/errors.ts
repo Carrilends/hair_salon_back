@@ -24,3 +24,19 @@ export class ConversationAccessError extends AssistantDomainError {
     this.name = 'ConversationAccessError';
   }
 }
+
+/**
+ * El proveedor de IA no pudo atender la petición: falta la credencial, la cuota
+ * se agotó, o la llamada fue rechazada. El mensaje es **seguro para la clienta**
+ * y el diagnóstico real viaja en `causa`, que el borde HTTP registra en el log.
+ * Sin esta separación el fallo llega al navegador como un 400/500 sin explicación
+ * y sin rastro (verificado el 2026-09-08).
+ */
+export class LlmUnavailableError extends AssistantDomainError {
+  constructor(readonly causa: Error) {
+    super(
+      'El asistente no está disponible en este momento. Puedes reservar por el flujo web de siempre.',
+    );
+    this.name = 'LlmUnavailableError';
+  }
+}

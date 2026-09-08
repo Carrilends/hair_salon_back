@@ -4,6 +4,7 @@ import {
   GeminiLlmAdapter,
 } from './gemini-llm.adapter';
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
+import { LlmUnavailableError } from '../../domain/errors';
 
 /**
  * Doble del cliente de Google: captura los parámetros con los que el adaptador
@@ -165,6 +166,36 @@ describe('GeminiLlmAdapter', () => {
     });
   });
 
+  it('reemite la firma del razonamiento antes de las llamadas a herramienta', async () => {
+    const cliente = new FakeGeminiClient(respuesta());
+    await new GeminiLlmAdapter(CONFIG, cliente).complete({
+      messages: [
+        { role: 'user', content: 'y mañana?' },
+        {
+          role: 'assistant',
+          content: '',
+          providerState: 'firma-abc',
+          toolCalls: [
+            {
+              id: 't1',
+              name: 'listarServicios',
+              arguments: { busqueda: 'corte' },
+            },
+          ],
+        },
+        { role: 'tool', content: '[{"id":"s1"}]', toolCallId: 't1' },
+      ],
+    });
+    const pasos = cliente.lastParams!.input as Array<Record<string, unknown>>;
+
+    // Los modelos que razonan (Gemini 3.x) exigen recuperar la firma del
+    // razonamiento que produjo la llamada; sin ella la API rechaza la
+    // continuación del bucle con `400 invalid argument` (verificado contra la
+    // API real el 2026-09-08). Va ANTES de la llamada.
+    expect(pasos[1]).toEqual({ type: 'thought', signature: 'firma-abc' });
+    expect(pasos[2]).toMatchObject({ type: 'function_call', id: 't1' });
+  });
+
   it('declara las herramientas en el formato plano de Gemini', async () => {
     const cliente = new FakeGeminiClient(respuesta());
     await new GeminiLlmAdapter(CONFIG, cliente).complete({
@@ -181,7 +212,7 @@ describe('GeminiLlmAdapter', () => {
     });
   });
 
-  it('mapea la respuesta ignorando los pasos de razonamiento', async () => {
+  it('conserva la firma del razonamiento y mapea las llamadas', async () => {
     const cliente = new FakeGeminiClient(
       respuesta({
         steps: [
@@ -199,6 +230,9 @@ describe('GeminiLlmAdapter', () => {
       messages: [{ role: 'user', content: 'mañana?' }],
     });
     expect(resultado.message.role).toBe('assistant');
+    // El texto del razonamiento no entra en la conversación, pero su firma sí
+    // debe conservarse para poder devolverla en el siguiente turno.
+    expect(resultado.message.providerState).toBe('abc');
     expect(resultado.message.toolCalls).toEqual([
       {
         id: 'c1',
@@ -225,8 +259,36 @@ describe('GeminiLlmAdapter', () => {
       routerModel: 'm',
       mainModel: 'M',
     });
-    await expect(
-      adapter.complete({ messages: [{ role: 'user', content: 'hola' }] }),
-    ).rejects.toThrow(/GEMINI_API_KEY/);
+    const error = await adapter
+      .complete({ messages: [{ role: 'user', content: 'hola' }] })
+      .then(() => null)
+      .catch((e: unknown) => e);
+
+    // El diagnóstico sigue existiendo, pero viaja en `cause` (para el log),
+    // no en el mensaje que puede acabar viendo la clienta.
+    expect(error).toBeInstanceOf(LlmUnavailableError);
+    expect((error as Error).message).not.toMatch(/GEMINI_API_KEY/);
+    expect((error as LlmUnavailableError).causa.message).toMatch(
+      /GEMINI_API_KEY/,
+    );
+  });
+
+  it('traduce un fallo del proveedor en LlmUnavailableError sin filtrar el detalle', async () => {
+    const cliente = new FakeGeminiClient(respuesta());
+    cliente.interactions = {
+      create: () =>
+        Promise.reject(new Error('400 Request contains an invalid argument.')),
+    };
+
+    const error = await new GeminiLlmAdapter(CONFIG, cliente)
+      .complete({ messages: [{ role: 'user', content: 'hola' }] })
+      .then(() => null)
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(LlmUnavailableError);
+    expect((error as Error).message).not.toMatch(/invalid argument/);
+    expect((error as LlmUnavailableError).causa.message).toMatch(
+      /invalid argument/,
+    );
   });
 });

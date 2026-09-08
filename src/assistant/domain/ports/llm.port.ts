@@ -13,6 +13,15 @@ export interface LlmMessage {
   content: string;
   toolCallId?: string;
   toolCalls?: LlmToolCall[];
+  /**
+   * Estado **opaco** del proveedor asociado a este turno. Los modelos que
+   * razonan exigen recuperar la firma de su propio razonamiento para poder
+   * continuar un bucle de herramientas; sin ella rechazan la petición.
+   *
+   * El dominio **no lo interpreta ni lo construye**: solo lo transporta entre
+   * dos turnos. Cada adaptador decide qué guarda aquí, o no guarda nada.
+   */
+  providerState?: string;
 }
 
 export interface LlmToolDefinition {
