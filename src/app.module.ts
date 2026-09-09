@@ -19,6 +19,7 @@ import { WorkersModule } from './workers/workers.module';
 import { ReservationsModule } from './reservations/reservations.module';
 import { FaqsModule } from './faqs/faqs.module';
 import { AssistantModule } from './assistant/assistant.module';
+import { McpModule } from './mcp/mcp.module';
 
 function parseBool(value: string | undefined): boolean | undefined {
   if (value === undefined) return undefined;
@@ -84,6 +85,7 @@ function parseBool(value: string | undefined): boolean | undefined {
     ReservationsModule,
     FaqsModule,
     AssistantModule,
+    McpModule,
   ],
   controllers: [HealthController],
 })

@@ -98,5 +98,9 @@ const DEFAULT_MAIN_MODEL = 'gemini-3.8-flash';
       ],
     },
   ],
+  // El arreglo de herramientas se exporta para que la superficie MCP publique
+  // **los mismos objetos**, no copias (Fase 7, M8). Nada mas sale de este modulo:
+  // el bucle, el presupuesto y la telemetria siguen siendo asunto suyo.
+  exports: [ASSISTANT_TOOLS],
 })
 export class AssistantModule {}
