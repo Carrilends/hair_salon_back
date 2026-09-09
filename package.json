@@ -29,7 +29,6 @@
   },
   "dependencies": {
     "@google/genai": "^2.21.0",
-    "@modelcontextprotocol/express": "2.0.0",
     "@modelcontextprotocol/node": "2.0.0",
     "@modelcontextprotocol/server": "2.0.0",
     "@nestjs/common": "^10.0.0",

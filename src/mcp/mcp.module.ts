@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 
 import { AssistantModule } from 'src/assistant/assistant.module';
 import { McpController } from './infrastructure/http/mcp.controller';
+import { McpOriginGuard } from './infrastructure/http/mcp-origin.guard';
+import { McpProtocolVersionGuard } from './infrastructure/http/mcp-protocol-version.guard';
 
 /**
  * Superficie MCP. Es **aditiva**: no aporta ninguna herramienta propia ni ninguna
@@ -12,5 +14,6 @@ import { McpController } from './infrastructure/http/mcp.controller';
 @Module({
   imports: [AssistantModule],
   controllers: [McpController],
+  providers: [McpOriginGuard, McpProtocolVersionGuard],
 })
 export class McpModule {}

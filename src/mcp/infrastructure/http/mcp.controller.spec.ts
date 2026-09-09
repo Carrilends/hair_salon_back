@@ -5,6 +5,8 @@ import request from 'supertest';
 import { AssistantTool } from 'src/assistant/application/tools/assistant-tool';
 import { ASSISTANT_TOOLS } from 'src/assistant/application/tokens';
 import { McpController } from './mcp.controller';
+import { McpOriginGuard } from './mcp-origin.guard';
+import { McpProtocolVersionGuard } from './mcp-protocol-version.guard';
 import { MCP_PROTOCOL_VERSION } from '../../application/mcp-tool-registry';
 
 /** El esquema que publica la herramienta falsa. Se compara por igualdad mas abajo. */
@@ -78,6 +80,8 @@ describe('McpController (HTTP)', () => {
             new HerramientaQueRevienta(),
           ],
         },
+        McpOriginGuard,
+        McpProtocolVersionGuard,
       ],
     }).compile();
 
@@ -206,5 +210,109 @@ describe('McpController (HTTP)', () => {
     // viaja como parametro. El plan de la fase suponia `-32601` y estaba
     // equivocado; esta prueba fija el codigo que devuelve el transporte conforme.
     expect(body.error.code).toBe(-32602);
+  });
+
+  // --- Conformidad del transporte (T3) -------------------------------------
+  //
+  // De las cinco obligaciones, la de `Origin` es la unica que implementa este
+  // proyecto; las otras las resuelve el manejador del SDK. Se prueban todas
+  // igualmente: lo que la tesis afirma es que el endpoint es conforme, y eso hay
+  // que poder demostrarlo sin importar quien escribio cada linea.
+
+  it('rechaza con 403 una peticion con Origin no permitido', async () => {
+    const { status } = await request(app.getHttpServer())
+      .post('/api/mcp')
+      .set('Origin', 'https://sitio-atacante.example')
+      .set('Accept', 'application/json, text/event-stream')
+      .set('MCP-Protocol-Version', MCP_PROTOCOL_VERSION)
+      .set('Mcp-Method', 'tools/list')
+      .send({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/list',
+        params: { _meta: sobre() },
+      });
+
+    expect(status).toBe(403);
+  });
+
+  it('rechaza con 400 y -32020 cuando falta la cabecera MCP-Protocol-Version', async () => {
+    const { status, body } = await request(app.getHttpServer())
+      .post('/api/mcp')
+      .set('Accept', 'application/json, text/event-stream')
+      .set('Mcp-Method', 'tools/list')
+      .send({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/list',
+        params: { _meta: sobre() },
+      });
+
+    expect(status).toBe(400);
+    expect(body.error.code).toBe(-32020);
+  });
+
+  it('rechaza con 400 y -32020 cuando falta la cabecera Mcp-Method', async () => {
+    const { status, body } = await request(app.getHttpServer())
+      .post('/api/mcp')
+      .set('Accept', 'application/json, text/event-stream')
+      .set('MCP-Protocol-Version', MCP_PROTOCOL_VERSION)
+      .send({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/list',
+        params: { _meta: sobre() },
+      });
+
+    expect(status).toBe(400);
+    expect(body.error.code).toBe(-32020);
+  });
+
+  it('rechaza con 400 y -32020 cuando en tools/call falta Mcp-Name', async () => {
+    const { status, body } = await request(app.getHttpServer())
+      .post('/api/mcp')
+      .set('Accept', 'application/json, text/event-stream')
+      .set('MCP-Protocol-Version', MCP_PROTOCOL_VERSION)
+      .set('Mcp-Method', 'tools/call')
+      .send({
+        jsonrpc: '2.0',
+        id: 4,
+        method: 'tools/call',
+        params: { name: 'listarServicios', arguments: {}, _meta: sobre() },
+      });
+
+    expect(status).toBe(400);
+    expect(body.error.code).toBe(-32020);
+  });
+
+  it('rechaza con 400 y -32020 cuando Mcp-Name no coincide con el cuerpo', async () => {
+    // La especificacion obliga a esta comprobacion porque un intermediario —un
+    // balanceador, una pasarela— podria encaminar segun la cabecera mientras el
+    // servidor ejecuta segun el cuerpo. Es una discrepancia de fuente de verdad.
+    const { status, body } = await request(app.getHttpServer())
+      .post('/api/mcp')
+      .set('Accept', 'application/json, text/event-stream')
+      .set('MCP-Protocol-Version', MCP_PROTOCOL_VERSION)
+      .set('Mcp-Method', 'tools/call')
+      .set('Mcp-Name', 'listarServicios') // cabecera
+      .send({
+        jsonrpc: '2.0',
+        id: 3,
+        method: 'tools/call',
+        params: {
+          name: 'consultarDisponibilidad', // cuerpo distinto
+          arguments: {},
+          _meta: sobre(),
+        },
+      });
+
+    expect(status).toBe(400);
+    expect(body.error.code).toBe(-32020);
+  });
+
+  it('responde 405 a GET y DELETE sobre la ruta', async () => {
+    // La revision vigente elimino el endpoint GET y las operaciones de sesion.
+    await request(app.getHttpServer()).get('/api/mcp').expect(405);
+    await request(app.getHttpServer()).delete('/api/mcp').expect(405);
   });
 });

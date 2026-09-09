@@ -687,13 +687,6 @@
   dependencies:
     zod "^4.2.0"
 
-"@modelcontextprotocol/express@2.0.0":
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/@modelcontextprotocol/express/-/express-2.0.0.tgz#0e29ada50d022fd345e8661a337cefeabdc6d0e0"
-  integrity sha512-Snlr8j9FR9LcVvEJPF7qJ7d5zTL4Bes2dk7RcacN9eSZ7OLohwxqhEvWu1+UxELyScgLbLLOdeVEGdwKI1iwVQ==
-  dependencies:
-    cors "^2.8.5"
-
 "@modelcontextprotocol/node@2.0.0":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/@modelcontextprotocol/node/-/node-2.0.0.tgz#3851275cb1c08aeb113d5b7cbe6dbe7adab37c65"
@@ -2310,7 +2303,7 @@ cors@2.8.5:
     object-assign "^4"
     vary "^1"
 
-cors@^2.8.5, cors@~2.8.5:
+cors@~2.8.5:
   version "2.8.6"
   resolved "https://registry.yarnpkg.com/cors/-/cors-2.8.6.tgz#ff5dd69bd95e547503820d29aba4f8faf8dfec96"
   integrity sha512-tJtZBBHA6vjIAaF6EnIaq6laBBP9aq/Y3ouVJjEfoHbRBcHBAHYcMh/w8LDrk2PvIMMq8gmopa5D4V8RmbrxGw==
