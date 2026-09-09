@@ -17,11 +17,15 @@ class FakeCatalog implements ServiceCatalogQueryPort {
     this.lastLimit = limit;
     return this.items.slice(0, limit);
   }
+  async findByTagNames(): Promise<Map<string, AssistantServiceSummary[]>> {
+    return new Map();
+  }
 }
 
 const ctx: AssistantContext = {
   userId: 'u1',
   now: new Date('2026-08-19T14:00:00Z'),
+  isAdmin: false,
 };
 
 describe('ListServicesTool', () => {

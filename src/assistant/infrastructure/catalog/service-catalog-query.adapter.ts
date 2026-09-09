@@ -6,6 +6,10 @@ import {
   AssistantServiceSummary,
   ServiceCatalogQueryPort,
 } from '../../domain/ports/service-catalog-query.port';
+import {
+  groupCandidatesByTag,
+  TaggedServiceRow,
+} from './group-candidates-by-tag';
 
 /**
  * Adaptador secundario: busca servicios por nombre y proyecta solo lo que el
@@ -38,5 +42,31 @@ export class ServiceCatalogQueryAdapter implements ServiceCatalogQueryPort {
       price: Number(s.price),
       durationMinutes: s.duration,
     }));
+  }
+
+  async findByTagNames(
+    tagNames: string[],
+    limitPerTag: number,
+  ): Promise<Map<string, AssistantServiceSummary[]>> {
+    // Sin etiquetas no hay nada que consultar (y `IN ()` sería SQL inválido).
+    if (tagNames.length === 0) return new Map();
+
+    // Un join servicio↔etiqueta filtrado por los nombres pedidos. Una fila por
+    // cada par (servicio, etiqueta coincidente): un servicio con dos etiquetas
+    // pedidas es candidato en ambas. El agrupado, orden y capado los hace la
+    // función pura del dominio.
+    const rows = await this.repo
+      .createQueryBuilder('s')
+      .innerJoin('s.tags', 't')
+      .where('t.name IN (:...names)', { names: tagNames })
+      .orderBy('s.price', 'ASC')
+      .select('s.id', 'id')
+      .addSelect('s.name', 'name')
+      .addSelect('s.price', 'price')
+      .addSelect('s.duration', 'duration')
+      .addSelect('t.name', 'tagName')
+      .getRawMany<TaggedServiceRow>();
+
+    return groupCandidatesByTag(rows, tagNames, limitPerTag);
   }
 }

@@ -17,4 +17,15 @@ export interface ServiceCatalogQueryPort {
     text: string | undefined,
     limit: number,
   ): Promise<AssistantServiceSummary[]>;
+
+  /**
+   * Candidatos por nombre de etiqueta (recuperación acotada, §6.2): hasta
+   * `limitPerTag` por etiqueta, ordenados por precio ascendente —lo que el
+   * compositor voraz necesita—. El mapa devuelto incluye SIEMPRE todas las
+   * etiquetas pedidas; las que no tengan candidatos quedan con arreglo vacío.
+   */
+  findByTagNames(
+    tagNames: string[],
+    limitPerTag: number,
+  ): Promise<Map<string, AssistantServiceSummary[]>>;
 }

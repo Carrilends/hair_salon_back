@@ -30,11 +30,22 @@ export interface SendMessageInput {
   conversationId?: string;
   message: string;
   userId: string | null;
+  /**
+   * Rol admin del solicitante, derivado del JWT en el borde HTTP. Opcional en la
+   * entrada (ausente ⇒ `false`, mínimo privilegio); el contexto siempre lo lleva.
+   */
+  isAdmin?: boolean;
 }
 
 export interface SendMessageResult {
   conversationId?: string;
   reply: string;
+  /**
+   * Dato estructurado que una herramienta "presentable" produjo en el turno (una
+   * propuesta de paquete, T7). El borde HTTP lo devuelve junto al texto para que
+   * el widget lo pinte; ausente si no hubo ninguno.
+   */
+  propuesta?: unknown;
 }
 
 /**
@@ -88,11 +99,15 @@ export class SendMessageUseCase {
     const context: AssistantContext = {
       userId: input.userId,
       now: this.clock.now(),
+      // El rol admin viaja desde el borde HTTP (JWT), nunca desde el chat. Ausente
+      // ⇒ false: una omisión nunca concede privilegios.
+      isAdmin: input.isAdmin ?? false,
     };
     const messages = this.buildContext(conversation, input.message, context.now);
     const toolDefinitions = this.tools.map((t) => t.definition);
 
     let reply = '';
+    let propuesta: unknown;
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
       const completion = await this.llm.complete({
         messages,
@@ -122,6 +137,12 @@ export class SendMessageUseCase {
         const result = tool
           ? await tool.execute(call.arguments, context)
           : { ok: false, motivo: 'herramienta_desconocida' };
+        // T7: si la herramienta es "presentable" y no devolvió un error, se
+        // guarda su resultado para surfacearlo como dato estructurado (la última
+        // gana, si hubiera varias en el turno).
+        if (tool?.presentable && isPresentableResult(result)) {
+          propuesta = result;
+        }
         messages.push({
           role: 'tool',
           content: JSON.stringify(result),
@@ -131,8 +152,12 @@ export class SendMessageUseCase {
     }
 
     // Al agotar las vueltas sin respuesta final, se responde con cortesía en vez
-    // de seguir facturando.
-    if (!reply) reply = COURTESY_REPLY;
+    // de seguir facturando. En ese caso NO se surfacea la propuesta: la tarjeta
+    // del paquete junto a un texto de fracaso sería contradictoria.
+    if (!reply) {
+      reply = COURTESY_REPLY;
+      propuesta = undefined;
+    }
 
     // Historia durable: el mensaje de la clienta y la respuesta final.
     conversation.append(Message.user(input.message));
@@ -145,7 +170,11 @@ export class SendMessageUseCase {
     }
 
     const saved = await this.repository.save(conversation);
-    return { conversationId: saved.id, reply };
+    return {
+      conversationId: saved.id,
+      reply,
+      ...(propuesta !== undefined ? { propuesta } : {}),
+    };
   }
 
   private async loadOrStart(input: SendMessageInput): Promise<Conversation> {
@@ -203,4 +232,13 @@ function fechaDelSalon(now: Date): string {
   const { year, month, day } = getDatePartsInTz(now, tz);
   const dosDigitos = (n: number) => String(n).padStart(2, '0');
   return `${year}-${dosDigitos(month)}-${dosDigitos(day)}`;
+}
+
+/** Un resultado surfaceable: objeto que no es un error (`ok: false`). */
+function isPresentableResult(result: unknown): boolean {
+  return (
+    typeof result === 'object' &&
+    result !== null &&
+    (result as { ok?: unknown }).ok !== false
+  );
 }

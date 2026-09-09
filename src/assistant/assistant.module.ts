@@ -4,6 +4,8 @@ import { AuthModule } from 'src/auth/auth.module';
 import { WorkersModule } from 'src/workers/workers.module';
 import { ReservationsModule } from 'src/reservations/reservations.module';
 import { CreateReservationUseCase } from 'src/reservations/application/create-reservation.use-case';
+import { GetMyReservationsUseCase } from 'src/reservations/application/get-my-reservations.use-case';
+import { CancelReservationUseCase } from 'src/reservations/application/cancel-reservation.use-case';
 import { Service } from 'src/service/entities/service.entity';
 
 import { ConversationOrmEntity } from './infrastructure/persistence/conversation.orm-entity';
@@ -17,9 +19,7 @@ import { AssistantController } from './infrastructure/http/assistant.controller'
 
 import { SendMessageUseCase } from './application/send-message.use-case';
 import { SummarizeConversationUseCase } from './application/summarize-conversation.use-case';
-import { ListServicesTool } from './application/tools/list-services.tool';
-import { CheckAvailabilityTool } from './application/tools/check-availability.tool';
-import { CreateReservationTool } from './application/tools/create-reservation.tool';
+import { buildAssistantTools } from './build-assistant-tools';
 import {
   ASSISTANT_BUDGET,
   ASSISTANT_CLOCK,
@@ -85,20 +85,16 @@ const DEFAULT_MAIN_MODEL = 'gemini-3.8-flash';
       }),
     },
     {
+      // El orden del `inject` DEBE coincidir con los parámetros de
+      // `buildAssistantTools` (Nest resuelve por posición).
       provide: ASSISTANT_TOOLS,
-      useFactory: (
-        catalog: ServiceCatalogQueryAdapter,
-        availability: AvailabilityQueryAdapter,
-        createReservation: CreateReservationUseCase,
-      ) => [
-        new ListServicesTool(catalog),
-        new CheckAvailabilityTool(availability),
-        new CreateReservationTool(createReservation),
-      ],
+      useFactory: buildAssistantTools,
       inject: [
         ServiceCatalogQueryAdapter,
         AvailabilityQueryAdapter,
         CreateReservationUseCase,
+        GetMyReservationsUseCase,
+        CancelReservationUseCase,
       ],
     },
   ],

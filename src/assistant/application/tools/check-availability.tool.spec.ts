@@ -15,7 +15,7 @@ class FakeAvailability implements AvailabilityQueryPort {
 }
 
 function ctxAt(iso: string): AssistantContext {
-  return { userId: 'u1', now: new Date(iso) };
+  return { userId: 'u1', now: new Date(iso), isAdmin: false };
 }
 
 function weekday(): DayAvailability {
