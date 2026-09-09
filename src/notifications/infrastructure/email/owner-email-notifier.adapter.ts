@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { NotifierPort } from '../../domain/ports/notifier.port';
 import { EmailSenderPort } from '../../domain/ports/email-sender.port';
 import { NotifiableEvent } from '../../domain/events/reservation-created.event';
+import { renderBrandedEmail } from '../../application/branded-email';
 import {
   EMAIL_SENDER,
   OWNER_NOTIFICATION_CONFIG,
@@ -40,6 +41,12 @@ export class OwnerEmailNotifier implements NotifierPort {
       .map((s) => `  · ${s.name} (${s.durationMinutes} min)`)
       .join('\n');
 
+    // El HTML no respeta los saltos de línea del texto plano: los servicios van
+    // en una sola línea, y la lista con saltos se reserva para la alternativa.
+    const serviciosEnLinea = event.services
+      .map((s) => `${s.name} (${s.durationMinutes} min)`)
+      .join(', ');
+
     const telefono = event.customerPhone ? ` (${event.customerPhone})` : '';
 
     await this.mailer.send({
@@ -54,6 +61,21 @@ export class OwnerEmailNotifier implements NotifierPort {
         `Servicios:\n${servicios}\n\n` +
         `Estado: ${event.status}. Confírmala o cancélala en el panel:\n` +
         `${this.config.panelUrl}\n`,
+      html: renderBrandedEmail({
+        title: 'Nueva reserva',
+        paragraphs: [
+          `Cuándo: ${cuando}`,
+          `Estilista: ${event.workerName}`,
+          `Cliente: ${event.customerName}${telefono}`,
+          `Duración: ${event.totalDurationMinutes} minutos`,
+          `Servicios: ${serviciosEnLinea}`,
+          `Estado: ${event.status}.`,
+        ],
+        action: {
+          label: 'Abrir el panel de reservas',
+          url: this.config.panelUrl,
+        },
+      }),
     });
   }
 }

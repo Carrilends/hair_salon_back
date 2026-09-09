@@ -1,6 +1,7 @@
 import { OwnerEmailNotifier } from './owner-email-notifier.adapter';
 import { EmailMessage } from '../../domain/ports/email-sender.port';
 import { ReservationCreatedEvent } from '../../domain/events/reservation-created.event';
+import { SALON_NAME } from '../../application/branded-email';
 
 const event: ReservationCreatedEvent = {
   type: 'reservation.created',
@@ -62,5 +63,20 @@ describe('OwnerEmailNotifier', () => {
     expect(message.text).toContain('Peinado');
     expect(message.text).toContain('Ana');
     expect(message.text).toContain('https://sitio.netlify.app/reservas');
+  });
+  it('añade un cuerpo HTML con la marca, los servicios y el enlace al panel, sin perder el texto plano', async () => {
+    const { adapter, sent } = makeAdapter();
+    await adapter.notify(event);
+    const message = sent[0];
+
+    // La alternativa de texto no se degrada al añadir HTML.
+    expect(message.text).toContain('Corte');
+    expect(message.text).toContain('https://sitio.netlify.app/reservas');
+
+    expect(message.html).toBeDefined();
+    expect(message.html).toContain(SALON_NAME);
+    expect(message.html).toContain('Corte');
+    expect(message.html).toContain('Peinado');
+    expect(message.html).toContain('https://sitio.netlify.app/reservas');
   });
 });
