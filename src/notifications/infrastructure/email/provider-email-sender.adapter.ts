@@ -13,6 +13,7 @@ export interface ResendSendPayload {
   subject: string;
   text: string;
   html?: string;
+  replyTo?: string[];
 }
 
 /** Forma del `error` que devuelve el SDK. No es una excepción: es un valor. */
@@ -77,6 +78,11 @@ export class ProviderEmailSenderAdapter implements EmailSenderPort {
       );
     }
 
+    // Buzón real al que van a parar las respuestas: el remitente pertenece al
+    // subdominio de envío y nadie lo lee, así que sin esto responder a un
+    // correo de la peluquería se pierde.
+    const replyTo = (process.env.EMAIL_REPLY_TO ?? '').trim();
+
     this.client ??= this.createClient(apiKey);
 
     const { data, error } = await this.client.emails.send({
@@ -85,6 +91,7 @@ export class ProviderEmailSenderAdapter implements EmailSenderPort {
       subject: message.subject,
       text: message.text,
       ...(message.html !== undefined ? { html: message.html } : {}),
+      ...(replyTo.length > 0 ? { replyTo: [replyTo] } : {}),
     });
 
     if (error) {

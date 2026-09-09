@@ -43,6 +43,7 @@ describe('ProviderEmailSenderAdapter', () => {
     process.env.EMAIL_API_KEY = 're_test_key';
     process.env.EMAIL_FROM =
       'Peluquería Marlene <no-reply@notifications.peluqueriamarlene.com>';
+    delete process.env.EMAIL_REPLY_TO;
   });
 
   afterEach(() => {
@@ -113,5 +114,36 @@ describe('ProviderEmailSenderAdapter', () => {
     ).rejects.toThrow(/EMAIL_API_KEY/);
 
     expect(clientCreated).toBe(false);
+  });
+  it('dirige las respuestas al buzón real cuando EMAIL_REPLY_TO está configurado', async () => {
+    process.env.EMAIL_REPLY_TO = 'marlene@ejemplo.com';
+    const captured: Captured = {};
+    const adapter = new ProviderEmailSenderAdapter(() =>
+      fakeClient(captured, { data: { id: 'msg_123' } }),
+    );
+
+    await adapter.send({
+      to: 'clienta@ejemplo.com',
+      subject: 'Nueva reserva',
+      text: 'texto',
+    });
+
+    // Sin esto, responder a un correo de la peluquería no llega a nadie.
+    expect(captured.payload?.replyTo).toEqual(['marlene@ejemplo.com']);
+  });
+
+  it('omite replyTo cuando EMAIL_REPLY_TO no está configurado', async () => {
+    const captured: Captured = {};
+    const adapter = new ProviderEmailSenderAdapter(() =>
+      fakeClient(captured, { data: { id: 'msg_123' } }),
+    );
+
+    await adapter.send({
+      to: 'clienta@ejemplo.com',
+      subject: 'Nueva reserva',
+      text: 'texto',
+    });
+
+    expect(captured.payload).not.toHaveProperty('replyTo');
   });
 });
