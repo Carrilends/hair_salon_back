@@ -39,6 +39,19 @@ class ConsultarDisponibilidadFalsa implements AssistantTool {
   }
 }
 
+/** Una herramienta cuyo caso de uso revienta: el turno no debe romperse por ello. */
+class HerramientaQueRevienta implements AssistantTool {
+  readonly name = 'reventar';
+  readonly definition = {
+    name: 'reventar',
+    description: 'Falla siempre.',
+    parameters: { type: 'object', properties: {}, required: [] },
+  };
+  async execute(): Promise<unknown> {
+    throw new Error('el catalogo no responde');
+  }
+}
+
 /**
  * El sobre `_meta` que la revision `2026-07-28` exige en cada peticion: al
  * desaparecer `initialize`, la version y las capacidades del cliente viajan aqui,
@@ -62,6 +75,7 @@ describe('McpController (HTTP)', () => {
           useValue: [
             new ListarServiciosFalsa(),
             new ConsultarDisponibilidadFalsa(),
+            new HerramientaQueRevienta(),
           ],
         },
       ],
@@ -114,7 +128,11 @@ describe('McpController (HTTP)', () => {
       });
 
     const nombres = body.result.tools.map((t: { name: string }) => t.name);
-    expect(nombres).toEqual(['listarServicios', 'consultarDisponibilidad']);
+    expect(nombres).toEqual([
+      'listarServicios',
+      'consultarDisponibilidad',
+      'reventar',
+    ]);
   });
 
   it('publica el esquema del contrato interno, no una copia reescrita para MCP', async () => {
@@ -137,5 +155,56 @@ describe('McpController (HTTP)', () => {
     );
     expect(listar.inputSchema).toEqual(ESQUEMA_LISTAR);
     expect(listar.description).toBe('Lista los servicios del catalogo.');
+  });
+
+  /** Atajo para `tools/call`, con las cabeceras que la especificacion exige. */
+  const llamar = (name: string, args: Record<string, unknown> = {}) =>
+    request(app.getHttpServer())
+      .post('/api/mcp')
+      .set('Accept', 'application/json, text/event-stream')
+      .set('MCP-Protocol-Version', MCP_PROTOCOL_VERSION)
+      .set('Mcp-Method', 'tools/call')
+      .set('Mcp-Name', name)
+      .send({
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/call',
+        params: { name, arguments: args, _meta: sobre() },
+      });
+
+  it('ejecuta la herramienta y devuelve su resultado como contenido de texto', async () => {
+    const { body } = await llamar('listarServicios', { busqueda: 'corte' });
+
+    expect(body.result.content[0].type).toBe('text');
+    expect(JSON.parse(body.result.content[0].text)[0]).toHaveProperty(
+      'nombre',
+      'Corte dama',
+    );
+    // En el camino feliz el SDK omite `isError`; el campo es opcional y su
+    // ausencia significa exito.
+    expect(body.result.isError).toBeUndefined();
+  });
+
+  it('marca isError y explica el motivo cuando la herramienta revienta', async () => {
+    // Un fallo de dominio no puede tumbar el turno ni salir como un 500 opaco con
+    // una traza: el cliente tiene que poder leerlo y reaccionar.
+    const { status, body } = await llamar('reventar');
+
+    expect(status).toBe(200);
+    expect(body.result.isError).toBe(true);
+    expect(body.result.content[0].text).toContain('el catalogo no responde');
+    expect(body.result.content[0].text).not.toContain('at ');
+  });
+
+  it('responde con un error JSON-RPC cuando la herramienta no existe', async () => {
+    const { body } = await llamar('herramientaInventada');
+
+    expect(body.error).toBeDefined();
+    expect(body.result).toBeUndefined();
+    // `-32602` (*Invalid params*), no `-32601` (*Method not found*): `tools/call`
+    // SI es un metodo conocido: lo desconocido es el nombre de la herramienta, que
+    // viaja como parametro. El plan de la fase suponia `-32601` y estaba
+    // equivocado; esta prueba fija el codigo que devuelve el transporte conforme.
+    expect(body.error.code).toBe(-32602);
   });
 });

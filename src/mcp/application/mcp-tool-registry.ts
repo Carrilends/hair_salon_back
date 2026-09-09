@@ -3,7 +3,10 @@ import {
   StandardSchemaWithJSON,
 } from '@modelcontextprotocol/server';
 
-import { AssistantTool } from 'src/assistant/application/tools/assistant-tool';
+import {
+  AssistantContext,
+  AssistantTool,
+} from 'src/assistant/application/tools/assistant-tool';
 
 /**
  * Envuelve un **JSON Schema crudo** —el que ya lleva `AssistantTool.definition.
@@ -52,7 +55,10 @@ export const MCP_PROTOCOL_VERSION = '2026-07-28';
  * mismo arreglo que el bucle interno inyecta al modelo. Un contrato, dos
  * consumidores (M8).
  */
-export function buildMcpServer(tools: AssistantTool[]): McpServer {
+export function buildMcpServer(
+  tools: AssistantTool[],
+  context: AssistantContext,
+): McpServer {
   const server = new McpServer({
     name: 'peluqueria-marlene',
     version: MCP_PROTOCOL_VERSION,
@@ -65,8 +71,16 @@ export function buildMcpServer(tools: AssistantTool[]): McpServer {
         description: tool.definition.description,
         inputSchema: rawJsonSchema(tool.definition.parameters),
       },
-      async () => {
-        throw new Error('tools/call aun no implementado');
+      async (args: Record<string, unknown>) => {
+        // Fachada delgada: la herramienta ya devuelve datos compactados y el
+        // contexto de identidad viene dado. Aqui solo se proyecta al formato de
+        // contenido que espera el protocolo. Si `execute` lanza, el SDK lo
+        // convierte en un resultado con `isError`, que es lo que el cliente debe
+        // ver: un fallo de dominio nunca es un 500 opaco.
+        const resultado = await tool.execute(args ?? {}, context);
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(resultado) }],
+        };
       },
     );
   }

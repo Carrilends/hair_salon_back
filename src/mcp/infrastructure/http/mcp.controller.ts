@@ -35,7 +35,13 @@ export class McpController {
     // que es justo lo que permite la revision `2026-07-28` al eliminar las
     // sesiones de protocolo.
     this.handle = toNodeHandler(
-      createMcpHandler(() => buildMcpServer(this.tools)),
+      createMcpHandler(() =>
+        buildMcpServer(this.tools, {
+          userId: null,
+          now: new Date(),
+          isAdmin: false,
+        }),
+      ),
     );
   }
 
