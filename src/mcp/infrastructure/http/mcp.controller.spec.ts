@@ -4,6 +4,7 @@ import request from 'supertest';
 
 import { AssistantTool } from 'src/assistant/application/tools/assistant-tool';
 import { ASSISTANT_TOOLS } from 'src/assistant/application/tokens';
+import { OptionalJwtAuthGuard } from 'src/reservations/infrastructure/http/optional-jwt-auth.guard';
 import { McpController } from './mcp.controller';
 import { McpOriginGuard } from './mcp-origin.guard';
 import { McpProtocolVersionGuard } from './mcp-protocol-version.guard';
@@ -83,7 +84,13 @@ describe('McpController (HTTP)', () => {
         McpOriginGuard,
         McpProtocolVersionGuard,
       ],
-    }).compile();
+    })
+      // Estas pruebas van del transporte, no de la identidad: el guard real
+      // necesitaria Passport levantado. Se sustituye por uno que deja la
+      // peticion anonima, que es el caso que aqui interesa.
+      .overrideGuard(OptionalJwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     app = modulo.createNestApplication();
     // Se replica el borde real de `src/main.ts`: sin esto la prueba no diria nada

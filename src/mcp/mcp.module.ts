@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { AssistantModule } from 'src/assistant/assistant.module';
+import { AuthModule } from 'src/auth/auth.module';
 import { McpController } from './infrastructure/http/mcp.controller';
 import { McpOriginGuard } from './infrastructure/http/mcp-origin.guard';
 import { McpProtocolVersionGuard } from './infrastructure/http/mcp-protocol-version.guard';
@@ -12,7 +13,9 @@ import { McpProtocolVersionGuard } from './infrastructure/http/mcp-protocol-vers
  * dependencia es ese modulo.
  */
 @Module({
-  imports: [AssistantModule],
+  // `AuthModule` por el `OptionalJwtAuthGuard`: exporta la estrategia JWT y
+  // `PassportModule`, igual que hacen `AssistantModule` y `ReservationsModule`.
+  imports: [AssistantModule, AuthModule],
   controllers: [McpController],
   providers: [McpOriginGuard, McpProtocolVersionGuard],
 })
