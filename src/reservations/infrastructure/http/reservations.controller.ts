@@ -19,6 +19,7 @@ import { ValidRoles } from 'src/auth/interfaces/valid-roles';
 import { User } from 'src/auth/entities/user.entity';
 import { ReservationActor } from '../../domain/reservation-actor';
 import { CreateReservationDto } from './dto/create-reservation.dto';
+import { RescheduleReservationDto } from './dto/reschedule-reservation.dto';
 import { OccupancyQueryDto } from './dto/occupancy-query.dto';
 import { OptionalJwtAuthGuard } from './optional-jwt-auth.guard';
 import { ReservationDomainExceptionFilter } from './reservation-domain-exception.filter';
@@ -28,6 +29,7 @@ import { ListActiveReservationsUseCase } from '../../application/list-active-res
 import { GetMyReservationsUseCase } from '../../application/get-my-reservations.use-case';
 import { ConfirmReservationUseCase } from '../../application/confirm-reservation.use-case';
 import { CancelReservationUseCase } from '../../application/cancel-reservation.use-case';
+import { RescheduleReservationUseCase } from '../../application/reschedule-reservation.use-case';
 
 @Controller('reservations')
 @UseFilters(ReservationDomainExceptionFilter)
@@ -39,6 +41,7 @@ export class ReservationsController {
     private readonly getMine: GetMyReservationsUseCase,
     private readonly confirm: ConfirmReservationUseCase,
     private readonly cancel: CancelReservationUseCase,
+    private readonly reschedule: RescheduleReservationUseCase,
   ) {}
 
   @Auth(ValidRoles.admin)
@@ -88,6 +91,22 @@ export class ReservationsController {
     @GetUser() user: User,
   ) {
     return this.cancel.execute(id, actorFromUser(user));
+  }
+
+  /**
+   * Mueve una cita. Es `PATCH` y no `PUT` porque solo cambia la ventana: la
+   * reserva sigue siendo la misma, con su id, sus servicios y su estilista. Que
+   * conserve el id importa además fuera de aquí: es el asa que viaja dentro de
+   * los botones de WhatsApp.
+   */
+  @Auth()
+  @Patch(':id/reschedule')
+  rescheduleReservation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RescheduleReservationDto,
+    @GetUser() user: User,
+  ) {
+    return this.reschedule.execute(id, dto.scheduledAt, actorFromUser(user));
   }
 
   // RF33: el borrado de administración se implementa como cancelación (no borrado físico).

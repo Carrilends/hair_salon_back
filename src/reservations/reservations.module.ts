@@ -19,6 +19,7 @@ import { ListActiveReservationsUseCase } from './application/list-active-reserva
 import { GetMyReservationsUseCase } from './application/get-my-reservations.use-case';
 import { ConfirmReservationUseCase } from './application/confirm-reservation.use-case';
 import { CancelReservationUseCase } from './application/cancel-reservation.use-case';
+import { RescheduleReservationUseCase } from './application/reschedule-reservation.use-case';
 import { PurgeOldReservationsUseCase } from './application/purge-old-reservations.use-case';
 import { SettlePastReservationsUseCase } from './application/settle-past-reservations.use-case';
 import {
@@ -48,6 +49,7 @@ import {
     GetMyReservationsUseCase,
     ConfirmReservationUseCase,
     CancelReservationUseCase,
+    RescheduleReservationUseCase,
     PurgeOldReservationsUseCase,
     SettlePastReservationsUseCase,
     ReservationPurgeScheduler,
@@ -63,6 +65,7 @@ import {
     CreateReservationUseCase,
     GetMyReservationsUseCase,
     CancelReservationUseCase,
+    RescheduleReservationUseCase,
   ],
 })
 export class ReservationsModule {}

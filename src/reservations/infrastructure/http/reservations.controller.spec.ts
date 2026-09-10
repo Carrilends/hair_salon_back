@@ -14,6 +14,7 @@ describe('ReservationsController', () => {
   let getMine: { execute: jest.Mock };
   let confirm: { execute: jest.Mock };
   let cancel: { execute: jest.Mock };
+  let reschedule: { execute: jest.Mock };
   let controller: ReservationsController;
 
   const ID = '4d2f0e4e-6f1b-4a3e-9a2f-2b1c3d4e5f60';
@@ -25,6 +26,7 @@ describe('ReservationsController', () => {
     getMine = { execute: jest.fn() };
     confirm = { execute: jest.fn() };
     cancel = { execute: jest.fn() };
+    reschedule = { execute: jest.fn() };
     controller = new ReservationsController(
       create as any,
       occupancy as any,
@@ -32,6 +34,7 @@ describe('ReservationsController', () => {
       getMine as any,
       confirm as any,
       cancel as any,
+      reschedule as any,
     );
   });
 
@@ -123,6 +126,34 @@ describe('ReservationsController', () => {
         roles: ['admin'],
       } as any);
       expect(cancel.execute).toHaveBeenCalledWith(ID, { kind: 'admin' });
+    });
+
+    it('PATCH /reservations/:id/reschedule pasa la hora nueva y el actor', async () => {
+      reschedule.execute.mockResolvedValue({ id: ID, status: 'pendiente' });
+      await controller.rescheduleReservation(
+        ID,
+        { scheduledAt: '2026-04-21T16:00:00.000Z' } as any,
+        { id: 'u-1', roles: ['user'] } as any,
+      );
+      expect(reschedule.execute).toHaveBeenCalledWith(
+        ID,
+        '2026-04-21T16:00:00.000Z',
+        { kind: 'user', userId: 'u-1' },
+      );
+    });
+
+    it('PATCH /reservations/:id/reschedule fabrica un actor admin si el usuario lo es', async () => {
+      reschedule.execute.mockResolvedValue({ id: ID, status: 'confirmada' });
+      await controller.rescheduleReservation(
+        ID,
+        { scheduledAt: '2026-04-21T16:00:00.000Z' } as any,
+        { id: 'a-1', roles: ['admin'] } as any,
+      );
+      expect(reschedule.execute).toHaveBeenCalledWith(
+        ID,
+        '2026-04-21T16:00:00.000Z',
+        { kind: 'admin' },
+      );
     });
 
     it('DELETE /reservations/:id cancela como administración', async () => {
