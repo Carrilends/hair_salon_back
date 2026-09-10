@@ -8,4 +8,17 @@ import { Reservation } from '../reservation';
  */
 export interface ReservationNotifierPort {
   reservationCreated(reservation: Reservation): Promise<void>;
+  /**
+   * `byAdmin` viaja en el aviso porque decide a quién se le cuenta qué: la
+   * clienta solo recibe los cambios que hizo la peluquería; los suyos ya se los
+   * confirmó el canal por el que los hizo.
+   */
+  reservationCancelled(
+    reservation: Reservation,
+    meta: { byAdmin: boolean },
+  ): Promise<void>;
+  reservationRescheduled(
+    reservation: Reservation,
+    meta: { byAdmin: boolean; previousScheduledAt: Date },
+  ): Promise<void>;
 }

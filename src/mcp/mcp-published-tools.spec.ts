@@ -72,6 +72,11 @@ describe('Superficie MCP — herramientas de gestion (T6)', () => {
         save: async (r: Reservation) => r,
       } as never,
       { now: () => ahora } as never,
+      {
+        reservationCreated: async () => undefined,
+        reservationCancelled: async () => undefined,
+        reservationRescheduled: async () => undefined,
+      } as never,
     );
 
     // Las demas dependencias solo se guardan por referencia al construir las

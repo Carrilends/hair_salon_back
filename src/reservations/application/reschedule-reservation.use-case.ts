@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Reservation } from '../domain/reservation';
 import { ReservationScheduling } from '../domain/reservation-scheduling';
 import { WorkerOverlapError, ReservationNotFoundError } from '../domain/errors';
@@ -6,7 +6,8 @@ import { ReservationRepositoryPort } from '../domain/ports/reservation-repositor
 import { ClockPort } from '../domain/ports/clock.port';
 import { ReservationActor, isAdminActor } from '../domain/reservation-actor';
 import { assertCanActOn } from '../domain/reservation-authorization';
-import { RESERVATION_REPOSITORY, CLOCK } from './tokens';
+import { ReservationNotifierPort } from '../domain/ports/reservation-notifier.port';
+import { RESERVATION_REPOSITORY, CLOCK, RESERVATION_NOTIFIER } from './tokens';
 
 /**
  * Mueve una cita en el tiempo. Es la **única** regla de reprogramación del
@@ -20,12 +21,15 @@ import { RESERVATION_REPOSITORY, CLOCK } from './tokens';
 @Injectable()
 export class RescheduleReservationUseCase {
   private readonly scheduling = new ReservationScheduling();
+  private readonly logger = new Logger(RescheduleReservationUseCase.name);
 
   constructor(
     @Inject(RESERVATION_REPOSITORY)
     private readonly repository: ReservationRepositoryPort,
     @Inject(CLOCK)
     private readonly clock: ClockPort,
+    @Inject(RESERVATION_NOTIFIER)
+    private readonly notifier: ReservationNotifierPort,
   ) {}
 
   async execute(
@@ -46,6 +50,8 @@ export class RescheduleReservationUseCase {
     assertCanActOn(reservation, actor);
 
     const byAdmin = isAdminActor(actor);
+    // Se captura ANTES de mutar: el aviso muestra «antes → después».
+    const previousScheduledAt = reservation.scheduledAt;
     reservation.reschedule({
       scheduledAt: new Date(scheduledAt),
       now: this.clock.now(),
@@ -68,6 +74,20 @@ export class RescheduleReservationUseCase {
     );
     if (overlaps > 0) throw new WorkerOverlapError();
 
-    return this.repository.save(reservation);
+    const saved = await this.repository.save(reservation);
+
+    try {
+      await this.notifier.reservationRescheduled(saved, {
+        byAdmin,
+        previousScheduledAt,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Reserva ${saved.id} reprogramada, pero falló la notificación`,
+        error as Error,
+      );
+    }
+
+    return saved;
   }
 }

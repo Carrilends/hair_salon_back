@@ -18,9 +18,41 @@ export class ReservationNotifierAdapter implements ReservationNotifierPort {
   ) {}
 
   async reservationCreated(reservation: Reservation): Promise<void> {
-    const workerName = await this.workers.getWorkerName(reservation.workerId);
     await this.dispatcher.notify({
       type: 'reservation.created',
+      ...(await this.baseEvent(reservation)),
+    });
+  }
+
+  async reservationCancelled(
+    reservation: Reservation,
+    meta: { byAdmin: boolean },
+  ): Promise<void> {
+    await this.dispatcher.notify({
+      type: 'reservation.cancelled',
+      byAdmin: meta.byAdmin,
+      ...(await this.baseEvent(reservation)),
+    });
+  }
+
+  async reservationRescheduled(
+    reservation: Reservation,
+    meta: { byAdmin: boolean; previousScheduledAt: Date },
+  ): Promise<void> {
+    await this.dispatcher.notify({
+      type: 'reservation.rescheduled',
+      byAdmin: meta.byAdmin,
+      previousScheduledAt: meta.previousScheduledAt,
+      // La reserva ya viene movida: `scheduledAt` es la hora nueva, y la
+      // anterior llega aparte para poder mostrar «antes → después».
+      ...(await this.baseEvent(reservation)),
+    });
+  }
+
+  /** Campos comunes a los tres eventos; resuelve el nombre del estilista (N7). */
+  private async baseEvent(reservation: Reservation) {
+    const workerName = await this.workers.getWorkerName(reservation.workerId);
+    return {
       reservationId: reservation.id!,
       scheduledAt: reservation.scheduledAt,
       endedAt: reservation.endedAt,
@@ -35,6 +67,6 @@ export class ReservationNotifierAdapter implements ReservationNotifierPort {
       totalDurationMinutes: reservation.totalDurationMinutes,
       totalPrice: reservation.lines.reduce((sum, l) => sum + l.price, 0),
       status: reservation.status,
-    });
+    };
   }
 }

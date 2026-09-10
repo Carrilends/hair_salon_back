@@ -57,6 +57,11 @@ function repo(
 }
 
 const clock = { now: () => AHORA } as any;
+const noopNotifier = {
+  reservationCreated: async () => undefined,
+  reservationCancelled: async () => undefined,
+  reservationRescheduled: async () => undefined,
+} as any;
 
 beforeEach(() => {
   process.env.SALON_TZ = 'America/Bogota';
@@ -66,7 +71,7 @@ beforeEach(() => {
 describe('RescheduleReservationUseCase · orden canónico de validación', () => {
   it('mueve la reserva y la persiste', async () => {
     const { port, guardados } = repo(reserva());
-    const uc = new RescheduleReservationUseCase(port, clock);
+    const uc = new RescheduleReservationUseCase(port, clock, noopNotifier);
 
     const result = await uc.execute('r-1', NUEVA.toISOString(), {
       kind: 'user',
@@ -79,7 +84,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
 
   it('lanza ReservationNotFoundError si no existe', async () => {
     const { port } = repo(null);
-    const uc = new RescheduleReservationUseCase(port, clock);
+    const uc = new RescheduleReservationUseCase(port, clock, noopNotifier);
 
     await expect(
       uc.execute('r-1', NUEVA.toISOString(), { kind: 'user', userId: 'u-1' }),
@@ -88,7 +93,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
 
   it('comprueba la propiedad ANTES de tocar el agregado', async () => {
     const { port, guardados } = repo(reserva());
-    const uc = new RescheduleReservationUseCase(port, clock);
+    const uc = new RescheduleReservationUseCase(port, clock, noopNotifier);
 
     await expect(
       uc.execute('r-1', NUEVA.toISOString(), { kind: 'user', userId: 'otra' }),
@@ -99,7 +104,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
   it('respeta el plazo del agregado', async () => {
     const { port } = repo(reserva());
     const tarde = { now: () => new Date('2026-04-20T16:00:00.000Z') } as any;
-    const uc = new RescheduleReservationUseCase(port, tarde);
+    const uc = new RescheduleReservationUseCase(port, tarde, noopNotifier);
 
     await expect(
       uc.execute('r-1', NUEVA.toISOString(), { kind: 'user', userId: 'u-1' }),
@@ -109,7 +114,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
   it('rechaza una hora fuera del horario del salón', async () => {
     // 2026-04-21T03:00Z = 22:00 del lunes en Bogotá, después del cierre.
     const { port, guardados } = repo(reserva());
-    const uc = new RescheduleReservationUseCase(port, clock);
+    const uc = new RescheduleReservationUseCase(port, clock, noopNotifier);
 
     await expect(
       uc.execute('r-1', '2026-04-21T03:00:00.000Z', {
@@ -122,7 +127,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
 
   it('rechaza mover la cita al pasado', async () => {
     const { port, guardados } = repo(reserva());
-    const uc = new RescheduleReservationUseCase(port, clock);
+    const uc = new RescheduleReservationUseCase(port, clock, noopNotifier);
 
     await expect(
       uc.execute('r-1', '2026-04-19T15:00:00.000Z', {
@@ -137,7 +142,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
     // Sin esto, la fila ya persistida se contaría a sí misma y ninguna
     // reprogramación sería posible.
     const { port, overlapArgs } = repo(reserva());
-    const uc = new RescheduleReservationUseCase(port, clock);
+    const uc = new RescheduleReservationUseCase(port, clock, noopNotifier);
 
     await uc.execute('r-1', NUEVA.toISOString(), {
       kind: 'user',
@@ -149,7 +154,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
 
   it('lanza WorkerOverlapError si el estilista ya está ocupado', async () => {
     const { port, guardados } = repo(reserva(), { overlaps: 1 });
-    const uc = new RescheduleReservationUseCase(port, clock);
+    const uc = new RescheduleReservationUseCase(port, clock, noopNotifier);
 
     await expect(
       uc.execute('r-1', NUEVA.toISOString(), { kind: 'user', userId: 'u-1' }),
@@ -161,7 +166,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
     // El mutador ya corrió cuando se valida el horario: si algo falla después,
     // lo único que importa es que no llegue al repositorio.
     const { port, guardados } = repo(reserva(), { overlaps: 3 });
-    const uc = new RescheduleReservationUseCase(port, clock);
+    const uc = new RescheduleReservationUseCase(port, clock, noopNotifier);
 
     await expect(
       uc.execute('r-1', NUEVA.toISOString(), { kind: 'user', userId: 'u-1' }),
@@ -174,7 +179,7 @@ describe('RescheduleReservationUseCase · margen de antelación', () => {
   it('aplica RESCHEDULE_MIN_LEAD_MINUTES a quien no es administración', async () => {
     process.env.RESCHEDULE_MIN_LEAD_MINUTES = '240'; // 4 h; la cita es en 3 h
     const { port } = repo(reserva());
-    const uc = new RescheduleReservationUseCase(port, clock);
+    const uc = new RescheduleReservationUseCase(port, clock, noopNotifier);
 
     await expect(
       uc.execute('r-1', NUEVA.toISOString(), { kind: 'user', userId: 'u-1' }),
@@ -184,10 +189,52 @@ describe('RescheduleReservationUseCase · margen de antelación', () => {
   it('no se lo aplica a administración', async () => {
     process.env.RESCHEDULE_MIN_LEAD_MINUTES = '240';
     const { port, guardados } = repo(reserva());
-    const uc = new RescheduleReservationUseCase(port, clock);
+    const uc = new RescheduleReservationUseCase(port, clock, noopNotifier);
 
     await uc.execute('r-1', NUEVA.toISOString(), { kind: 'admin' });
 
+    expect(guardados).toHaveLength(1);
+  });
+});
+
+describe('RescheduleReservationUseCase · aviso', () => {
+  it('avisa después de persistir, con la hora ANTERIOR y quién movió', async () => {
+    const avisos: any[] = [];
+    const { port } = repo(reserva());
+    const espia = {
+      reservationRescheduled: async (r: Reservation, meta: unknown) => {
+        avisos.push({ id: r.id, meta });
+      },
+    } as any;
+    const uc = new RescheduleReservationUseCase(port, clock, espia);
+
+    await uc.execute('r-1', NUEVA.toISOString(), {
+      kind: 'user',
+      userId: 'u-1',
+    });
+
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0].meta).toEqual({
+      previousScheduledAt: ORIGINAL,
+      byAdmin: false,
+    });
+  });
+
+  it('un fallo del aviso NO deshace la reprogramación', async () => {
+    const { port, guardados } = repo(reserva());
+    const roto = {
+      reservationRescheduled: async () => {
+        throw new Error('sin red');
+      },
+    } as any;
+    const uc = new RescheduleReservationUseCase(port, clock, roto);
+
+    const result = await uc.execute('r-1', NUEVA.toISOString(), {
+      kind: 'user',
+      userId: 'u-1',
+    });
+
+    expect(result.scheduledAt).toEqual(NUEVA);
     expect(guardados).toHaveLength(1);
   });
 });
