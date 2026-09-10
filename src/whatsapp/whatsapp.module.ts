@@ -52,8 +52,10 @@ const VENTANA_MS = 60_000;
     MetaSignatureGuard,
     HandleInboundMessageUseCase,
     InboundLogPurgeScheduler,
-    { provide: RESERVATION_ACTIONS, useClass: ReservationActionsAdapter },
+    // `useExisting` y no `useClass`: con `useClass` habría DOS instancias del
+    // adaptador, la del token y la de la clase.
     ReservationActionsAdapter,
+    { provide: RESERVATION_ACTIONS, useExisting: ReservationActionsAdapter },
     { provide: INBOUND_MESSAGE_LOG, useClass: TypeOrmInboundMessageLog },
     {
       // Quién es la peluquería para este canal. Un mensaje que venga de ese
