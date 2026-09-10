@@ -18,7 +18,15 @@ Notas importantes:
 
 - Dentro de Docker, la API se conecta al Postgres por red interna usando `DB_HOST=db` y `DB_PORT=5432` (esto lo fuerza `docker-compose.yml`).
 - `DB_PUBLIC_PORT` controla el puerto publicado hacia tu máquina (por defecto `3334 -> 5432`).
-- Notificaciones opcionales con arranque perezoso: sin `EMAIL_PROVIDER` los correos se imprimen en el log (adaptador de consola) y sin `WHATSAPP_TOKEN` la confirmación por WhatsApp también (no llama a la Cloud API de Meta). La app **arranca sin esas credenciales**; solo un envío real falla, con mensaje claro, si faltan. El envío en vivo por WhatsApp requiere además una WABA verificada, un número dedicado y una plantilla aprobada por Meta (ver `.env.example`).
+- Notificaciones opcionales con arranque perezoso: sin `EMAIL_PROVIDER` los correos se imprimen en el log (adaptador de consola) y sin `WHATSAPP_TOKEN` los avisos por WhatsApp también (no llaman a la Cloud API de Meta). La app **arranca sin esas credenciales**; solo un envío real falla, con mensaje claro, si faltan.
+- **Canal de WhatsApp bidireccional (Etapa 2).** Además de los avisos, el backend expone un webhook con el que la clienta cancela o mueve su cita, y la peluquería confirma:
+  - Ruta pública: **`POST /api/whatsapp/webhook`** (y `GET` para la verificación de Meta). Es el único endpoint del proyecto que recibe callbacks de un tercero.
+  - **`main.ts` arranca con `rawBody: true`**, necesario para verificar la firma `X-Hub-Signature-256` sobre los bytes crudos. Si alguien lo quitara, el webhook empezaría a rechazar todo con 403 —falla cerrado a propósito—.
+  - El endpoint **responde 200 antes de procesar**: Meta reintenta durante días ante una respuesta lenta o no-2xx. Un proxy que amortigüe o reescriba la respuesta puede provocar reentregas en bucle.
+  - `WHATSAPP_APP_SECRET` y `WHATSAPP_VERIFY_TOKEN` son **obligatorios** para que el canal entrante funcione; sin ellos responde 403 a todo. No dependen de `WHATSAPP_TOKEN`.
+  - `SALON_OWNER_WHATSAPP` es una **llave de seguridad**: un mensaje entrante desde ese número actúa como administración. Vacío, nadie lo es.
+  - **Dos migraciones nuevas** (`ReservationPhoneE164` y `WhatsAppInboundMessages`). Con `TYPEORM_MIGRATIONS_RUN=true` se aplican solas al desplegar; la primera rellena la columna derivada del teléfono sobre las reservas existentes.
+  - El aprovisionamiento en Meta (línea dedicada, WABA, **cuatro plantillas** y registro del webhook) está paso a paso en `docs/configs/06-whatsapp-cloud-api.md`.
 
 ## Levantar en local con Docker
 
