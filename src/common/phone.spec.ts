@@ -16,6 +16,15 @@ describe('normalizeCoPhoneToE164', () => {
     expect(normalizeCoPhoneToE164('573001234567')).toBe('573001234567');
   });
 
+  it('es idempotente sobre el wa_id que entrega Meta en el webhook', () => {
+    // Meta pone el remitente como `573001112233`. El canal entrante lo pasa por
+    // esta función igualmente, para no depender de la forma exacta del proveedor
+    // y comparar siempre normalizado contra el teléfono guardado de la reserva.
+    const waId = '573001112233';
+    expect(normalizeCoPhoneToE164(waId)).toBe(waId);
+    expect(normalizeCoPhoneToE164(normalizeCoPhoneToE164(waId))).toBe(waId);
+  });
+
   it('quita el + y los espacios de un número con indicativo', () => {
     expect(normalizeCoPhoneToE164('+57 300 123 4567')).toBe('573001234567');
   });

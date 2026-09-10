@@ -6,7 +6,7 @@ import {
 import { NotifiableEvent } from '../../domain/events/reservation-created.event';
 import { NotifierPort } from '../../domain/ports/notifier.port';
 import { WhatsAppSenderPort } from '../../domain/ports/whatsapp-sender.port';
-import { normalizeCoPhoneToE164 } from './phone';
+import { normalizeCoPhoneToE164 } from 'src/common/phone';
 
 export interface ClientWhatsAppConfig {
   timeZone: string; // America/Bogota
