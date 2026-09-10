@@ -39,12 +39,19 @@ describe('NotificationsModule (cableado)', () => {
     );
   });
 
-  it('registra el canal whatsapp en el arreglo de notificadores', async () => {
+  it('registra los cuatro canales, incluidos los dos de WhatsApp', async () => {
+    // El arreglo `NOTIFIERS` es el ÚNICO sitio del sistema que enumera canales:
+    // esta prueba es lo que impide que uno se quede sin cablear en silencio.
     delete process.env.WHATSAPP_TOKEN;
     const moduleRef = await compileModule();
 
     const notifiers = moduleRef.get<NotifierPort[]>(NOTIFIERS);
-    expect(notifiers.map((n) => n.channel)).toContain('whatsapp');
+    expect(notifiers.map((n) => n.channel).sort()).toEqual([
+      'correo',
+      'websocket',
+      'whatsapp',
+      'whatsapp-dueña',
+    ]);
   });
 
   it('usa la Cloud API cuando WHATSAPP_TOKEN está presente', async () => {

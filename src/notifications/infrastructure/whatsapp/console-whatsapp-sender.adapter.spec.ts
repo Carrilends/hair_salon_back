@@ -15,7 +15,9 @@ describe('ConsoleWhatsAppSender', () => {
 
     await expect(
       sender.send({
+        kind: 'template',
         to: '573001234567',
+        templateName: 'confirmacion_reserva',
         bodyParams: ['sábado', 'Ana', 'Corte'],
       }),
     ).resolves.toBeUndefined();
@@ -25,6 +27,48 @@ describe('ConsoleWhatsAppSender', () => {
     expect(printed).toContain('573001234567');
     expect(printed).toContain('sábado');
     expect(printed).toContain('Corte');
+
+    log.mockRestore();
+  });
+
+  it('imprime los identificadores de los botones y de las filas, no solo su texto', async () => {
+    // Son lo que hay que reenviar a mano al webhook para ejercitar el flujo sin
+    // Meta: si no se imprimieran, la demostración sin credenciales no existiría.
+    const log = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+    const sender = new ConsoleWhatsAppSender();
+
+    await sender.send({
+      kind: 'interactive-list',
+      to: '573001234567',
+      body: 'Elige el día',
+      buttonText: 'Ver días',
+      rows: [{ id: 'RSDAY|r-1|2026-09-12', title: 'vie 12 sep' }],
+    });
+
+    const printed = String(log.mock.calls[0][0]);
+    expect(printed).toContain('RSDAY|r-1|2026-09-12');
+    expect(printed).toContain('vie 12 sep');
+
+    log.mockRestore();
+  });
+
+  it('imprime el payload de los botones de una plantilla', async () => {
+    const log = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+    const sender = new ConsoleWhatsAppSender();
+
+    await sender.send({
+      kind: 'template',
+      to: '573001234567',
+      templateName: 'reserva_creada_cliente',
+      bodyParams: ['x'],
+      buttons: [{ index: 0, payload: 'CANCEL|r-1' }],
+    });
+
+    expect(String(log.mock.calls[0][0])).toContain('CANCEL|r-1');
 
     log.mockRestore();
   });

@@ -2,6 +2,7 @@ import {
   CloudApiWhatsAppConfig,
   CloudApiWhatsAppSender,
 } from './cloud-api-whatsapp-sender.adapter';
+import { WhatsAppMessage } from '../../domain/ports/whatsapp-sender.port';
 
 /**
  * Adaptador real contra la Cloud API de Meta. Envía una plantilla aprobada por
@@ -14,8 +15,14 @@ const baseConfig: CloudApiWhatsAppConfig = {
   token: 'TOK',
   phoneNumberId: '123456',
   apiVersion: 'v21.0',
-  templateName: 'confirmacion_reserva',
   templateLang: 'es_CO',
+};
+
+const PLANTILLA: WhatsAppMessage & { kind: 'template' } = {
+  kind: 'template',
+  to: '573001234567',
+  templateName: 'confirmacion_reserva',
+  bodyParams: ['sábado', 'Ana', 'Corte'],
 };
 
 type Captured = {
@@ -51,12 +58,7 @@ describe('CloudApiWhatsAppSender', () => {
       }),
     );
 
-    await expect(
-      sender.send({
-        to: '573001234567',
-        bodyParams: ['sábado', 'Ana', 'Corte'],
-      }),
-    ).resolves.toBeUndefined();
+    await expect(sender.send({ ...PLANTILLA })).resolves.toBeUndefined();
 
     expect(captured.url).toBe(
       'https://graph.facebook.com/v21.0/123456/messages',
@@ -86,9 +88,9 @@ describe('CloudApiWhatsAppSender', () => {
       fakeFetch(captured, { ok: true, status: 200 }),
     );
 
-    await expect(
-      sender.send({ to: '573001234567', bodyParams: [] }),
-    ).rejects.toThrow(/WHATSAPP_TOKEN/);
+    await expect(sender.send({ ...PLANTILLA })).rejects.toThrow(
+      /WHATSAPP_TOKEN/,
+    );
     expect(captured.url).toBeUndefined();
   });
 
@@ -99,22 +101,24 @@ describe('CloudApiWhatsAppSender', () => {
       fakeFetch(captured, { ok: true, status: 200 }),
     );
 
-    await expect(
-      sender.send({ to: '573001234567', bodyParams: [] }),
-    ).rejects.toThrow(/WHATSAPP_PHONE_NUMBER_ID/);
+    await expect(sender.send({ ...PLANTILLA })).rejects.toThrow(
+      /WHATSAPP_PHONE_NUMBER_ID/,
+    );
     expect(captured.url).toBeUndefined();
   });
 
-  it('lanza un error claro y no llama a la red si falta el nombre de la plantilla', async () => {
+  it('lanza un error claro y no llama a la red si el mensaje no trae plantilla', async () => {
+    // La plantilla es del mensaje, no de la aplicación: quien la omite tiene un
+    // fallo de programación, no de configuración, y conviene que se note.
     const captured: Captured = {};
     const sender = new CloudApiWhatsAppSender(
-      { ...baseConfig, templateName: undefined },
+      baseConfig,
       fakeFetch(captured, { ok: true, status: 200 }),
     );
 
     await expect(
-      sender.send({ to: '573001234567', bodyParams: ['x'] }),
-    ).rejects.toThrow(/WHATSAPP_TEMPLATE_NAME/);
+      sender.send({ ...PLANTILLA, templateName: '' }),
+    ).rejects.toThrow(/plantilla/i);
     expect(captured.url).toBeUndefined();
   });
 
@@ -129,9 +133,171 @@ describe('CloudApiWhatsAppSender', () => {
       }),
     );
 
-    await expect(
-      sender.send({ to: '573001234567', bodyParams: ['x'] }),
-    ).rejects.toThrow(/401/);
+    await expect(sender.send({ ...PLANTILLA })).rejects.toThrow(/401/);
     expect(captured.url).toBeDefined();
+  });
+
+  it('el idioma del mensaje pisa el del adaptador', async () => {
+    const captured: Captured = {};
+    const sender = new CloudApiWhatsAppSender(
+      baseConfig,
+      fakeFetch(captured, { ok: true, status: 200 }),
+    );
+
+    await sender.send({ ...PLANTILLA, templateLang: 'es_MX' });
+
+    const body = JSON.parse(captured.init?.body ?? '{}');
+    expect(body.template.language.code).toBe('es_MX');
+  });
+
+  it('adjunta los botones de respuesta rápida como componentes por posición', async () => {
+    // Es lo que hace que la confirmación lleve «Cancelar cita» y «Cambiar
+    // fecha»: Meta pide un componente `button` por botón, con su índice y el
+    // payload que el negocio define al enviar.
+    const captured: Captured = {};
+    const sender = new CloudApiWhatsAppSender(
+      baseConfig,
+      fakeFetch(captured, { ok: true, status: 200 }),
+    );
+
+    await sender.send({
+      ...PLANTILLA,
+      buttons: [
+        { index: 0, payload: 'CANCEL|r-1' },
+        { index: 1, payload: 'RESCHED|r-1' },
+      ],
+    });
+
+    const body = JSON.parse(captured.init?.body ?? '{}');
+    const botones = body.template.components.filter(
+      (c: { type: string }) => c.type === 'button',
+    );
+    expect(botones).toEqual([
+      {
+        type: 'button',
+        sub_type: 'quick_reply',
+        index: '0',
+        parameters: [{ type: 'payload', payload: 'CANCEL|r-1' }],
+      },
+      {
+        type: 'button',
+        sub_type: 'quick_reply',
+        index: '1',
+        parameters: [{ type: 'payload', payload: 'RESCHED|r-1' }],
+      },
+    ]);
+  });
+
+  it('envía texto libre como type text', async () => {
+    const captured: Captured = {};
+    const sender = new CloudApiWhatsAppSender(
+      baseConfig,
+      fakeFetch(captured, { ok: true, status: 200 }),
+    );
+
+    await sender.send({
+      kind: 'text',
+      to: '573001234567',
+      body: 'Listo, tu cita quedó cancelada.',
+    });
+
+    const body = JSON.parse(captured.init?.body ?? '{}');
+    expect(body.type).toBe('text');
+    expect(body.text).toEqual({ body: 'Listo, tu cita quedó cancelada.' });
+  });
+
+  it('envía botones interactivos dentro de la ventana de 24 h, sin plantilla', async () => {
+    const captured: Captured = {};
+    const sender = new CloudApiWhatsAppSender(
+      baseConfig,
+      fakeFetch(captured, { ok: true, status: 200 }),
+    );
+
+    await sender.send({
+      kind: 'interactive-buttons',
+      to: '573001234567',
+      body: '¿Seguro que quieres cancelar?',
+      buttons: [
+        { id: 'CANCEL_OK|r-1', title: 'Sí, cancelar' },
+        { id: 'NOOP', title: 'No, dejarla' },
+      ],
+    });
+
+    const body = JSON.parse(captured.init?.body ?? '{}');
+    expect(body.type).toBe('interactive');
+    expect(body.interactive.type).toBe('button');
+    expect(body.interactive.body).toEqual({
+      text: '¿Seguro que quieres cancelar?',
+    });
+    expect(body.interactive.action.buttons).toEqual([
+      { type: 'reply', reply: { id: 'CANCEL_OK|r-1', title: 'Sí, cancelar' } },
+      { type: 'reply', reply: { id: 'NOOP', title: 'No, dejarla' } },
+    ]);
+  });
+
+  it('envía una lista interactiva con sus filas', async () => {
+    const captured: Captured = {};
+    const sender = new CloudApiWhatsAppSender(
+      baseConfig,
+      fakeFetch(captured, { ok: true, status: 200 }),
+    );
+
+    await sender.send({
+      kind: 'interactive-list',
+      to: '573001234567',
+      header: 'Cambiar fecha',
+      body: 'Elige el día',
+      footer: 'Peluquería Marlene',
+      buttonText: 'Ver días',
+      rows: [
+        { id: 'RSDAY|r-1|2026-09-12', title: 'vie 12 sep' },
+        {
+          id: 'RSDAY|r-1|2026-09-13',
+          title: 'sáb 13 sep',
+          description: '3 horas libres',
+        },
+      ],
+    });
+
+    const body = JSON.parse(captured.init?.body ?? '{}');
+    expect(body.interactive.type).toBe('list');
+    expect(body.interactive.header).toEqual({
+      type: 'text',
+      text: 'Cambiar fecha',
+    });
+    expect(body.interactive.footer).toEqual({ text: 'Peluquería Marlene' });
+    expect(body.interactive.action.button).toBe('Ver días');
+    expect(body.interactive.action.sections[0].rows).toEqual([
+      { id: 'RSDAY|r-1|2026-09-12', title: 'vie 12 sep' },
+      {
+        id: 'RSDAY|r-1|2026-09-13',
+        title: 'sáb 13 sep',
+        description: '3 horas libres',
+      },
+    ]);
+  });
+
+  it('rechaza una lista con más de diez filas antes de llamar a la red', async () => {
+    // Meta la rechazaría igualmente; fallar aquí da un error legible en el log en
+    // vez de un 400 opaco de Graph.
+    const captured: Captured = {};
+    const sender = new CloudApiWhatsAppSender(
+      baseConfig,
+      fakeFetch(captured, { ok: true, status: 200 }),
+    );
+
+    await expect(
+      sender.send({
+        kind: 'interactive-list',
+        to: '573001234567',
+        body: 'Elige',
+        buttonText: 'Ver',
+        rows: Array.from({ length: 11 }, (_, i) => ({
+          id: `X|${i}`,
+          title: `Fila ${i}`,
+        })),
+      }),
+    ).rejects.toThrow(/10 filas/);
+    expect(captured.url).toBeUndefined();
   });
 });

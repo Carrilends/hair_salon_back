@@ -18,3 +18,11 @@ export const WHATSAPP_SENDER = Symbol('WhatsAppSenderPort');
 
 /** Configuración del WhatsApp de confirmación a la clienta: zona horaria. */
 export const CLIENT_WHATSAPP_CONFIG = Symbol('ClientWhatsAppConfig');
+
+/**
+ * Destinatario, zona y plantilla del aviso a la peluquería por WhatsApp. Es
+ * distinto del de la clienta porque el destinatario es fijo y la plantilla es
+ * otra: el número emisor es la línea dedicada de la Cloud API, y este es el
+ * móvil personal de Marlene.
+ */
+export const OWNER_WHATSAPP_CONFIG = Symbol('OWNER_WHATSAPP_CONFIG');

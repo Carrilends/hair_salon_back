@@ -8,6 +8,7 @@ import {
   EMAIL_SENDER,
   NOTIFIERS,
   OWNER_NOTIFICATION_CONFIG,
+  OWNER_WHATSAPP_CONFIG,
   WHATSAPP_SENDER,
 } from './application/tokens';
 import { NotificationDispatcher } from './application/notification-dispatcher';
@@ -25,6 +26,10 @@ import {
   ClientWhatsAppConfig,
   ClientWhatsAppNotifier,
 } from './infrastructure/whatsapp/client-whatsapp-notifier.adapter';
+import {
+  OwnerWhatsAppConfig,
+  OwnerWhatsAppNotifier,
+} from './infrastructure/whatsapp/owner-whatsapp-notifier.adapter';
 
 /**
  * Módulo compartido de notificaciones (Fase 4). Reúne el puerto de correo
@@ -77,37 +82,64 @@ import {
               token,
               phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
               apiVersion: process.env.WHATSAPP_API_VERSION ?? 'v21.0',
-              templateName: process.env.WHATSAPP_TEMPLATE_NAME,
+              // El nombre de la plantilla ya NO vive aquí: es del mensaje, no de
+              // la aplicación, porque cada aviso usa la suya.
               templateLang: process.env.WHATSAPP_TEMPLATE_LANG ?? 'es_CO',
             })
           : new ConsoleWhatsAppSender();
       },
     },
     {
-      // Zona horaria del mensaje de confirmación a la clienta (Bogotá).
+      // Zona horaria y plantillas de los avisos a la clienta. Una por evento:
+      // Meta exige una plantilla aprobada por cada mensaje que inicia el negocio.
       provide: CLIENT_WHATSAPP_CONFIG,
       useFactory: (): ClientWhatsAppConfig => ({
         timeZone: process.env.SALON_TZ ?? 'America/Bogota',
+        templateCreated: process.env.WHATSAPP_TEMPLATE_RESERVA_CREADA ?? '',
+        templateCancelled:
+          process.env.WHATSAPP_TEMPLATE_RESERVA_CANCELADA ?? '',
+        templateRescheduled:
+          process.env.WHATSAPP_TEMPLATE_RESERVA_REPROGRAMADA ?? '',
+      }),
+    },
+    {
+      // Aviso a la peluquería. El destinatario es su móvil personal, que NO es
+      // el número que la Cloud API consume: sin él, el canal simplemente no
+      // existe todavía.
+      provide: OWNER_WHATSAPP_CONFIG,
+      useFactory: (): OwnerWhatsAppConfig => ({
+        ownerPhone: process.env.SALON_OWNER_WHATSAPP ?? '',
+        timeZone: process.env.SALON_TZ ?? 'America/Bogota',
+        templateName: process.env.WHATSAPP_TEMPLATE_AVISO_DUENA ?? '',
       }),
     },
     AdminEventsGateway,
     OwnerEmailNotifier,
     WebSocketNotifier,
     ClientWhatsAppNotifier,
+    OwnerWhatsAppNotifier,
     {
       // El conjunto de canales activos es un dato de configuración, no una
       // condición dispersa por el código: sumar WhatsApp (Etapa 2) fue añadir
       // un elemento a este arreglo.
       provide: NOTIFIERS,
-      inject: [OwnerEmailNotifier, WebSocketNotifier, ClientWhatsAppNotifier],
+      inject: [
+        OwnerEmailNotifier,
+        WebSocketNotifier,
+        ClientWhatsAppNotifier,
+        OwnerWhatsAppNotifier,
+      ],
       useFactory: (
         correo: OwnerEmailNotifier,
         socket: WebSocketNotifier,
-        whatsapp: ClientWhatsAppNotifier,
-      ) => [correo, socket, whatsapp],
+        whatsappClienta: ClientWhatsAppNotifier,
+        whatsappDuena: OwnerWhatsAppNotifier,
+      ) => [correo, socket, whatsappClienta, whatsappDuena],
     },
     NotificationDispatcher,
   ],
-  exports: [EMAIL_SENDER, NotificationDispatcher],
+  // `WHATSAPP_SENDER` sale del módulo porque el canal ENTRANTE necesita
+  // responder a la clienta, y el transporte es el mismo en los dos sentidos.
+  exports: [EMAIL_SENDER, NotificationDispatcher, WHATSAPP_SENDER],
 })
 export class NotificationsModule {}

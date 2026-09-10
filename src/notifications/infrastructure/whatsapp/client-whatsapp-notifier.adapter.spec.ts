@@ -5,7 +5,19 @@ import {
   ClientWhatsAppNotifier,
 } from './client-whatsapp-notifier.adapter';
 
-const config: ClientWhatsAppConfig = { timeZone: 'America/Bogota' };
+const config: ClientWhatsAppConfig = {
+  timeZone: 'America/Bogota',
+  templateCreated: 'reserva_creada_cliente',
+  templateCancelled: 'reserva_cancelada_cliente',
+  templateRescheduled: 'reserva_reprogramada_cliente',
+};
+
+/** Estrecha la unión para poder leer los campos de plantilla en las aserciones. */
+function comoPlantilla(m: WhatsAppMessage) {
+  if (m.kind !== 'template')
+    throw new Error(`se esperaba plantilla, no ${m.kind}`);
+  return m;
+}
 
 function makeEvent(
   overrides: Partial<ReservationCreatedEvent> = {},
@@ -55,9 +67,11 @@ describe('ClientWhatsAppNotifier', () => {
     expect(sent).toHaveLength(1);
     expect(sent[0].to).toBe('573001234567');
     // [fecha en zona del salón, estilista, servicios]
-    expect(sent[0].bodyParams).toHaveLength(3);
-    expect(sent[0].bodyParams[1]).toBe('Ana');
-    expect(sent[0].bodyParams[2]).toBe('Corte, Tinte');
+    const p = comoPlantilla(sent[0]);
+    expect(p.templateName).toBe('reserva_creada_cliente');
+    expect(p.bodyParams).toHaveLength(3);
+    expect(p.bodyParams[1]).toBe('Ana');
+    expect(p.bodyParams[2]).toBe('Corte, Tinte');
   });
 
   it('formatea la fecha en la zona del salón, no en la del servidor', async () => {
@@ -65,8 +79,8 @@ describe('ClientWhatsAppNotifier', () => {
 
     await notifier.notify(makeEvent());
 
-    expect(sent[0].bodyParams[0]).toContain('3:00');
-    expect(sent[0].bodyParams[0]).not.toContain('8:00');
+    expect(comoPlantilla(sent[0]).bodyParams[0]).toContain('3:00');
+    expect(comoPlantilla(sent[0]).bodyParams[0]).not.toContain('8:00');
   });
 
   it('se salta el envío sin lanzar cuando no hay teléfono', async () => {
@@ -102,36 +116,74 @@ describe('ClientWhatsAppNotifier', () => {
 });
 
 describe('ClientWhatsAppNotifier · discriminación por tipo de evento', () => {
-  const base = {
-    reservationId: 'r-1',
-    scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
-    endedAt: new Date('2026-04-20T16:00:00.000Z'),
-    workerName: 'Marlene',
-    customerName: 'Ana',
-    customerPhone: '3001234567',
-    services: [{ name: 'Corte', price: 20000, durationMinutes: 60 }],
-    totalDurationMinutes: 60,
-    totalPrice: 20000,
-    status: 'pendiente',
-  };
+  it('la confirmación lleva los dos botones con el id de la reserva', async () => {
+    const { notifier, sent } = makeNotifier();
 
-  it('NO manda una confirmación de reserva nueva para una cancelación', async () => {
-    const enviados: unknown[] = [];
-    const sender = {
-      send: async (m: unknown) => {
-        enviados.push(m);
-      },
-    };
-    const sut = new ClientWhatsAppNotifier(sender as any, {
-      timeZone: 'America/Bogota',
-    });
+    await notifier.notify(makeEvent());
 
-    await sut.notify({
-      ...base,
+    expect(comoPlantilla(sent[0]).buttons).toEqual([
+      { index: 0, payload: 'CANCEL|r-1' },
+      { index: 1, payload: 'RESCHED|r-1' },
+    ]);
+  });
+
+  it('NO le cuenta a la clienta una cancelación que hizo ella misma', async () => {
+    // Ya se la confirmó el canal por el que la hizo. Recibir además un WhatsApp
+    // diciéndole lo que acaba de hacer es ruido, y encima se cobra.
+    const { notifier, sent } = makeNotifier();
+
+    await notifier.notify({
+      ...makeEvent(),
+      type: 'reservation.cancelled',
+      byAdmin: false,
+    } as never);
+
+    expect(sent).toHaveLength(0);
+  });
+
+  it('SÍ le cuenta una cancelación hecha por la peluquería', async () => {
+    const { notifier, sent } = makeNotifier();
+
+    await notifier.notify({
+      ...makeEvent(),
       type: 'reservation.cancelled',
       byAdmin: true,
-    } as any);
+    } as never);
 
-    expect(enviados).toHaveLength(0);
+    expect(sent).toHaveLength(1);
+    expect(comoPlantilla(sent[0]).templateName).toBe(
+      'reserva_cancelada_cliente',
+    );
+  });
+
+  it('SÍ le cuenta un cambio de hora hecho por la peluquería, con antes y después', async () => {
+    const { notifier, sent } = makeNotifier();
+
+    await notifier.notify({
+      ...makeEvent(),
+      type: 'reservation.rescheduled',
+      byAdmin: true,
+      previousScheduledAt: new Date('2026-08-27T20:00:00Z'),
+    } as never);
+
+    const p = comoPlantilla(sent[0]);
+    expect(p.templateName).toBe('reserva_reprogramada_cliente');
+    expect(p.bodyParams).toHaveLength(3);
+    expect(p.bodyParams[0]).toContain('27 de agosto');
+    expect(p.bodyParams[1]).toContain('29 de agosto');
+    expect(p.bodyParams[2]).toBe('Ana');
+  });
+
+  it('NO le cuenta un cambio de hora que hizo ella misma', async () => {
+    const { notifier, sent } = makeNotifier();
+
+    await notifier.notify({
+      ...makeEvent(),
+      type: 'reservation.rescheduled',
+      byAdmin: false,
+      previousScheduledAt: new Date('2026-08-27T20:00:00Z'),
+    } as never);
+
+    expect(sent).toHaveLength(0);
   });
 });
