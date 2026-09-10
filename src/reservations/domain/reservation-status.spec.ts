@@ -22,13 +22,19 @@ describe('máquina de estados de la reserva (§6.4)', () => {
 
   it('permite pendiente → cancelada', () => {
     expect(() =>
-      assertTransition(ReservationStatus.Pendiente, ReservationStatus.Cancelada),
+      assertTransition(
+        ReservationStatus.Pendiente,
+        ReservationStatus.Cancelada,
+      ),
     ).not.toThrow();
   });
 
   it('permite confirmada → cumplida', () => {
     expect(() =>
-      assertTransition(ReservationStatus.Confirmada, ReservationStatus.Cumplida),
+      assertTransition(
+        ReservationStatus.Confirmada,
+        ReservationStatus.Cumplida,
+      ),
     ).not.toThrow();
   });
 
@@ -52,7 +58,10 @@ describe('máquina de estados de la reserva (§6.4)', () => {
 
   it('rechaza salir de un estado terminal (cancelada)', () => {
     expect(() =>
-      assertTransition(ReservationStatus.Cancelada, ReservationStatus.Pendiente),
+      assertTransition(
+        ReservationStatus.Cancelada,
+        ReservationStatus.Pendiente,
+      ),
     ).toThrow(InvalidStatusTransitionError);
   });
 

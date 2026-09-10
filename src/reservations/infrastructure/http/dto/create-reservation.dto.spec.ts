@@ -26,7 +26,9 @@ describe('CreateReservationDto (NF05 — validación de datos de entrada)', () =
   });
 
   it('Caso 2: rechaza scheduledAt sin formato ISO 8601', async () => {
-    const errors = await validate(buildDto({ scheduledAt: '06/05/2026 15:00' }));
+    const errors = await validate(
+      buildDto({ scheduledAt: '06/05/2026 15:00' }),
+    );
     expect(constraintsFor(errors, 'scheduledAt')).toHaveProperty('isIso8601');
   });
 

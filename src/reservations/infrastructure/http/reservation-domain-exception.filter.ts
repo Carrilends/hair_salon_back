@@ -4,6 +4,7 @@ import {
   Catch,
   ConflictException,
   ExceptionFilter,
+  ForbiddenException,
   HttpException,
   NotFoundException,
 } from '@nestjs/common';
@@ -11,6 +12,7 @@ import {
   CancellationTooLateError,
   DomainError,
   ReservationNotFoundError,
+  ReservationOwnershipError,
   WorkerOverlapError,
 } from '../../domain/errors';
 
@@ -18,6 +20,7 @@ import {
  * Traduce los errores de dominio de Reservas a excepciones HTTP:
  *   - WorkerOverlapError / CancellationTooLateError -> 409 Conflict
  *   - ReservationNotFoundError                      -> 404 Not Found
+ *   - ReservationOwnershipError                     -> 403 Forbidden
  *   - resto de errores de dominio (horario, transición de estado inválida,
  *     servicios/contacto faltantes, entrada inválida) -> 400 Bad Request
  */
@@ -32,6 +35,8 @@ export class ReservationDomainExceptionFilter implements ExceptionFilter {
       http = new ConflictException(error.message);
     } else if (error instanceof ReservationNotFoundError) {
       http = new NotFoundException(error.message);
+    } else if (error instanceof ReservationOwnershipError) {
+      http = new ForbiddenException(error.message);
     } else {
       http = new BadRequestException(error.message);
     }

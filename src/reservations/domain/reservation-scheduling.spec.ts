@@ -15,7 +15,12 @@ describe('ReservationScheduling.assertWithinBusinessHours', () => {
       workerId: 'w-1',
       userId: 'w-1',
       lines: [
-        { serviceId: 's', name: 'Servicio', price: 0, durationMinutes: minutes },
+        {
+          serviceId: 's',
+          name: 'Servicio',
+          price: 0,
+          durationMinutes: minutes,
+        },
       ],
     });
 

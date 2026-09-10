@@ -64,3 +64,15 @@ export class DuplicateServicesError extends DomainError {
     this.name = 'DuplicateServicesError';
   }
 }
+
+/**
+ * El actor no es dueño de la reserva sobre la que quiere actuar. Es un error de
+ * dominio y no una `ForbiddenException` de Nest: la capa de aplicación no debe
+ * conocer el framework, y es el filtro del borde HTTP quien lo traduce a 403.
+ */
+export class ReservationOwnershipError extends DomainError {
+  constructor() {
+    super('No puede actuar sobre una reserva ajena');
+    this.name = 'ReservationOwnershipError';
+  }
+}

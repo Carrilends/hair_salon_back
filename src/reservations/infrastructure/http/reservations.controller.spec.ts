@@ -49,7 +49,10 @@ describe('ReservationsController', () => {
       await expect(
         controller.occupancy({ from: '2026-04-20', to: '2026-04-21' }),
       ).resolves.toBe(result);
-      expect(occupancy.execute).toHaveBeenCalledWith('2026-04-20', '2026-04-21');
+      expect(occupancy.execute).toHaveBeenCalledWith(
+        '2026-04-20',
+        '2026-04-21',
+      );
     });
 
     it('GET /reservations/me lista las reservas del usuario autenticado', async () => {
@@ -66,9 +69,12 @@ describe('ReservationsController', () => {
         workerId: 'w-1',
       };
       create.execute.mockResolvedValue({ id: 'r-1' });
-      const result = await controller.create(dto as any, {
-        user: { id: 'u-1' },
-      } as any);
+      const result = await controller.create(
+        dto as any,
+        {
+          user: { id: 'u-1' },
+        } as any,
+      );
       expect(create.execute).toHaveBeenCalledWith({
         scheduledAt: dto.scheduledAt,
         serviceIds: dto.serviceIds,
@@ -100,39 +106,39 @@ describe('ReservationsController', () => {
 
     it('PATCH /reservations/:id/cancel pasa el actor (usuario no admin)', async () => {
       cancel.execute.mockResolvedValue({ id: ID, status: 'cancelada' });
-      await controller.cancelReservation(ID, { id: 'u-1', roles: ['user'] } as any);
+      await controller.cancelReservation(ID, {
+        id: 'u-1',
+        roles: ['user'],
+      } as any);
       expect(cancel.execute).toHaveBeenCalledWith(ID, {
+        kind: 'user',
         userId: 'u-1',
-        isAdmin: false,
       });
     });
 
-    it('PATCH /reservations/:id/cancel marca isAdmin si el usuario es administrador', async () => {
+    it('PATCH /reservations/:id/cancel fabrica un actor admin si el usuario lo es', async () => {
       cancel.execute.mockResolvedValue({ id: ID, status: 'cancelada' });
       await controller.cancelReservation(ID, {
         id: 'a-1',
         roles: ['admin'],
       } as any);
-      expect(cancel.execute).toHaveBeenCalledWith(ID, {
-        userId: 'a-1',
-        isAdmin: true,
-      });
+      expect(cancel.execute).toHaveBeenCalledWith(ID, { kind: 'admin' });
     });
 
     it('DELETE /reservations/:id cancela como administración', async () => {
       cancel.execute.mockResolvedValue({ id: ID, status: 'cancelada' });
       await controller.removeAsAdmin(ID);
-      expect(cancel.execute).toHaveBeenCalledWith(ID, {
-        userId: null,
-        isAdmin: true,
-      });
+      expect(cancel.execute).toHaveBeenCalledWith(ID, { kind: 'admin' });
     });
   });
 
   describe('protección por rol (contrato preservado)', () => {
     it('restringe listado, confirmación y borrado a administradores', () => {
       expect(
-        Reflect.getMetadata(META_ROLES, ReservationsController.prototype.findAll),
+        Reflect.getMetadata(
+          META_ROLES,
+          ReservationsController.prototype.findAll,
+        ),
       ).toEqual([ValidRoles.admin]);
       expect(
         Reflect.getMetadata(

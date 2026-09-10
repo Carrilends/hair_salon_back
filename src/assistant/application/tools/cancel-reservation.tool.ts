@@ -6,17 +6,18 @@ import {
   DomainError,
   InvalidStatusTransitionError,
   ReservationNotFoundError,
+  ReservationOwnershipError,
 } from 'src/reservations/domain/errors';
+import { ReservationActor } from 'src/reservations/domain/reservation-actor';
 
 /**
  * Contrato mínimo del caso de uso real de cancelación (A6). El actor lleva la
- * identidad y el rol; ambos salen del contexto de sesión, nunca del modelo.
+ * identidad; sale del contexto de sesión, nunca del modelo. Aquí el asistente
+ * solo puede fabricar actores `user` y `admin`: el actor `phone` pertenece al
+ * canal de WhatsApp y no se cuela por esta puerta.
  */
 export interface CancelReservationExecutor {
-  execute(
-    id: string,
-    actor: { userId: string | null; isAdmin: boolean },
-  ): Promise<{ status: string }>;
+  execute(id: string, actor: ReservationActor): Promise<{ status: string }>;
 }
 
 /**
@@ -59,10 +60,12 @@ export class CancelReservationTool implements AssistantTool {
     if (!id) return { ok: false, motivo: 'argumentos_invalidos' };
 
     try {
-      const reservation = await this.cancel.execute(id, {
-        userId: context.userId,
-        isAdmin: context.isAdmin,
-      });
+      const reservation = await this.cancel.execute(
+        id,
+        context.isAdmin
+          ? { kind: 'admin' }
+          : { kind: 'user', userId: context.userId },
+      );
       return { ok: true, estado: reservation.status };
     } catch (error) {
       return { ok: false, motivo: mapCancelErrorToReason(error) };
@@ -72,7 +75,9 @@ export class CancelReservationTool implements AssistantTool {
 
 /** Traduce los fallos de la cancelación a motivos cortos y legibles para el modelo. */
 export function mapCancelErrorToReason(error: unknown): string {
-  // Reserva ajena: el caso de uso lanza ForbiddenException (Nest), no un DomainError.
+  // Reserva ajena. `ForbiddenException` se conserva por compatibilidad: el caso
+  // de uso ahora lanza `ReservationOwnershipError`, que sí es un error de dominio.
+  if (error instanceof ReservationOwnershipError) return 'no_es_tu_reserva';
   if (error instanceof ForbiddenException) return 'no_es_tu_reserva';
   if (error instanceof ReservationNotFoundError) return 'reserva_no_encontrada';
   if (error instanceof CancellationTooLateError) return 'fuera_de_plazo';

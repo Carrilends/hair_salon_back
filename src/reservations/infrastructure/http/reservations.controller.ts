@@ -17,6 +17,7 @@ import { Auth } from 'src/auth/decorators/auth.decorator';
 import { GetUser } from 'src/auth/decorators/get-user.decorator';
 import { ValidRoles } from 'src/auth/interfaces/valid-roles';
 import { User } from 'src/auth/entities/user.entity';
+import { ReservationActor } from '../../domain/reservation-actor';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { OccupancyQueryDto } from './dto/occupancy-query.dto';
 import { OptionalJwtAuthGuard } from './optional-jwt-auth.guard';
@@ -60,7 +61,10 @@ export class ReservationsController {
   @UseGuards(OptionalJwtAuthGuard)
   @Post()
   @HttpCode(201)
-  create(@Body() dto: CreateReservationDto, @Req() req: { user?: User | null }) {
+  create(
+    @Body() dto: CreateReservationDto,
+    @Req() req: { user?: User | null },
+  ) {
     const user = req.user ?? null;
     return this.createReservation.execute({
       scheduledAt: dto.scheduledAt,
@@ -83,8 +87,7 @@ export class ReservationsController {
     @Param('id', ParseUUIDPipe) id: string,
     @GetUser() user: User,
   ) {
-    const isAdmin = user.roles?.includes(ValidRoles.admin) ?? false;
-    return this.cancel.execute(id, { userId: user.id, isAdmin });
+    return this.cancel.execute(id, actorFromUser(user));
   }
 
   // RF33: el borrado de administración se implementa como cancelación (no borrado físico).
@@ -92,6 +95,16 @@ export class ReservationsController {
   @Delete(':id')
   @HttpCode(200)
   removeAsAdmin(@Param('id', ParseUUIDPipe) id: string) {
-    return this.cancel.execute(id, { userId: null, isAdmin: true });
+    return this.cancel.execute(id, { kind: 'admin' });
   }
+}
+
+/**
+ * Traduce la sesión al actor del dominio. Este es el borde donde se fabrica la
+ * identidad del portal: sale del JWT y de ningún otro sitio.
+ */
+function actorFromUser(user: User): ReservationActor {
+  return user.roles?.includes(ValidRoles.admin)
+    ? { kind: 'admin' }
+    : { kind: 'user', userId: user.id };
 }

@@ -62,7 +62,7 @@ describe('CancelReservationTool', () => {
 
     expect(cancel.calls[0]).toEqual({
       id: 'r1',
-      actor: { userId: 'cliente-real', isAdmin: false },
+      actor: { kind: 'user', userId: 'cliente-real' },
     });
   });
 
@@ -97,7 +97,7 @@ describe('CancelReservationTool', () => {
     const res = await tool.execute({ reservaId: 'r1' }, ctx('admin-1', true));
 
     expect(res).toEqual({ ok: true, estado: 'cancelada' });
-    expect(cancel.calls[0].actor.isAdmin).toBe(true);
+    expect(cancel.calls[0].actor).toEqual({ kind: 'admin' });
   });
 
   it('reserva inexistente vuelve como reserva_no_encontrada', async () => {
