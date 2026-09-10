@@ -23,8 +23,12 @@ export class TypeOrmInboundMessageLog implements InboundMessageLogPort {
       .orIgnore()
       .execute();
 
-    // Postgres devuelve las filas realmente insertadas: vacío = ya estaba.
-    return (result.identifiers?.length ?? 0) > 0;
+    // Se mira `raw` y NO `identifiers`. `identifiers` devuelve la clave que se
+    // le pasó, se haya insertado o no —es un eco de la entrada, no del
+    // resultado—, así que con él la reentrega parecería nueva y la clienta
+    // recibiría el mismo mensaje dos veces. `raw` trae las filas realmente
+    // insertadas por el `RETURNING`: vacío significa que ya estaba.
+    return (result.raw?.length ?? 0) > 0;
   }
 
   async deleteOlderThan(cutoff: Date): Promise<void> {
