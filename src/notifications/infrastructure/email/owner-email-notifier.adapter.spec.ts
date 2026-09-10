@@ -82,21 +82,12 @@ describe('OwnerEmailNotifier', () => {
 });
 
 describe('OwnerEmailNotifier · discriminación por tipo de evento', () => {
-  it('NO compone un aviso de reserva nueva para una cancelación', async () => {
-    // El despachador entrega TODOS los eventos a TODOS los canales. Sin guarda,
-    // este notificador leería los campos comunes y anunciaría «Nueva reserva»
-    // para una cancelación. Hasta que sepa redactarla, se salta.
-    const enviados: unknown[] = [];
-    const mailer = {
-      send: async (m: unknown) => {
-        enviados.push(m);
-      },
-    };
-    const sut = new OwnerEmailNotifier(mailer as any, {
-      to: 'salon@ejemplo.com',
-      timeZone: 'America/Bogota',
-      panelUrl: 'https://panel',
-    });
+  it('anuncia una cancelación como cancelación, nunca como reserva nueva', async () => {
+    // El despachador entrega TODOS los eventos a TODOS los canales. Sin
+    // discriminar por tipo, este notificador leería los campos comunes y
+    // anunciaría «Nueva reserva» ante una cancelación.
+    const { mailer, enviados } = espia();
+    const sut = notificador(mailer);
 
     await sut.notify({
       ...baseEvento(),
@@ -104,27 +95,95 @@ describe('OwnerEmailNotifier · discriminación por tipo de evento', () => {
       byAdmin: false,
     } as any);
 
-    expect(enviados).toHaveLength(0);
+    expect(enviados).toHaveLength(1);
+    expect(enviados[0].subject).toContain('cancel');
+    expect(enviados[0].subject).not.toContain('Nueva reserva');
+    // Quién canceló importa para la peluquería: no es lo mismo que la clienta
+    // suelte la cita a que la haya soltado el propio salón.
+    expect(enviados[0].text).toContain('la clienta');
+  });
+
+  it('distingue una cancelación hecha por la peluquería', async () => {
+    const { mailer, enviados } = espia();
+    const sut = notificador(mailer);
+
+    await sut.notify({
+      ...baseEvento(),
+      type: 'reservation.cancelled',
+      byAdmin: true,
+    } as any);
+
+    expect(enviados[0].text).toContain('la peluquería');
+  });
+
+  it('una reprogramación muestra antes y después', async () => {
+    const { mailer, enviados } = espia();
+    const sut = notificador(mailer);
+
+    await sut.notify({
+      ...baseEvento(),
+      type: 'reservation.rescheduled',
+      byAdmin: false,
+      previousScheduledAt: new Date('2026-04-18T15:00:00.000Z'),
+    } as any);
+
+    expect(enviados[0].subject).toContain('cambi');
+    // La hora nueva y la vieja, ambas, y en la zona del salón.
+    expect(enviados[0].text).toContain('18 de abril');
+    expect(enviados[0].text).toContain('20 de abril');
   });
 
   it('sigue avisando de las reservas nuevas', async () => {
-    const enviados: unknown[] = [];
-    const mailer = {
-      send: async (m: unknown) => {
-        enviados.push(m);
-      },
-    };
-    const sut = new OwnerEmailNotifier(mailer as any, {
-      to: 'salon@ejemplo.com',
-      timeZone: 'America/Bogota',
-      panelUrl: 'https://panel',
-    });
+    const { mailer, enviados } = espia();
+    const sut = notificador(mailer);
 
     await sut.notify({ ...baseEvento(), type: 'reservation.created' } as any);
 
     expect(enviados).toHaveLength(1);
+    expect(enviados[0].subject).toContain('Nueva reserva');
+  });
+
+  it('los tres avisos llevan el enlace al panel', async () => {
+    const { mailer, enviados } = espia();
+    const sut = notificador(mailer);
+
+    for (const evento of [
+      { type: 'reservation.created' },
+      { type: 'reservation.cancelled', byAdmin: false },
+      {
+        type: 'reservation.rescheduled',
+        byAdmin: false,
+        previousScheduledAt: new Date('2026-04-18T15:00:00.000Z'),
+      },
+    ]) {
+      await sut.notify({ ...baseEvento(), ...evento } as any);
+    }
+
+    expect(enviados).toHaveLength(3);
+    for (const m of enviados) {
+      expect(m.text).toContain('https://panel');
+      expect(m.html).toContain('https://panel');
+    }
   });
 });
+
+function espia() {
+  const enviados: any[] = [];
+  const mailer = {
+    send: async (m: unknown) => {
+      enviados.push(m);
+    },
+  };
+  return { mailer, enviados };
+}
+
+function notificador(mailer: unknown) {
+  return new OwnerEmailNotifier(mailer as any, {
+    to: 'salon@ejemplo.com',
+    timeZone: 'America/Bogota',
+    panelUrl: 'https://panel',
+  });
+}
 
 function baseEvento() {
   return {

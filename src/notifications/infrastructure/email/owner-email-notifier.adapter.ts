@@ -15,10 +15,14 @@ export interface OwnerNotificationConfig {
 }
 
 /**
- * Canal durable (N2): compone el aviso de reserva nueva y lo entrega al
- * `EmailSenderPort`; no sabe qué proveedor hay detrás. La hora se expresa en la
- * zona del salón, no en la del servidor (Railway corre en UTC), para no enviar
- * avisos con la hora corrida cinco horas.
+ * Canal durable (N2): redacta el aviso que corresponda a cada evento de la
+ * reserva —nueva, cancelada o movida de hora— y lo entrega al `EmailSenderPort`;
+ * no sabe qué proveedor hay detrás. La hora se expresa siempre en la zona del
+ * salón, no en la del servidor (Railway corre en UTC), para no enviar avisos con
+ * la hora corrida cinco horas.
+ *
+ * La peluquería recibe **los tres**, incluidos los cambios que hace ella misma:
+ * su bandeja es el registro de lo que pasa con la agenda.
  */
 @Injectable()
 export class OwnerEmailNotifier implements NotifierPort {
@@ -31,48 +35,46 @@ export class OwnerEmailNotifier implements NotifierPort {
   ) {}
 
   async notify(event: NotifiableEvent): Promise<void> {
-    // El despachador entrega TODOS los eventos a TODOS los canales. Este solo
-    // sabe redactar el de reserva nueva; los demás se saltan en vez de anunciar
-    // una cancelación con el asunto «Nueva reserva».
-    if (event.type !== 'reservation.created') return;
+    const cuando = this.formatear(event.scheduledAt);
+    const serviciosEnLinea = event.services
+      .map((s) => `${s.name} (${s.durationMinutes} min)`)
+      .join(', ');
+    const telefono = event.customerPhone ? ` (${event.customerPhone})` : '';
+    const quien = `${event.customerName}${telefono}`;
 
-    const cuando = new Intl.DateTimeFormat('es-CO', {
-      dateStyle: 'full',
-      timeStyle: 'short',
-      timeZone: this.config.timeZone,
-    }).format(event.scheduledAt);
+    // Un `switch` exhaustivo sobre el discriminante: si mañana se añade un
+    // evento a la unión, el compilador obliga a decidir qué se le cuenta a la
+    // peluquería en vez de dejar que caiga en una rama que no le corresponde.
+    const { subject, intro, extra } = this.redactar(event, cuando);
 
     const servicios = event.services
       .map((s) => `  · ${s.name} (${s.durationMinutes} min)`)
       .join('\n');
 
-    // El HTML no respeta los saltos de línea del texto plano: los servicios van
-    // en una sola línea, y la lista con saltos se reserva para la alternativa.
-    const serviciosEnLinea = event.services
-      .map((s) => `${s.name} (${s.durationMinutes} min)`)
-      .join(', ');
-
-    const telefono = event.customerPhone ? ` (${event.customerPhone})` : '';
-
     await this.mailer.send({
       to: this.config.to,
-      subject: `Nueva reserva — ${cuando}`,
+      subject,
       text:
-        'Se registró una reserva nueva en el portal.\n\n' +
+        `${intro}\n\n` +
+        (extra ? `${extra}\n` : '') +
         `Cuándo: ${cuando}\n` +
         `Estilista: ${event.workerName}\n` +
-        `Cliente: ${event.customerName}${telefono}\n` +
+        `Cliente: ${quien}\n` +
         `Duración: ${event.totalDurationMinutes} minutos\n` +
         `Servicios:\n${servicios}\n\n` +
-        `Estado: ${event.status}. Confírmala o cancélala en el panel:\n` +
+        `Estado: ${event.status}. Gestiona la agenda en el panel:\n` +
         `${this.config.panelUrl}\n`,
       html: renderBrandedEmail({
-        title: 'Nueva reserva',
+        title: subject,
         paragraphs: [
+          intro,
+          ...(extra ? [extra] : []),
           `Cuándo: ${cuando}`,
           `Estilista: ${event.workerName}`,
-          `Cliente: ${event.customerName}${telefono}`,
+          `Cliente: ${quien}`,
           `Duración: ${event.totalDurationMinutes} minutos`,
+          // El HTML no respeta los saltos del texto plano: los servicios van en
+          // una sola línea y la lista con saltos se reserva para la alternativa.
           `Servicios: ${serviciosEnLinea}`,
           `Estado: ${event.status}.`,
         ],
@@ -82,5 +84,47 @@ export class OwnerEmailNotifier implements NotifierPort {
         },
       }),
     });
+  }
+
+  private redactar(
+    event: NotifiableEvent,
+    cuando: string,
+  ): { subject: string; intro: string; extra?: string } {
+    switch (event.type) {
+      case 'reservation.created':
+        return {
+          subject: `Nueva reserva — ${cuando}`,
+          intro: 'Se registró una reserva nueva en el portal.',
+        };
+
+      case 'reservation.cancelled':
+        return {
+          subject: `Reserva cancelada — ${cuando}`,
+          // Quién canceló es lo primero que la peluquería necesita saber: no es
+          // lo mismo que la clienta suelte la cita a que la haya soltado el
+          // propio salón desde el panel o desde WhatsApp.
+          intro: event.byAdmin
+            ? 'Una reserva fue cancelada por la peluquería.'
+            : 'Una reserva fue cancelada por la clienta.',
+        };
+
+      case 'reservation.rescheduled':
+        return {
+          subject: `Reserva con fecha cambiada — ${cuando}`,
+          intro: event.byAdmin
+            ? 'La peluquería movió una reserva de hora.'
+            : 'La clienta movió su reserva de hora.',
+          extra: `Antes era: ${this.formatear(event.previousScheduledAt)}`,
+        };
+    }
+  }
+
+  /** Siempre en la zona del salón: Railway corre en UTC. */
+  private formatear(fecha: Date): string {
+    return new Intl.DateTimeFormat('es-CO', {
+      dateStyle: 'full',
+      timeStyle: 'short',
+      timeZone: this.config.timeZone,
+    }).format(fecha);
   }
 }
