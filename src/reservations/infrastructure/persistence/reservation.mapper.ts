@@ -2,6 +2,7 @@ import { DeepPartial } from 'typeorm';
 import { Reservation } from '../../domain/reservation';
 import { ReservationStatus } from '../../domain/reservation-status';
 import { ReservationOrmEntity } from './reservation.orm-entity';
+import { normalizeCoPhoneToE164 } from 'src/common/phone';
 
 export const ReservationMapper = {
   toDomain(row: ReservationOrmEntity): Reservation {
@@ -30,12 +31,19 @@ export const ReservationMapper = {
   },
 
   /**
-   * Columnas escalares del agregado (sin la relación `services`). Es lo único
-   * mutable tras la creación (el ciclo de vida solo cambia `status`); la ruta de
-   * actualización del repositorio persiste solo esto para no reescribir las
-   * líneas de servicio inmutables.
+   * Columnas escalares del agregado (sin la relación `services`). Tras la
+   * creación cambian `status` y, desde la reprogramación, también la ventana
+   * (`scheduled_at` / `ended_at`); la ruta de actualización del repositorio
+   * persiste solo esto para no reescribir las líneas de servicio inmutables.
+   *
+   * Aquí se calcula la columna derivada `customerPhoneE164`. Se hace en el
+   * mapper —y no con una columna generada en SQL— porque la regla de
+   * normalización vive en `src/common/phone.ts` y reimplementarla en SQL
+   * dejaría dos versiones que se desincronizan. Como `toOrmScalars` corre tanto
+   * al crear como al actualizar, la columna se mantiene sola.
    */
   toOrmScalars(reservation: Reservation): DeepPartial<ReservationOrmEntity> {
+    const phone = reservation.contact?.phone ?? null;
     return {
       scheduledAt: reservation.scheduledAt,
       endedAt: reservation.endedAt,
@@ -44,7 +52,8 @@ export const ReservationMapper = {
       status: reservation.status,
       userId: reservation.userId,
       customerName: reservation.contact?.name ?? null,
-      customerPhone: reservation.contact?.phone ?? null,
+      customerPhone: phone,
+      customerPhoneE164: normalizeCoPhoneToE164(phone),
       customerEmail: reservation.contact?.email ?? null,
     };
   },

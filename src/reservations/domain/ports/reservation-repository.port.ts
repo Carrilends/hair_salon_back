@@ -45,6 +45,17 @@ export interface ReservationRepositoryPort {
   ): Promise<number>;
   findActiveWithWorker(now: Date): Promise<ReservationView[]>;
   findByUser(userId: string): Promise<ReservationView[]>;
+  /**
+   * Reservas sobre las que un número de teléfono puede actuar: las suyas, aún no
+   * vencidas y en un estado no terminal.
+   *
+   * Devuelve **agregados y no `ReservationView`** porque quien las pide (el canal
+   * de WhatsApp) va a mutarlas —cancelar, mover— y necesita las reglas del
+   * dominio, no un DTO de presentación. Sin `LIMIT`: el tope de diez es de
+   * presentación (el máximo de filas de una lista de WhatsApp) y lo aplica quien
+   * dibuja el mensaje, no el repositorio.
+   */
+  findActiveByPhone(phoneE164: string, now: Date): Promise<Reservation[]>;
   findOccupancyRows(
     fromYmd: string,
     toYmd: string,

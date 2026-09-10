@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, MoreThan, Not, Repository } from 'typeorm';
+import { In, LessThan, MoreThan, Not, Repository } from 'typeorm';
 import { ReservationOrmEntity } from './reservation.orm-entity';
 import { ReservationMapper } from './reservation.mapper';
 import { Reservation } from '../../domain/reservation';
@@ -121,6 +121,25 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
       order: { scheduledAt: 'DESC' },
     });
     return rows.map((r) => this.toView(r));
+  }
+
+  async findActiveByPhone(
+    phoneE164: string,
+    now: Date,
+  ): Promise<Reservation[]> {
+    const rows = await this.repo.find({
+      // Solo las accionables: ya vencida o terminal no se puede cancelar ni
+      // mover, así que ofrecerla en el menú de WhatsApp sería mentir. El orden
+      // es ascendente porque la más próxima es la que interesa primero.
+      where: {
+        customerPhoneE164: phoneE164,
+        endedAt: MoreThan(now),
+        status: In(['pendiente', 'confirmada']),
+      },
+      relations: ['services'],
+      order: { scheduledAt: 'ASC' },
+    });
+    return rows.map((r) => ReservationMapper.toDomain(r));
   }
 
   async findOccupancyRows(

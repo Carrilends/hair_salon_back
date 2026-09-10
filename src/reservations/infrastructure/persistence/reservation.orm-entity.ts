@@ -54,6 +54,18 @@ export class ReservationOrmEntity {
   @Column('text', { name: 'customer_phone', nullable: true })
   customerPhone: string | null;
 
+  /**
+   * Teléfono normalizado a E.164 (`57` + móvil de 10 dígitos), derivado de
+   * `customer_phone` por el mapper. Es la **única columna consultable**: el
+   * crudo se guarda tal como lo escribió la clienta, así que `300 123 4567` y
+   * `+573001234567` son la misma persona con dos textos distintos. Nula cuando
+   * el número no es un móvil colombiano válido: esas reservas no son
+   * contactables por WhatsApp y quedan fuera del canal, igual que ya lo estaban
+   * para el aviso saliente.
+   */
+  @Column('text', { name: 'customer_phone_e164', nullable: true })
+  customerPhoneE164: string | null;
+
   @Column('text', { name: 'customer_email', nullable: true })
   customerEmail: string | null;
 

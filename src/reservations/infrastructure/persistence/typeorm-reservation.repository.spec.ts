@@ -1,4 +1,4 @@
-import { MoreThan, Not } from 'typeorm';
+import { In, MoreThan, Not } from 'typeorm';
 import { TypeOrmReservationRepository } from './typeorm-reservation.repository';
 import { Reservation } from '../../domain/reservation';
 import { ReservationStatus } from '../../domain/reservation-status';
@@ -239,5 +239,35 @@ describe('TypeOrmReservationRepository.save · rama de actualización', () => {
     });
 
     await expect(sut.save(existente)).rejects.toThrow(WorkerOverlapError);
+  });
+});
+
+describe('TypeOrmReservationRepository.findActiveByPhone', () => {
+  it('filtra por teléfono normalizado, no terminales y aún no vencidas, en orden ascendente', async () => {
+    // Es la consulta que sostiene el canal entrante: a partir del `wa_id` que
+    // Meta pone en el webhook hay que llegar a las citas sobre las que ese
+    // número puede actuar. Solo las suyas, solo las que aún se pueden mover.
+    const now = new Date('2026-08-20T12:00:00.000Z');
+    const repo = { find: jest.fn(async () => []) };
+    const sut = new TypeOrmReservationRepository(repo as any);
+
+    await sut.findActiveByPhone('573001234567', now);
+
+    const [args] = repo.find.mock.calls[0] as unknown as [Record<string, any>];
+    expect(args.where).toMatchObject({ customerPhoneE164: '573001234567' });
+    expect(args.where.endedAt).toEqual(MoreThan(now));
+    expect(args.where.status).toEqual(In(['pendiente', 'confirmada']));
+    expect(args.order).toEqual({ scheduledAt: 'ASC' });
+  });
+
+  it('devuelve agregados de dominio, no vistas de lectura', async () => {
+    // El flujo de WhatsApp va a mutar lo que reciba (cancelar, mover), así que
+    // necesita el agregado con sus reglas, no un DTO plano de presentación.
+    const repo = { find: jest.fn(async () => [ormRow()]) };
+    const sut = new TypeOrmReservationRepository(repo as any);
+
+    const [reserva] = await sut.findActiveByPhone('573001234567', new Date());
+
+    expect(reserva).toBeInstanceOf(Reservation);
   });
 });
