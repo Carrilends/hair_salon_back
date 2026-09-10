@@ -41,6 +41,19 @@ function parseYmd(dateYmd: string): { y: number; m: number; d: number } {
   return { y, m, d };
 }
 
+/** Igual que `parseYmd` pero rechaza lo que no sea `YYYY-MM-DD` real. */
+function parseYmdEstricto(
+  dateYmd: string,
+): { y: number; m: number; d: number } | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateYmd)) return null;
+  const { y, m, d } = parseYmd(dateYmd);
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null;
+  // Rechaza un 31 de febrero: `Date.UTC` lo desbordaría al mes siguiente.
+  const prueba = new Date(Date.UTC(y, m - 1, d));
+  if (prueba.getUTCMonth() !== m - 1 || prueba.getUTCDate() !== d) return null;
+  return { y, m, d };
+}
+
 export function getSalonNow(tz: string): SalonNow {
   const now = getDatePartsInTz(new Date(), tz);
   const weekday = new Date(
@@ -111,4 +124,51 @@ export function getDayBounds(
     effectiveStartMin,
     effectiveCapacityMin: Math.max(0, closeMin - effectiveStartMin),
   };
+}
+
+/**
+ * Hora local del salón → instante ISO en UTC.
+ *
+ * Es la inversa de `getDatePartsInTz` y hace falta desde que una hora entra al
+ * sistema ya expresada en el reloj de Bogotá (la que la clienta pulsa en una
+ * lista de WhatsApp) en vez de en UTC.
+ *
+ * No se puede hacer con `new Date('2026-09-12T15:30')`: eso interpreta la hora
+ * en la zona del **servidor**, que en Railway es UTC, y la cita saldría cinco
+ * horas corrida. El rodeo es: tratar los componentes como si fueran UTC, mirar
+ * qué hora local da ese instante en la zona del salón, y corregir por la
+ * diferencia. Un solo paso basta salvo en el salto de horario de verano;
+ * Colombia no lo tiene, y aun así se repite el ajuste por si la zona cambiara.
+ */
+export function salonLocalToUtcIso(
+  dateYmd: string,
+  hhmm: string,
+  tz: string,
+): string | null {
+  const fecha = parseYmdEstricto(dateYmd);
+  const hora = /^(\d{2}):(\d{2})$/.exec(hhmm);
+  if (!fecha || !hora) return null;
+
+  const h = Number(hora[1]);
+  const min = Number(hora[2]);
+  if (h > 23 || min > 59) return null;
+
+  const comoSiFueraUtc = Date.UTC(fecha.y, fecha.m - 1, fecha.d, h, min);
+  let instante = comoSiFueraUtc;
+
+  for (let i = 0; i < 2; i++) {
+    const partes = getDatePartsInTz(new Date(instante), tz);
+    const localComoUtc = Date.UTC(
+      partes.year,
+      partes.month - 1,
+      partes.day,
+      partes.hour,
+      partes.minute,
+    );
+    const desfase = comoSiFueraUtc - localComoUtc;
+    if (desfase === 0) break;
+    instante += desfase;
+  }
+
+  return new Date(instante).toISOString();
 }

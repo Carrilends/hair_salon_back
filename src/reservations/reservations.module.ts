@@ -19,6 +19,8 @@ import { ListActiveReservationsUseCase } from './application/list-active-reserva
 import { GetMyReservationsUseCase } from './application/get-my-reservations.use-case';
 import { ConfirmReservationUseCase } from './application/confirm-reservation.use-case';
 import { CancelReservationUseCase } from './application/cancel-reservation.use-case';
+import { FindActionableReservationsUseCase } from './application/find-actionable-reservations.use-case';
+import { GetReservationUseCase } from './application/get-reservation.use-case';
 import { RescheduleReservationUseCase } from './application/reschedule-reservation.use-case';
 import { PurgeOldReservationsUseCase } from './application/purge-old-reservations.use-case';
 import { SettlePastReservationsUseCase } from './application/settle-past-reservations.use-case';
@@ -50,6 +52,8 @@ import {
     ConfirmReservationUseCase,
     CancelReservationUseCase,
     RescheduleReservationUseCase,
+    FindActionableReservationsUseCase,
+    GetReservationUseCase,
     PurgeOldReservationsUseCase,
     SettlePastReservationsUseCase,
     ReservationPurgeScheduler,
@@ -59,13 +63,19 @@ import {
     { provide: SERVICE_CATALOG, useClass: ServiceCatalogAdapter },
     { provide: RESERVATION_NOTIFIER, useClass: ReservationNotifierAdapter },
   ],
-  // Exportados para que el asistente reutilice los casos de uso reales (A6):
-  // creación (Fase 5) y consulta/cancelación de reservas propias (Fase 6).
+  // Exportados para que el asistente y el canal de WhatsApp reutilicen los casos
+  // de uso REALES (A6): creación (Fase 5), consulta/cancelación de reservas
+  // propias (Fase 6) y, con la Etapa 2, reprogramación, confirmación y las dos
+  // consultas que el canal necesita. Ningún consumidor externo ve la
+  // persistencia: hablan con casos de uso, nunca con el repositorio.
   exports: [
     CreateReservationUseCase,
     GetMyReservationsUseCase,
     CancelReservationUseCase,
     RescheduleReservationUseCase,
+    ConfirmReservationUseCase,
+    FindActionableReservationsUseCase,
+    GetReservationUseCase,
   ],
 })
 export class ReservationsModule {}

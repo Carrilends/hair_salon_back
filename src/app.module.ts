@@ -20,6 +20,7 @@ import { ReservationsModule } from './reservations/reservations.module';
 import { FaqsModule } from './faqs/faqs.module';
 import { AssistantModule } from './assistant/assistant.module';
 import { McpModule } from './mcp/mcp.module';
+import { WhatsAppModule } from './whatsapp/whatsapp.module';
 
 function parseBool(value: string | undefined): boolean | undefined {
   if (value === undefined) return undefined;
@@ -86,6 +87,7 @@ function parseBool(value: string | undefined): boolean | undefined {
     FaqsModule,
     AssistantModule,
     McpModule,
+    WhatsAppModule,
   ],
   controllers: [HealthController],
 })
