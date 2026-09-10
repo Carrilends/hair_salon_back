@@ -40,3 +40,20 @@ export function assertTransition(
     throw new InvalidStatusTransitionError(from, to);
   }
 }
+
+/** Estados de los que ya no se sale: la reserva terminó su ciclo. */
+export function isTerminal(status: ReservationStatus): boolean {
+  return ALLOWED[status].length === 0;
+}
+
+/**
+ * ¿Se puede mover esta reserva en el tiempo?
+ *
+ * Reprogramar **no es una transición de estado**: cambia la ventana y conserva
+ * el estado, así que no puede apoyarse en `canTransition`, que rechazaría la
+ * auto-transición `pendiente → pendiente`. Lo único que impide mover una reserva
+ * es que ya haya terminado su ciclo.
+ */
+export function canReschedule(status: ReservationStatus): boolean {
+  return !isTerminal(status);
+}

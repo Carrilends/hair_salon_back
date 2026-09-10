@@ -3,8 +3,14 @@ import {
   EmptyServicesError,
   MissingContactError,
   CancellationTooLateError,
+  RescheduleTooLateError,
+  ReservationNotReschedulableError,
 } from './errors';
-import { ReservationStatus, assertTransition } from './reservation-status';
+import {
+  ReservationStatus,
+  assertTransition,
+  canReschedule,
+} from './reservation-status';
 import { ReservationLine } from './reservation-line';
 import { ContactInfo } from './contact-info';
 
@@ -28,18 +34,21 @@ export class Reservation {
   readonly id?: string;
   readonly userId: string | null;
   readonly contact: ContactInfo | null;
-  readonly scheduledAt: Date;
-  readonly endedAt: Date;
   readonly workerId: string;
   readonly lines: ReservationLine[];
+  // La ventana es privada desde que existe la reprogramación: sigue siendo de
+  // solo lectura desde fuera (los getters), pero el agregado necesita poder
+  // moverla, y que solo él pueda hacerlo.
+  private _scheduledAt: Date;
+  private _endedAt: Date;
   private _status: ReservationStatus;
 
   private constructor(props: ReservationProps) {
     this.id = props.id;
     this.userId = props.userId ?? null;
     this.contact = props.contact ?? null;
-    this.scheduledAt = props.scheduledAt;
-    this.endedAt = props.endedAt;
+    this._scheduledAt = props.scheduledAt;
+    this._endedAt = props.endedAt;
     this.workerId = props.workerId;
     this.lines = props.lines;
     this._status = props.status;
@@ -47,6 +56,14 @@ export class Reservation {
 
   get status(): ReservationStatus {
     return this._status;
+  }
+
+  get scheduledAt(): Date {
+    return this._scheduledAt;
+  }
+
+  get endedAt(): Date {
+    return this._endedAt;
   }
 
   /** Duración total derivada de las líneas (nunca se confía en el cliente). */
@@ -71,11 +88,9 @@ export class Reservation {
     if (!input.userId && !input.contact) {
       throw new MissingContactError();
     }
-    const total = input.lines.reduce((sum, l) => sum + l.durationMinutes, 0);
-    const endedAt = new Date(input.scheduledAt.getTime() + total * 60 * 1000);
     return new Reservation({
       scheduledAt: input.scheduledAt,
-      endedAt,
+      endedAt: endOfWindow(input.scheduledAt, input.lines),
       workerId: input.workerId,
       lines: input.lines,
       userId: input.userId ?? null,
@@ -130,4 +145,52 @@ export class Reservation {
     assertTransition(this._status, ReservationStatus.Cancelada);
     this._status = ReservationStatus.Cancelada;
   }
+
+  /**
+   * Mueve la cita en el tiempo. **Conserva el estado y el estilista**: solo
+   * cambia la ventana, y el fin se recalcula desde la duración de las líneas
+   * (nunca se confía en un `endedAt` de fuera).
+   *
+   * Por qué conserva el estado: degradar una `confirmada` a `pendiente` la
+   * dejaría a merced del cron de saldado, que cancela las pendientes vencidas.
+   * Una clienta que movió su cita y sí asistió quedaría registrada como
+   * cancelada. Que la peluquería recupere el control de una hora nueva que no le
+   * sirve se resuelve avisándole —y dándole con qué actuar—, no corrompiendo el
+   * histórico.
+   *
+   * `minLeadMinutes` es el margen de antelación del autoservicio. Con `0` (el
+   * valor por defecto) la regla es idéntica a la de cancelar: hasta el momento
+   * de la cita. Se mide contra la hora **actual** de la cita, no la nueva.
+   */
+  reschedule(opts: {
+    scheduledAt: Date;
+    now: Date;
+    byAdmin: boolean;
+    minLeadMinutes?: number;
+  }): void {
+    if (Number.isNaN(opts.scheduledAt.getTime())) {
+      throw new InvalidReservationError('scheduledAt is invalid');
+    }
+    if (!canReschedule(this._status)) {
+      throw new ReservationNotReschedulableError(this._status);
+    }
+    if (!opts.byAdmin) {
+      const lead = (opts.minLeadMinutes ?? 0) * 60 * 1000;
+      if (opts.now.getTime() >= this._scheduledAt.getTime() - lead) {
+        throw new RescheduleTooLateError();
+      }
+    }
+    this._scheduledAt = opts.scheduledAt;
+    this._endedAt = endOfWindow(opts.scheduledAt, this.lines);
+  }
+}
+
+/**
+ * Fin de la ventana derivado de la duración de las líneas. Único sitio donde
+ * vive la fórmula: la usan la creación y la reprogramación, y si estuviera
+ * duplicada podrían divergir.
+ */
+function endOfWindow(scheduledAt: Date, lines: ReservationLine[]): Date {
+  const total = lines.reduce((sum, l) => sum + l.durationMinutes, 0);
+  return new Date(scheduledAt.getTime() + total * 60 * 1000);
 }

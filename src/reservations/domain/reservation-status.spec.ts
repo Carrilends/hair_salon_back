@@ -1,7 +1,9 @@
 import {
   ReservationStatus,
   assertTransition,
+  canReschedule,
   canTransition,
+  isTerminal,
 } from './reservation-status';
 import { InvalidStatusTransitionError } from './errors';
 
@@ -71,6 +73,34 @@ describe('máquina de estados de la reserva (§6.4)', () => {
     ).toBe(true);
     expect(
       canTransition(ReservationStatus.Cumplida, ReservationStatus.Cancelada),
+    ).toBe(false);
+  });
+});
+
+describe('isTerminal / canReschedule', () => {
+  it('cumplida y cancelada son terminales', () => {
+    expect(isTerminal(ReservationStatus.Cumplida)).toBe(true);
+    expect(isTerminal(ReservationStatus.Cancelada)).toBe(true);
+  });
+
+  it('pendiente y confirmada no son terminales', () => {
+    expect(isTerminal(ReservationStatus.Pendiente)).toBe(false);
+    expect(isTerminal(ReservationStatus.Confirmada)).toBe(false);
+  });
+
+  it('se puede reprogramar lo que no ha terminado', () => {
+    // Reprogramar NO es una transición de estado: mueve la ventana y conserva el
+    // estado. Por eso necesita su propio predicado y no puede apoyarse en
+    // `canTransition`, que rechazaría la auto-transición pendiente→pendiente.
+    expect(canReschedule(ReservationStatus.Pendiente)).toBe(true);
+    expect(canReschedule(ReservationStatus.Confirmada)).toBe(true);
+    expect(canReschedule(ReservationStatus.Cumplida)).toBe(false);
+    expect(canReschedule(ReservationStatus.Cancelada)).toBe(false);
+  });
+
+  it('canTransition rechaza la auto-transición, que es justo por lo que existe canReschedule', () => {
+    expect(
+      canTransition(ReservationStatus.Pendiente, ReservationStatus.Pendiente),
     ).toBe(false);
   });
 });

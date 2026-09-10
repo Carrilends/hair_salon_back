@@ -76,3 +76,24 @@ export class ReservationOwnershipError extends DomainError {
     this.name = 'ReservationOwnershipError';
   }
 }
+
+/**
+ * La clienta intenta mover una cita cuya hora ya pasó (o que está dentro del
+ * margen de antelación configurado). Paridad con `CancellationTooLateError`:
+ * un umbral mayor para reprogramar que para cancelar sería esquivable —
+ * bastaría cancelar y volver a reservar.
+ */
+export class RescheduleTooLateError extends DomainError {
+  constructor() {
+    super('Ya no es posible cambiar la hora de esta reserva');
+    this.name = 'RescheduleTooLateError';
+  }
+}
+
+/** La reserva terminó su ciclo (cumplida o cancelada): no se puede mover. */
+export class ReservationNotReschedulableError extends DomainError {
+  constructor(status: string) {
+    super(`Una reserva ${status} no se puede reprogramar`);
+    this.name = 'ReservationNotReschedulableError';
+  }
+}
