@@ -29,10 +29,19 @@ export interface ReservationView {
 export interface ReservationRepositoryPort {
   save(reservation: Reservation): Promise<Reservation>;
   findById(id: string): Promise<Reservation | null>;
+  /**
+   * Reservas no canceladas del estilista cuya ventana se cruza con la dada.
+   *
+   * `excludeReservationId` existe para la reprogramación: la reserva que se está
+   * moviendo ya está persistida, así que sin excluirla se contaría a sí misma
+   * como solape y ningún cambio de hora sería posible. Al crear no se pasa,
+   * porque todavía no hay id.
+   */
   countOverlaps(
     workerId: string,
     scheduledAt: Date,
     endedAt: Date,
+    excludeReservationId?: string,
   ): Promise<number>;
   findActiveWithWorker(now: Date): Promise<ReservationView[]>;
   findByUser(userId: string): Promise<ReservationView[]>;

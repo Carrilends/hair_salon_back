@@ -14,6 +14,19 @@ import {
 /** Código SQLSTATE de Postgres para violación de constraint de exclusión. */
 const PG_EXCLUSION_VIOLATION = '23P01';
 
+/**
+ * Traduce el rechazo del constraint de exclusión (btree_gist) a error de
+ * dominio, o vuelve a lanzar lo que no sea eso. Lo usan **las dos** ramas de
+ * `save`: el INSERT de una reserva nueva y el UPDATE de una que se reprograma.
+ */
+function translatePgError(err: unknown): never {
+  const code =
+    (err as { driverError?: { code?: string } })?.driverError?.code ??
+    (err as { code?: string })?.code;
+  if (code === PG_EXCLUSION_VIOLATION) throw new WorkerOverlapError();
+  throw err;
+}
+
 @Injectable()
 export class TypeOrmReservationRepository implements ReservationRepositoryPort {
   constructor(
@@ -28,10 +41,17 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
       // se tocan las líneas de servicio: son inmutables y, con `cascade: true`
       // sin `orphanedRowAction`, volver a pasarlas por `save` las reinsertaría,
       // duplicando `reservation_services` en cada confirm/cancel (hallazgo A1).
-      await this.repo.update(
-        reservation.id,
-        ReservationMapper.toOrmScalars(reservation),
-      );
+      try {
+        await this.repo.update(
+          reservation.id,
+          ReservationMapper.toOrmScalars(reservation),
+        );
+      } catch (err) {
+        // Reprogramar mueve la ventana, así que el UPDATE puede chocar con el
+        // mismo constraint de exclusión que el INSERT. (Postgres no enfrenta la
+        // fila consigo misma, así que mover sin conflicto real no se autobloquea.)
+        translatePgError(err);
+      }
       id = reservation.id;
     } else {
       try {
@@ -42,11 +62,7 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
         // El constraint de exclusión (btree_gist) rechaza dos reservas no
         // canceladas que se solapan en el mismo estilista: es el backstop de la
         // carrera entre countOverlaps y el insert. Se traduce a error de dominio.
-        const code =
-          (err as { driverError?: { code?: string } })?.driverError?.code ??
-          (err as { code?: string })?.code;
-        if (code === PG_EXCLUSION_VIOLATION) throw new WorkerOverlapError();
-        throw err;
+        translatePgError(err);
       }
     }
     const full = await this.repo.findOne({
@@ -68,16 +84,23 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
     workerId: string,
     scheduledAt: Date,
     endedAt: Date,
+    excludeReservationId?: string,
   ): Promise<number> {
-    return this.repo
+    const qb = this.repo
       .createQueryBuilder('r')
       .where('r.worker_id = :workerId', { workerId })
       .andWhere('r.scheduled_at < :endedAt', { endedAt: endedAt.toISOString() })
       .andWhere('r.ended_at > :scheduledAt', {
         scheduledAt: scheduledAt.toISOString(),
       })
-      .andWhere("r.status <> 'cancelada'")
-      .getCount();
+      .andWhere("r.status <> 'cancelada'");
+
+    // Reprogramar: la fila que se mueve ya existe y se cruzaría consigo misma.
+    if (excludeReservationId) {
+      qb.andWhere('r.id <> :excludeReservationId', { excludeReservationId });
+    }
+
+    return qb.getCount();
   }
 
   async findActiveWithWorker(now: Date): Promise<ReservationView[]> {

@@ -154,3 +154,90 @@ describe('TypeOrmReservationRepository.settlePastReservations', () => {
     expect(cancelada?.where.status).toBe('pendiente');
   });
 });
+
+/** Doble del query builder: anota las cláusulas `andWhere` que recibe. */
+function mockQueryBuilder() {
+  const clauses: string[] = [];
+  const params: Record<string, unknown> = {};
+  const qb: any = {
+    clauses,
+    params,
+    where: jest.fn((c: string, p?: Record<string, unknown>) => {
+      clauses.push(c);
+      Object.assign(params, p ?? {});
+      return qb;
+    }),
+    andWhere: jest.fn((c: string, p?: Record<string, unknown>) => {
+      clauses.push(c);
+      Object.assign(params, p ?? {});
+      return qb;
+    }),
+    getCount: jest.fn(async () => 0),
+  };
+  return qb;
+}
+
+describe('TypeOrmReservationRepository.countOverlaps', () => {
+  const inicio = new Date('2026-08-20T14:00:00.000Z');
+  const fin = new Date('2026-08-20T15:00:00.000Z');
+
+  it('excluye la propia reserva cuando se le pasa su id (reprogramación)', async () => {
+    // Mover una cita dos horas dentro de su mismo día la haría solaparse consigo
+    // misma: la fila ya está persistida y entra en el conteo. Sin esta exclusión,
+    // toda reprogramación sería rechazada por un solape inexistente.
+    const qb = mockQueryBuilder();
+    const repo = { createQueryBuilder: jest.fn(() => qb) };
+    const sut = new TypeOrmReservationRepository(repo as any);
+
+    await sut.countOverlaps('w-1', inicio, fin, 'r-1');
+
+    expect(qb.clauses).toContain('r.id <> :excludeReservationId');
+    expect(qb.params.excludeReservationId).toBe('r-1');
+  });
+
+  it('sin id de exclusión no añade la cláusula (creación)', async () => {
+    // Al crear todavía no hay id que excluir: la consulta debe quedar idéntica a
+    // como estaba, para no cambiar el comportamiento del camino de creación.
+    const qb = mockQueryBuilder();
+    const repo = { createQueryBuilder: jest.fn(() => qb) };
+    const sut = new TypeOrmReservationRepository(repo as any);
+
+    await sut.countOverlaps('w-1', inicio, fin);
+
+    expect(qb.clauses).not.toContain('r.id <> :excludeReservationId');
+  });
+});
+
+describe('TypeOrmReservationRepository.save · rama de actualización', () => {
+  it('traduce la violación de exclusión (23P01) también al ACTUALIZAR', async () => {
+    // La traducción vivía solo en la rama INSERT. Con la reprogramación, un
+    // cambio de hora es un UPDATE que puede violar el mismo constraint de
+    // exclusión: sin traducir, saldría como un 500 crudo del driver en vez del
+    // 409 que el filtro de dominio sabe devolver.
+    const pgErr: any = new Error(
+      'conflicting key value violates exclusion constraint',
+    );
+    pgErr.driverError = { code: '23P01' };
+    const repo = {
+      create: jest.fn((x: any) => x),
+      save: jest.fn(),
+      update: jest.fn(async () => {
+        throw pgErr;
+      }),
+      findOne: jest.fn(async () => ormRow()),
+    };
+    const sut = new TypeOrmReservationRepository(repo as any);
+    const existente = Reservation.fromPersistence({
+      id: 'r-1',
+      userId: 'u-1',
+      contact: null,
+      scheduledAt: new Date('2026-08-20T14:00:00.000Z'),
+      endedAt: new Date('2026-08-20T15:00:00.000Z'),
+      workerId: 'w-1',
+      status: ReservationStatus.Confirmada,
+      lines: [{ ...line }],
+    });
+
+    await expect(sut.save(existente)).rejects.toThrow(WorkerOverlapError);
+  });
+});
