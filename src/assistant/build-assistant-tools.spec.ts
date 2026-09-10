@@ -1,10 +1,11 @@
 import { buildAssistantTools } from './build-assistant-tools';
 
 describe('buildAssistantTools', () => {
-  it('registra las ocho herramientas del asistente, en orden estable', () => {
+  it('registra las nueve herramientas del asistente, en orden estable', () => {
     // Las dependencias solo se guardan por referencia en cada herramienta; no se
     // invocan al construir, así que fakes vacíos bastan para verificar el registro.
     const tools = buildAssistantTools(
+      {} as never,
       {} as never,
       {} as never,
       {} as never,
@@ -18,6 +19,7 @@ describe('buildAssistantTools', () => {
       'crearReserva',
       'misReservas',
       'cancelarReserva',
+      'reprogramarReserva',
       'recomendarServicios',
       'componerPaquete',
       'reservarPaquete',

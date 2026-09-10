@@ -103,7 +103,11 @@ export class SendMessageUseCase {
       // ⇒ false: una omisión nunca concede privilegios.
       isAdmin: input.isAdmin ?? false,
     };
-    const messages = this.buildContext(conversation, input.message, context.now);
+    const messages = this.buildContext(
+      conversation,
+      input.message,
+      context.now,
+    );
     const toolDefinitions = this.tools.map((t) => t.definition);
 
     let reply = '';

@@ -29,6 +29,9 @@ const CAPACIDADES_PUBLICADAS = [
   'crearReserva',
   'misReservas',
   'cancelarReserva',
+  // Etapa 2 de WhatsApp: mover la propia cita es capacidad de clienta, igual que
+  // cancelarla. El caso de uso vuelve a comprobar la propiedad.
+  'reprogramarReserva',
   'recomendarServicios',
   'componerPaquete',
   'reservarPaquete',
@@ -79,6 +82,7 @@ describe('Superficie MCP — herramientas de gestion (T6)', () => {
       {} as never,
       {} as never,
       cancelar as never,
+      {} as never,
     );
 
     const modulo = await Test.createTestingModule({

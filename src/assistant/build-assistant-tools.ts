@@ -1,6 +1,7 @@
 import { CreateReservationUseCase } from 'src/reservations/application/create-reservation.use-case';
 import { GetMyReservationsUseCase } from 'src/reservations/application/get-my-reservations.use-case';
 import { CancelReservationUseCase } from 'src/reservations/application/cancel-reservation.use-case';
+import { RescheduleReservationUseCase } from 'src/reservations/application/reschedule-reservation.use-case';
 
 import { AssistantTool } from './application/tools/assistant-tool';
 import { ListServicesTool } from './application/tools/list-services.tool';
@@ -8,6 +9,7 @@ import { CheckAvailabilityTool } from './application/tools/check-availability.to
 import { CreateReservationTool } from './application/tools/create-reservation.tool';
 import { MyReservationsTool } from './application/tools/my-reservations.tool';
 import { CancelReservationTool } from './application/tools/cancel-reservation.tool';
+import { RescheduleReservationTool } from './application/tools/reschedule-reservation.tool';
 import { RecommendServicesTool } from './application/tools/recommend-services.tool';
 import { ComposePackageTool } from './application/tools/compose-package.tool';
 import { ReservePackageTool } from './application/tools/reserve-package.tool';
@@ -26,6 +28,7 @@ export function buildAssistantTools(
   createReservation: CreateReservationUseCase,
   getMyReservations: GetMyReservationsUseCase,
   cancelReservation: CancelReservationUseCase,
+  rescheduleReservation: RescheduleReservationUseCase,
 ): AssistantTool[] {
   return [
     new ListServicesTool(catalog),
@@ -33,6 +36,7 @@ export function buildAssistantTools(
     new CreateReservationTool(createReservation),
     new MyReservationsTool(getMyReservations),
     new CancelReservationTool(cancelReservation),
+    new RescheduleReservationTool(rescheduleReservation),
     new RecommendServicesTool(catalog),
     new ComposePackageTool(catalog),
     new ReservePackageTool(createReservation),

@@ -6,6 +6,7 @@ import { ReservationsModule } from 'src/reservations/reservations.module';
 import { CreateReservationUseCase } from 'src/reservations/application/create-reservation.use-case';
 import { GetMyReservationsUseCase } from 'src/reservations/application/get-my-reservations.use-case';
 import { CancelReservationUseCase } from 'src/reservations/application/cancel-reservation.use-case';
+import { RescheduleReservationUseCase } from 'src/reservations/application/reschedule-reservation.use-case';
 import { Service } from 'src/service/entities/service.entity';
 
 import { ConversationOrmEntity } from './infrastructure/persistence/conversation.orm-entity';
@@ -95,6 +96,7 @@ const DEFAULT_MAIN_MODEL = 'gemini-3.8-flash';
         CreateReservationUseCase,
         GetMyReservationsUseCase,
         CancelReservationUseCase,
+        RescheduleReservationUseCase,
       ],
     },
   ],

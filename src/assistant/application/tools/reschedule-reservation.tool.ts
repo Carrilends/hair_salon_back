@@ -1,0 +1,102 @@
+import { AssistantContext, AssistantTool } from './assistant-tool';
+import { LlmToolDefinition } from '../../domain/ports/llm.port';
+import {
+  DomainError,
+  OutOfBusinessHoursError,
+  RescheduleTooLateError,
+  ReservationInThePastError,
+  ReservationNotFoundError,
+  ReservationNotReschedulableError,
+  ReservationOwnershipError,
+  WorkerOverlapError,
+} from 'src/reservations/domain/errors';
+import { ReservationActor } from 'src/reservations/domain/reservation-actor';
+
+/**
+ * Contrato mínimo del caso de uso real de reprogramación. Como en la
+ * cancelación, el actor lo fabrica la herramienta desde el contexto de sesión;
+ * el modelo no puede influir en él.
+ */
+export interface RescheduleReservationExecutor {
+  execute(
+    id: string,
+    scheduledAt: string,
+    actor: ReservationActor,
+  ): Promise<{ status: string }>;
+}
+
+/**
+ * `reprogramarReserva`: mueve una cita de la clienta con sesión iniciada.
+ * Fachada delgada sobre `RescheduleReservationUseCase` — ninguna regla de
+ * negocio vive aquí; el caso de uso vuelve a comprobar propiedad, plazo,
+ * horario y solapes.
+ *
+ * Se publica sola en MCP: el módulo del asistente exporta el mismo arreglo de
+ * objetos que consume la superficie MCP, así que añadirla aquí la hace visible
+ * allí sin tocar nada de ese módulo.
+ */
+export class RescheduleReservationTool implements AssistantTool {
+  readonly name = 'reprogramarReserva';
+
+  readonly definition: LlmToolDefinition = {
+    name: this.name,
+    description:
+      'Cambia la fecha y hora de una reserva de la clienta con sesión iniciada, conservando sus servicios y su estilista.',
+    parameters: {
+      type: 'object',
+      properties: {
+        reservaId: {
+          type: 'string',
+          description: 'ID de la reserva que se quiere mover',
+        },
+        nuevaFecha: {
+          type: 'string',
+          description:
+            'Nueva fecha y hora en formato ISO 8601 (hora de Colombia)',
+        },
+      },
+      required: ['reservaId', 'nuevaFecha'],
+      additionalProperties: false,
+    },
+  };
+
+  constructor(private readonly reschedule: RescheduleReservationExecutor) {}
+
+  async execute(
+    args: Record<string, unknown>,
+    context: AssistantContext,
+  ): Promise<unknown> {
+    if (!context.userId) return { ok: false, motivo: 'sesion_requerida' };
+
+    const id = typeof args.reservaId === 'string' ? args.reservaId : null;
+    const fecha = typeof args.nuevaFecha === 'string' ? args.nuevaFecha : null;
+    if (!id || !fecha) return { ok: false, motivo: 'argumentos_invalidos' };
+
+    try {
+      const reservation = await this.reschedule.execute(
+        id,
+        fecha,
+        context.isAdmin
+          ? { kind: 'admin' }
+          : { kind: 'user', userId: context.userId },
+      );
+      return { ok: true, estado: reservation.status };
+    } catch (error) {
+      return { ok: false, motivo: mapRescheduleErrorToReason(error) };
+    }
+  }
+}
+
+/** Traduce los fallos de la reprogramación a motivos cortos para el modelo. */
+export function mapRescheduleErrorToReason(error: unknown): string {
+  if (error instanceof ReservationOwnershipError) return 'no_es_tu_reserva';
+  if (error instanceof ReservationNotFoundError) return 'reserva_no_encontrada';
+  if (error instanceof RescheduleTooLateError) return 'fuera_de_plazo';
+  if (error instanceof ReservationNotReschedulableError)
+    return 'estado_no_movible';
+  if (error instanceof WorkerOverlapError) return 'hora_ocupada';
+  if (error instanceof OutOfBusinessHoursError) return 'fuera_de_horario';
+  if (error instanceof ReservationInThePastError) return 'fecha_pasada';
+  if (error instanceof DomainError) return 'no_disponible';
+  return 'error_desconocido';
+}
