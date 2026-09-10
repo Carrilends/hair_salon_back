@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { NotifierPort } from '../../domain/ports/notifier.port';
-import { NotifiableEvent } from '../../domain/events/reservation-created.event';
+import { NotifiableEvent } from '../../domain/events/notifiable-event';
 import { AdminEventsGateway, ADMIN_ROOM } from './admin-events.gateway';
 
 /**

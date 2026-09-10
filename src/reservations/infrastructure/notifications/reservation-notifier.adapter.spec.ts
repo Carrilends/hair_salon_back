@@ -1,7 +1,7 @@
 import { ReservationNotifierAdapter } from './reservation-notifier.adapter';
 import { Reservation } from '../../domain/reservation';
 import { ReservationStatus } from '../../domain/reservation-status';
-import { NotifiableEvent } from 'src/notifications/domain/events/reservation-created.event';
+import { NotifiableEvent } from 'src/notifications/domain/events/notifiable-event';
 
 function reservationWith(
   props: Partial<Parameters<typeof Reservation.fromPersistence>[0]> = {},

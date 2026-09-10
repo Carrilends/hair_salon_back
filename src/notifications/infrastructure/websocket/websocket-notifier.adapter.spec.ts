@@ -1,6 +1,6 @@
 import { WebSocketNotifier } from './websocket-notifier.adapter';
 import { ADMIN_ROOM } from './admin-events.gateway';
-import { NotifiableEvent } from '../../domain/events/reservation-created.event';
+import { NotifiableEvent } from '../../domain/events/notifiable-event';
 
 const event = {
   type: 'reservation.created',

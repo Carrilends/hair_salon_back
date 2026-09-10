@@ -1,4 +1,4 @@
-import { ReservationCreatedEvent } from '../../domain/events/reservation-created.event';
+import { ReservationCreatedEvent } from '../../domain/events/notifiable-event';
 import { WhatsAppMessage } from '../../domain/ports/whatsapp-sender.port';
 import {
   ClientWhatsAppConfig,
@@ -98,5 +98,40 @@ describe('ClientWhatsAppNotifier', () => {
     // A diferencia del teléfono inválido (que se salta sin lanzar), un fallo de
     // red debe subir: el despachador lo aísla con Promise.allSettled.
     await expect(notifier.notify(makeEvent())).rejects.toThrow(/401/);
+  });
+});
+
+describe('ClientWhatsAppNotifier · discriminación por tipo de evento', () => {
+  const base = {
+    reservationId: 'r-1',
+    scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
+    endedAt: new Date('2026-04-20T16:00:00.000Z'),
+    workerName: 'Marlene',
+    customerName: 'Ana',
+    customerPhone: '3001234567',
+    services: [{ name: 'Corte', price: 20000, durationMinutes: 60 }],
+    totalDurationMinutes: 60,
+    totalPrice: 20000,
+    status: 'pendiente',
+  };
+
+  it('NO manda una confirmación de reserva nueva para una cancelación', async () => {
+    const enviados: unknown[] = [];
+    const sender = {
+      send: async (m: unknown) => {
+        enviados.push(m);
+      },
+    };
+    const sut = new ClientWhatsAppNotifier(sender as any, {
+      timeZone: 'America/Bogota',
+    });
+
+    await sut.notify({
+      ...base,
+      type: 'reservation.cancelled',
+      byAdmin: true,
+    } as any);
+
+    expect(enviados).toHaveLength(0);
   });
 });

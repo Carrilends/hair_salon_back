@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { NotifierPort } from '../../domain/ports/notifier.port';
 import { EmailSenderPort } from '../../domain/ports/email-sender.port';
-import { NotifiableEvent } from '../../domain/events/reservation-created.event';
+import { NotifiableEvent } from '../../domain/events/notifiable-event';
 import { renderBrandedEmail } from '../../application/branded-email';
 import {
   EMAIL_SENDER,
@@ -31,6 +31,11 @@ export class OwnerEmailNotifier implements NotifierPort {
   ) {}
 
   async notify(event: NotifiableEvent): Promise<void> {
+    // El despachador entrega TODOS los eventos a TODOS los canales. Este solo
+    // sabe redactar el de reserva nueva; los demás se saltan en vez de anunciar
+    // una cancelación con el asunto «Nueva reserva».
+    if (event.type !== 'reservation.created') return;
+
     const cuando = new Intl.DateTimeFormat('es-CO', {
       dateStyle: 'full',
       timeStyle: 'short',

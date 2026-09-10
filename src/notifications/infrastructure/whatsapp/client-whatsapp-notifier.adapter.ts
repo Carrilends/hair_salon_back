@@ -3,7 +3,7 @@ import {
   CLIENT_WHATSAPP_CONFIG,
   WHATSAPP_SENDER,
 } from '../../application/tokens';
-import { NotifiableEvent } from '../../domain/events/reservation-created.event';
+import { NotifiableEvent } from '../../domain/events/notifiable-event';
 import { NotifierPort } from '../../domain/ports/notifier.port';
 import { WhatsAppSenderPort } from '../../domain/ports/whatsapp-sender.port';
 import { normalizeCoPhoneToE164 } from 'src/common/phone';
@@ -33,6 +33,11 @@ export class ClientWhatsAppNotifier implements NotifierPort {
   ) {}
 
   async notify(event: NotifiableEvent): Promise<void> {
+    // Igual que el canal de correo: solo redacta la confirmación de reserva
+    // nueva. Los avisos de cancelación y de cambio llegan en su propia tarea,
+    // con su plantilla y con la regla de a quién se le cuenta qué.
+    if (event.type !== 'reservation.created') return;
+
     const to = normalizeCoPhoneToE164(event.customerPhone);
     if (!to) {
       return;

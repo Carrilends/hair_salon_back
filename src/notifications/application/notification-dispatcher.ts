@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { NotifierPort } from '../domain/ports/notifier.port';
-import { NotifiableEvent } from '../domain/events/reservation-created.event';
+import { NotifiableEvent } from '../domain/events/notifiable-event';
 import { NOTIFIERS } from './tokens';
 
 @Injectable()

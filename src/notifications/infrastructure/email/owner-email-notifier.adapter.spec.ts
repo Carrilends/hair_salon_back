@@ -1,6 +1,6 @@
 import { OwnerEmailNotifier } from './owner-email-notifier.adapter';
 import { EmailMessage } from '../../domain/ports/email-sender.port';
-import { ReservationCreatedEvent } from '../../domain/events/reservation-created.event';
+import { ReservationCreatedEvent } from '../../domain/events/notifiable-event';
 import { SALON_NAME } from '../../application/branded-email';
 
 const event: ReservationCreatedEvent = {
@@ -80,3 +80,63 @@ describe('OwnerEmailNotifier', () => {
     expect(message.html).toContain('https://sitio.netlify.app/reservas');
   });
 });
+
+describe('OwnerEmailNotifier · discriminación por tipo de evento', () => {
+  it('NO compone un aviso de reserva nueva para una cancelación', async () => {
+    // El despachador entrega TODOS los eventos a TODOS los canales. Sin guarda,
+    // este notificador leería los campos comunes y anunciaría «Nueva reserva»
+    // para una cancelación. Hasta que sepa redactarla, se salta.
+    const enviados: unknown[] = [];
+    const mailer = {
+      send: async (m: unknown) => {
+        enviados.push(m);
+      },
+    };
+    const sut = new OwnerEmailNotifier(mailer as any, {
+      to: 'salon@ejemplo.com',
+      timeZone: 'America/Bogota',
+      panelUrl: 'https://panel',
+    });
+
+    await sut.notify({
+      ...baseEvento(),
+      type: 'reservation.cancelled',
+      byAdmin: false,
+    } as any);
+
+    expect(enviados).toHaveLength(0);
+  });
+
+  it('sigue avisando de las reservas nuevas', async () => {
+    const enviados: unknown[] = [];
+    const mailer = {
+      send: async (m: unknown) => {
+        enviados.push(m);
+      },
+    };
+    const sut = new OwnerEmailNotifier(mailer as any, {
+      to: 'salon@ejemplo.com',
+      timeZone: 'America/Bogota',
+      panelUrl: 'https://panel',
+    });
+
+    await sut.notify({ ...baseEvento(), type: 'reservation.created' } as any);
+
+    expect(enviados).toHaveLength(1);
+  });
+});
+
+function baseEvento() {
+  return {
+    reservationId: 'r-1',
+    scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
+    endedAt: new Date('2026-04-20T16:00:00.000Z'),
+    workerName: 'Marlene',
+    customerName: 'Ana',
+    customerPhone: '3001234567',
+    services: [{ name: 'Corte', price: 20000, durationMinutes: 60 }],
+    totalDurationMinutes: 60,
+    totalPrice: 20000,
+    status: 'pendiente',
+  };
+}

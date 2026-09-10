@@ -1,4 +1,4 @@
-import { NotifiableEvent } from '../events/reservation-created.event';
+import { NotifiableEvent } from '../events/notifiable-event';
 
 /**
  * Puerto de salida único del módulo de notificaciones. Cada canal (correo,
