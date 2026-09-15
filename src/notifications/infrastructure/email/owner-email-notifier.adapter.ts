@@ -3,6 +3,7 @@ import { NotifierPort } from '../../domain/ports/notifier.port';
 import { EmailSenderPort } from '../../domain/ports/email-sender.port';
 import { NotifiableEvent } from '../../domain/events/notifiable-event';
 import { renderBrandedEmail } from '../../application/branded-email';
+import { assertNever } from '../../domain/events/assert-never';
 import {
   EMAIL_SENDER,
   OWNER_NOTIFICATION_CONFIG,
@@ -116,6 +117,15 @@ export class OwnerEmailNotifier implements NotifierPort {
             : 'La clienta movió su reserva de hora.',
           extra: `Antes era: ${this.formatear(event.previousScheduledAt)}`,
         };
+
+      case 'reservation.confirmed':
+        return {
+          subject: `Reserva confirmada — ${cuando}`,
+          intro: 'La reserva quedó confirmada.',
+        };
+
+      default:
+        return assertNever(event, 'OwnerEmailNotifier');
     }
   }
 

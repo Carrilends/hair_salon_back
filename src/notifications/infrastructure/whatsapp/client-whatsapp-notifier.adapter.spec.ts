@@ -10,6 +10,7 @@ const config: ClientWhatsAppConfig = {
   templateCreated: 'reserva_creada_cliente',
   templateCancelled: 'reserva_cancelada_cliente',
   templateRescheduled: 'reserva_reprogramada_cliente',
+  templateConfirmed: 'reserva_confirmada_cliente',
 };
 
 /** Estrecha la unión para poder leer los campos de plantilla en las aserciones. */
@@ -172,6 +173,23 @@ describe('ClientWhatsAppNotifier · discriminación por tipo de evento', () => {
     expect(p.bodyParams[0]).toContain('27 de agosto');
     expect(p.bodyParams[1]).toContain('29 de agosto');
     expect(p.bodyParams[2]).toBe('Ana');
+  });
+
+  it('SÍ le cuenta que su cita quedó confirmada: es el aviso que más espera', async () => {
+    // Confirmar es siempre acción de la peluquería, así que no hay eco posible.
+    const { notifier, sent } = makeNotifier();
+
+    await notifier.notify({
+      ...makeEvent(),
+      type: 'reservation.confirmed',
+    } as never);
+
+    const p = comoPlantilla(sent[0]);
+    expect(p.templateName).toBe('reserva_confirmada_cliente');
+    expect(p.bodyParams).toEqual([
+      expect.stringContaining('29 de agosto'),
+      'Ana',
+    ]);
   });
 
   it('NO le cuenta un cambio de hora que hizo ella misma', async () => {

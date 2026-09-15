@@ -26,7 +26,7 @@ Notas importantes:
   - `WHATSAPP_APP_SECRET` y `WHATSAPP_VERIFY_TOKEN` son **obligatorios** para que el canal entrante funcione; sin ellos responde 403 a todo. No dependen de `WHATSAPP_TOKEN`.
   - `SALON_OWNER_WHATSAPP` es una **llave de seguridad**: un mensaje entrante desde ese número actúa como administración. Vacío, nadie lo es.
   - **Dos migraciones nuevas** (`ReservationPhoneE164` y `WhatsAppInboundMessages`). Con `TYPEORM_MIGRATIONS_RUN=true` se aplican solas al desplegar; la primera rellena la columna derivada del teléfono sobre las reservas existentes.
-  - El aprovisionamiento en Meta (línea dedicada, WABA, **cuatro plantillas** y registro del webhook) está paso a paso en `docs/configs/06-whatsapp-cloud-api.md`.
+  - El aprovisionamiento en Meta (línea dedicada, WABA, **cinco plantillas** y registro del webhook) está paso a paso en `docs/configs/06-whatsapp-cloud-api.md`.
 
 ## Levantar en local con Docker
 

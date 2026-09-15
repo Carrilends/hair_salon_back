@@ -79,6 +79,15 @@ describe('OwnerWhatsAppNotifier', () => {
     expect(sent).toHaveLength(0);
   });
 
+  it('una confirmación se anuncia y va SIN botones: ya no hay nada que decidir', async () => {
+    const { notifier, sent } = notificador();
+
+    await notifier.notify(evento({ type: 'reservation.confirmed' }));
+
+    expect(comoPlantilla(sent[0]).bodyParams[0]).toBe('Reserva confirmada');
+    expect(comoPlantilla(sent[0]).buttons).toBeUndefined();
+  });
+
   it('recibe los tres eventos, incluidos los que provoca la propia peluquería', async () => {
     // Su conversación es el registro de lo que pasa con la agenda; la clienta,
     // en cambio, solo recibe lo que decidió el salón.

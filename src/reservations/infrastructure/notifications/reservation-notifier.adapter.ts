@@ -49,7 +49,14 @@ export class ReservationNotifierAdapter implements ReservationNotifierPort {
     });
   }
 
-  /** Campos comunes a los tres eventos; resuelve el nombre del estilista (N7). */
+  async reservationConfirmed(reservation: Reservation): Promise<void> {
+    await this.dispatcher.notify({
+      type: 'reservation.confirmed',
+      ...(await this.baseEvent(reservation)),
+    });
+  }
+
+  /** Campos comunes a los cuatro eventos; resuelve el nombre del estilista (N7). */
   private async baseEvent(reservation: Reservation) {
     const workerName = await this.workers.getWorkerName(reservation.workerId);
     return {

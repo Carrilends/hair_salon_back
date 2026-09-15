@@ -143,7 +143,17 @@ describe('OwnerEmailNotifier · discriminación por tipo de evento', () => {
     expect(enviados[0].subject).toContain('Nueva reserva');
   });
 
-  it('los tres avisos llevan el enlace al panel', async () => {
+  it('anuncia una confirmación', async () => {
+    const { mailer, enviados } = espia();
+    const sut = notificador(mailer);
+
+    await sut.notify({ ...baseEvento(), type: 'reservation.confirmed' } as any);
+
+    expect(enviados).toHaveLength(1);
+    expect(enviados[0].subject).toContain('confirmada');
+  });
+
+  it('los cuatro avisos llevan el enlace al panel', async () => {
     const { mailer, enviados } = espia();
     const sut = notificador(mailer);
 
@@ -155,11 +165,12 @@ describe('OwnerEmailNotifier · discriminación por tipo de evento', () => {
         byAdmin: false,
         previousScheduledAt: new Date('2026-04-18T15:00:00.000Z'),
       },
+      { type: 'reservation.confirmed' },
     ]) {
       await sut.notify({ ...baseEvento(), ...evento } as any);
     }
 
-    expect(enviados).toHaveLength(3);
+    expect(enviados).toHaveLength(4);
     for (const m of enviados) {
       expect(m.text).toContain('https://panel');
       expect(m.html).toContain('https://panel');

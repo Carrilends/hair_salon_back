@@ -100,6 +100,8 @@ import {
           process.env.WHATSAPP_TEMPLATE_RESERVA_CANCELADA ?? '',
         templateRescheduled:
           process.env.WHATSAPP_TEMPLATE_RESERVA_REPROGRAMADA ?? '',
+        templateConfirmed:
+          process.env.WHATSAPP_TEMPLATE_RESERVA_CONFIRMADA ?? '',
       }),
     },
     {

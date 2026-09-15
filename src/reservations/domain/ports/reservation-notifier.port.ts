@@ -21,4 +21,6 @@ export interface ReservationNotifierPort {
     reservation: Reservation,
     meta: { byAdmin: boolean; previousScheduledAt: Date },
   ): Promise<void>;
+  /** Siempre la hace la peluquería; no hay `byAdmin` que decidir. */
+  reservationConfirmed(reservation: Reservation): Promise<void>;
 }

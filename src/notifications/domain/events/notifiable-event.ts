@@ -45,7 +45,18 @@ export interface ReservationRescheduledEvent extends ReservationEventBase {
   previousScheduledAt: Date;
 }
 
+/**
+ * Confirmar es siempre acción de la peluquería (desde el panel o desde su
+ * WhatsApp), así que no lleva `byAdmin`: no hay ambigüedad sobre quién fue. Es
+ * el aviso que la clienta más espera —«tu cita quedó confirmada»— y hasta ahora
+ * no existía: confirmar era mudo.
+ */
+export interface ReservationConfirmedEvent extends ReservationEventBase {
+  type: 'reservation.confirmed';
+}
+
 export type NotifiableEvent =
   | ReservationCreatedEvent
   | ReservationCancelledEvent
-  | ReservationRescheduledEvent;
+  | ReservationRescheduledEvent
+  | ReservationConfirmedEvent;

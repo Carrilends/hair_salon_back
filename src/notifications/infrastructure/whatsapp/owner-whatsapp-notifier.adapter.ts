@@ -10,6 +10,7 @@ import {
   WhatsAppSenderPort,
 } from '../../domain/ports/whatsapp-sender.port';
 import { encodeButtonPayload } from 'src/whatsapp/domain/button-payload';
+import { assertNever } from '../../domain/events/assert-never';
 import { normalizeCoPhoneToE164 } from 'src/common/phone';
 
 export interface OwnerWhatsAppConfig {
@@ -89,15 +90,24 @@ export class OwnerWhatsAppNotifier implements NotifierPort {
         return event.byAdmin
           ? `Hora cambiada por la peluquería (antes: ${this.formatear(event.previousScheduledAt)})`
           : `Hora cambiada por la clienta (antes: ${this.formatear(event.previousScheduledAt)})`;
+      case 'reservation.confirmed':
+        return 'Reserva confirmada';
+      default:
+        return assertNever(event, 'OwnerWhatsAppNotifier');
     }
   }
 
   /**
-   * Una cita cancelada ya no admite nada, así que el aviso va sin botones: una
-   * plantilla con botones que no llevan a ninguna parte es peor que ninguno.
+   * Una cita cancelada ya no admite nada, y una confirmada ya no tiene nada que
+   * decidir: esos avisos van sin botones. Una plantilla con botones que no
+   * llevan a ninguna parte es peor que ninguno.
    */
   private botones(event: NotifiableEvent) {
-    if (event.type === 'reservation.cancelled') return undefined;
+    if (
+      event.type === 'reservation.cancelled' ||
+      event.type === 'reservation.confirmed'
+    )
+      return undefined;
     return [
       {
         index: 0,

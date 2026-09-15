@@ -10,6 +10,7 @@ import {
   WhatsAppSenderPort,
 } from '../../domain/ports/whatsapp-sender.port';
 import { encodeButtonPayload } from 'src/whatsapp/domain/button-payload';
+import { assertNever } from '../../domain/events/assert-never';
 import { normalizeCoPhoneToE164 } from 'src/common/phone';
 
 export interface ClientWhatsAppConfig {
@@ -18,6 +19,7 @@ export interface ClientWhatsAppConfig {
   templateCreated: string;
   templateCancelled: string;
   templateRescheduled: string;
+  templateConfirmed: string;
 }
 
 /**
@@ -109,6 +111,19 @@ export class ClientWhatsAppNotifier implements NotifierPort {
             event.workerName,
           ],
         };
+
+      case 'reservation.confirmed':
+        // Siempre la hace la peluquería, así que no hay eco que filtrar: este
+        // es el aviso que la clienta más espera.
+        return {
+          kind: 'template',
+          to,
+          templateName: this.config.templateConfirmed,
+          bodyParams: [cuando, event.workerName],
+        };
+
+      default:
+        return assertNever(event, 'ClientWhatsAppNotifier');
     }
   }
 
