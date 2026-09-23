@@ -1,5 +1,5 @@
 import {
-  isWeekendYmd,
+  usesWeekendHoursYmd,
   WEEKDAY_CLOSE_MIN,
   WEEKDAY_OPEN_MIN,
   WEEKEND_CLOSE_MIN,
@@ -109,9 +109,12 @@ export function getDayBounds(
   salonNow = getSalonNow(tz),
 ): DayBounds {
   const { y, m, d } = parseYmd(dateYmd);
-  const weekend = isWeekendYmd(y, m, d);
-  const openMin = weekend ? WEEKEND_OPEN_MIN : WEEKDAY_OPEN_MIN;
-  const closeMin = weekend ? WEEKEND_CLOSE_MIN : WEEKDAY_CLOSE_MIN;
+  // Festivo = mismo horario reducido que sábado y domingo. Es la única puerta
+  // por la que pasan la validación de reserva, la agenda del portal y las
+  // franjas del asistente, así que basta cambiarla aquí.
+  const reducido = usesWeekendHoursYmd(y, m, d);
+  const openMin = reducido ? WEEKEND_OPEN_MIN : WEEKDAY_OPEN_MIN;
+  const closeMin = reducido ? WEEKEND_CLOSE_MIN : WEEKDAY_CLOSE_MIN;
   const isToday = dateYmd === salonNow.ymd;
   const effectiveStartMin = isToday
     ? Math.max(openMin, salonNow.minOfDay)

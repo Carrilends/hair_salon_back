@@ -17,6 +17,9 @@ class FakeRepo implements Partial<ReservationRepositoryPort> {
 const workers: WorkerAvailabilityPort = {
   countParallelStylists: async () => 3,
   getDefaultWorkerId: async () => 'default-w',
+  // La ocupación agregada no elige estilista; el puerto lo exige, el caso de uso
+  // no lo usa.
+  listAssignableWorkloads: async () => [],
 };
 
 describe('GetOccupancyUseCase', () => {
