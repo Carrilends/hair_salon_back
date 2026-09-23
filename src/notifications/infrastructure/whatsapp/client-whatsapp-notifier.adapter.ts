@@ -99,7 +99,14 @@ export class ClientWhatsAppNotifier implements NotifierPort {
         };
 
       case 'reservation.rescheduled':
-        if (!event.byAdmin) return null;
+        // Dos motivos, no uno. El de siempre: lo hizo la peluquería. Y el nuevo:
+        // **cambió su estilista**, aunque moviera ella la cita. Reasignar cambia
+        // algo que no pidió, y enterarse el día de la cita —en el salón— es
+        // exactamente el fallo que este aviso existe para evitar.
+        //
+        // Sigue sin avisarse del movimiento propio que conserva estilista: eso
+        // ya se lo confirmó el canal por el que lo hizo, y cada plantilla cuesta.
+        if (!event.byAdmin && !event.workerChanged) return null;
         return {
           kind: 'template',
           to,

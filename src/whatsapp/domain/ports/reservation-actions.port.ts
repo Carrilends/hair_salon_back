@@ -7,6 +7,12 @@ export interface ReservationSummary {
   status: string;
   workerId: string;
   workerName: string;
+  /**
+   * ¿La eligió la clienta? El canal lo necesita para decidir si advertirle, en
+   * el paso previo a confirmar, de que cambiar la hora puede traerle otra
+   * estilista. Si la eligió, no puede pasarle, y avisarla sería preocuparla.
+   */
+  workerPinned: boolean;
   totalDurationMinutes: number;
   serviceNames: string[];
 }

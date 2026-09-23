@@ -273,3 +273,49 @@ describe('TypeOrmReservationRepository.findActiveByPhone', () => {
     expect(reserva).toBeInstanceOf(Reservation);
   });
 });
+
+/**
+ * El read model tiene que llevar el origen de la asignación.
+ *
+ * `ReservationView` es lo que ven **dos** superficies: «Mis reservas» del portal
+ * y la herramienta `misReservas` del asistente. El aviso previo —«cambiar la hora
+ * puede significar que te atienda otra estilista»— solo debe mostrarse a quien
+ * **no** eligió estilista: a quien la eligió no puede pasarle, y advertirla sería
+ * preocuparla por algo imposible. Sin este campo en la vista, ninguna de las dos
+ * superficies puede distinguir un caso del otro, y el aviso o sobra o falta.
+ */
+describe('TypeOrmReservationRepository.findByUser · origen de la asignación', () => {
+  it('la vista de lectura lleva workerPinned tal como está en la fila', async () => {
+    const repo = {
+      find: jest.fn(async () => [
+        {
+          ...ormRow(),
+          workerPinned: true,
+          worker: { id: 'w-1', name: 'Sonia', isDefault: false },
+        },
+      ]),
+    };
+    const sut = new TypeOrmReservationRepository(repo as any);
+
+    const [vista] = await sut.findByUser('u-1');
+
+    expect(vista.workerPinned).toBe(true);
+  });
+
+  it('no lo inventa: una reserva repartida por el sistema sale sin marcar', async () => {
+    const repo = {
+      find: jest.fn(async () => [
+        {
+          ...ormRow(),
+          workerPinned: false,
+          worker: { id: 'w-1', name: 'Sonia', isDefault: false },
+        },
+      ]),
+    };
+    const sut = new TypeOrmReservationRepository(repo as any);
+
+    const [vista] = await sut.findByUser('u-1');
+
+    expect(vista.workerPinned).toBe(false);
+  });
+});

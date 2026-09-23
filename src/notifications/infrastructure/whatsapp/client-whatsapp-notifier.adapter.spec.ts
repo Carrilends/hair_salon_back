@@ -205,3 +205,73 @@ describe('ClientWhatsAppNotifier · discriminación por tipo de evento', () => {
     expect(sent).toHaveLength(0);
   });
 });
+
+/**
+ * El tercer motivo para avisar a la clienta.
+ *
+ * Hasta aquí, la regla era una sola: se le cuentan los cambios que hizo la
+ * peluquería (`byAdmin`), porque los suyos ya se los confirmó el canal por el
+ * que los hizo. Desde que mover una cita sin estilista elegida la reparte de
+ * nuevo, hay un caso que esa regla deja fuera: **ella movió la cita y acabó con
+ * otra estilista**. Enterarse el día de la cita, en el salón, es el fallo caro.
+ *
+ * Se reutiliza la plantilla de reprogramación **ya aprobada por Meta**
+ * (`docs/configs/06-whatsapp-cloud-api.md`, plantilla 3), que ya lleva estilista
+ * y cuyo cuerpo no atribuye el cambio a nadie: «Tu cita cambió de hora: antes
+ * era el {{1}} y ahora queda para el {{2}}, con {{3}}». Inventar una plantilla
+ * nueva no es una decisión de código: la aprueba Meta, y el trámite está
+ * pendiente.
+ */
+describe('ClientWhatsAppNotifier · cambio de estilista al reprogramar', () => {
+  it('SÍ le cuenta un cambio de hora suyo cuando cambió su estilista', async () => {
+    const { notifier, sent } = makeNotifier();
+
+    await notifier.notify({
+      ...makeEvent(),
+      type: 'reservation.rescheduled',
+      byAdmin: false,
+      previousScheduledAt: new Date('2026-08-27T20:00:00Z'),
+      workerChanged: true,
+    } as never);
+
+    expect(sent).toHaveLength(1);
+    const p = comoPlantilla(sent[0]);
+    // La aprobada, no una nueva.
+    expect(p.templateName).toBe('reserva_reprogramada_cliente');
+    // Y con sus tres parámetros de siempre: antes, después y estilista. Nada
+    // más entra en la plantilla (minimización de datos).
+    expect(p.bodyParams).toHaveLength(3);
+    expect(p.bodyParams[2]).toBe('Ana');
+  });
+
+  it('sigue sin contarle un cambio de hora suyo si la estilista NO cambió', async () => {
+    // Decir «tu estilista sigue siendo la misma» en cada reprogramación sería
+    // ruido —y cada plantilla se cobra—.
+    const { notifier, sent } = makeNotifier();
+
+    await notifier.notify({
+      ...makeEvent(),
+      type: 'reservation.rescheduled',
+      byAdmin: false,
+      previousScheduledAt: new Date('2026-08-27T20:00:00Z'),
+      workerChanged: false,
+    } as never);
+
+    expect(sent).toHaveLength(0);
+  });
+
+  it('un cambio hecho por la peluquería se cuenta igual, cambie o no la estilista', async () => {
+    // El motivo nuevo se **suma** al de siempre, no lo sustituye.
+    const { notifier, sent } = makeNotifier();
+
+    await notifier.notify({
+      ...makeEvent(),
+      type: 'reservation.rescheduled',
+      byAdmin: true,
+      previousScheduledAt: new Date('2026-08-27T20:00:00Z'),
+      workerChanged: false,
+    } as never);
+
+    expect(sent).toHaveLength(1);
+  });
+});

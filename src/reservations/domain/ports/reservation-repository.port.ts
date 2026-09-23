@@ -13,6 +13,14 @@ export interface ReservationView {
   scheduledAt: Date;
   endedAt: Date;
   workerId: string;
+  /**
+   * ¿La estilista la eligió la clienta, o la repartió el sistema? Viaja en el
+   * read model porque **las dos** superficies que lo consumen —«Mis reservas»
+   * del portal y `misReservas` del asistente— tienen que condicionar con él el
+   * aviso previo al reprogramar: a quien eligió estilista no se la cambian
+   * nunca, así que advertirla sería preocuparla por algo que no puede pasarle.
+   */
+  workerPinned: boolean;
   totalDurationMinutes: number;
   status: string;
   userId: string | null;

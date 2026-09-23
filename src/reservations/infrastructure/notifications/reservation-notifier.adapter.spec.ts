@@ -76,3 +76,60 @@ describe('ReservationNotifierAdapter', () => {
     expect(despachados[0].customerPhone).toBeNull();
   });
 });
+
+/**
+ * El traductor no decide, propaga. Quién recibe el aviso de una reprogramación
+ * lo deciden los canales (`ClientWhatsAppNotifier` mira `byAdmin` y ahora
+ * también `workerChanged`); aquí solo hay que garantizar que el dato llega. Si
+ * se perdiera en la traducción, el aviso del cambio de estilista no existiría y
+ * el fallo sería silencioso hasta el día de la cita.
+ */
+describe('ReservationNotifierAdapter · reprogramación', () => {
+  function montar() {
+    const despachados: NotifiableEvent[] = [];
+    const dispatcher = {
+      notify: async (e: NotifiableEvent) => {
+        despachados.push(e);
+      },
+    };
+    const workers = { getWorkerName: async () => 'Monica' };
+    return {
+      adapter: new ReservationNotifierAdapter(
+        dispatcher as any,
+        workers as any,
+      ),
+      despachados,
+    };
+  }
+
+  it('lleva al evento si cambió la estilista, junto al antes y al byAdmin', async () => {
+    const { adapter, despachados } = montar();
+
+    await adapter.reservationRescheduled(reservationWith(), {
+      byAdmin: false,
+      previousScheduledAt: new Date('2026-08-19T15:00:00.000Z'),
+      workerChanged: true,
+    });
+
+    expect(despachados[0]).toMatchObject({
+      type: 'reservation.rescheduled',
+      byAdmin: false,
+      previousScheduledAt: new Date('2026-08-19T15:00:00.000Z'),
+      workerChanged: true,
+      // El nombre efectivo ya viajaba: es el único que usan las plantillas.
+      workerName: 'Monica',
+    });
+  });
+
+  it('no lo inventa: si no cambió, el evento dice que no cambió', async () => {
+    const { adapter, despachados } = montar();
+
+    await adapter.reservationRescheduled(reservationWith(), {
+      byAdmin: true,
+      previousScheduledAt: new Date('2026-08-19T15:00:00.000Z'),
+      workerChanged: false,
+    });
+
+    expect(despachados[0]).toMatchObject({ workerChanged: false });
+  });
+});

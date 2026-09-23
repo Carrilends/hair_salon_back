@@ -23,6 +23,10 @@ function cita(over: Partial<ReservationSummary> = {}): ReservationSummary {
     status: 'pendiente',
     workerId: 'w-1',
     workerName: 'Marlene',
+    // Sin marcar por defecto: es el caso mayoritario («Sin preferencia» en el
+    // portal, o el chat, que nunca manda estilista). Las pruebas del aviso
+    // construyen las suyas con el valor que necesitan.
+    workerPinned: false,
     totalDurationMinutes: 60,
     serviceNames: ['Corte'],
     ...over,
@@ -481,5 +485,51 @@ describe('HandleInboundMessage · nunca lanza', () => {
     await expect(
       sut.handle(mensaje({ text: 'hola' })),
     ).resolves.toBeUndefined();
+  });
+});
+
+/**
+ * El aviso previo en WhatsApp.
+ *
+ * Pulsar una hora de la lista **es** la confirmación: no hay un paso más. Así
+ * que el último momento en que se le puede advertir es el mensaje que lleva las
+ * horas. El aviso es **genérico** a propósito —«puede significar»— porque nadie
+ * sabe si habrá cambio hasta intentarlo: quién queda libre a la hora nueva solo
+ * se resuelve al reprogramar.
+ *
+ * Y no se le muestra a todo el mundo: si la clienta eligió estilista, mover la
+ * cita **nunca** se la cambia (o la conserva, o da 409). Advertirla sería
+ * preocuparla por algo que no puede pasarle.
+ */
+describe('HandleInboundMessage · aviso previo de cambio de estilista', () => {
+  it('al ofrecer las horas avisa de que puede cambiar la estilista', async () => {
+    const { sut, enviados } = montar({
+      citas: [cita({ workerPinned: false })],
+    });
+
+    await sut.handle(mensaje({ payload: `RSDAY|${RID}|2026-09-12` }));
+
+    expect(comoLista(enviados[0]).body).toMatch(/otra estilista/i);
+  });
+
+  it('NO la avisa si ella eligió estilista: a esa cita no puede pasarle', async () => {
+    const { sut, enviados } = montar({
+      citas: [cita({ workerPinned: true })],
+    });
+
+    await sut.handle(mensaje({ payload: `RSDAY|${RID}|2026-09-12` }));
+
+    expect(comoLista(enviados[0]).body).not.toMatch(/estilista/i);
+  });
+
+  it('el aviso no promete un cambio: dice que puede pasar', async () => {
+    // Honestidad: hasta que no se intenta mover, nadie sabe si habrá cambio.
+    const { sut, enviados } = montar({
+      citas: [cita({ workerPinned: false })],
+    });
+
+    await sut.handle(mensaje({ payload: `RSDAY|${RID}|2026-09-12` }));
+
+    expect(comoLista(enviados[0]).body).toMatch(/puede/i);
   });
 });

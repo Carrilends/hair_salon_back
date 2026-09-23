@@ -17,9 +17,19 @@ export interface ReservationNotifierPort {
     reservation: Reservation,
     meta: { byAdmin: boolean },
   ): Promise<void>;
+  /**
+   * `workerChanged` es el **tercer motivo** para avisar a la clienta, junto a
+   * `byAdmin`. Reasignar al mover cambia algo que ella no pidió —la persona que
+   * la atiende—, y enterarse el día de la cita es el fallo caro. Solo el caso de
+   * uso conoce el antes y el después, así que el dato nace allí y viaja aquí.
+   */
   reservationRescheduled(
     reservation: Reservation,
-    meta: { byAdmin: boolean; previousScheduledAt: Date },
+    meta: {
+      byAdmin: boolean;
+      previousScheduledAt: Date;
+      workerChanged: boolean;
+    },
   ): Promise<void>;
   /** Siempre la hace la peluquería; no hay `byAdmin` que decidir. */
   reservationConfirmed(reservation: Reservation): Promise<void>;

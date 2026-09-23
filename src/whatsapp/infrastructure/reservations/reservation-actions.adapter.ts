@@ -125,6 +125,7 @@ export class ReservationActionsAdapter implements ReservationActionsPort {
       status: r.status,
       workerId: r.workerId,
       workerName: await this.workers.getWorkerName(r.workerId),
+      workerPinned: r.workerPinned,
       totalDurationMinutes: r.totalDurationMinutes,
       serviceNames: r.lines.map((l) => l.name),
     };

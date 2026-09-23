@@ -23,7 +23,7 @@ export interface RescheduleReservationExecutor {
     id: string,
     scheduledAt: string,
     actor: ReservationActor,
-  ): Promise<{ status: string }>;
+  ): Promise<{ reservation: { status: string }; workerChanged: boolean }>;
 }
 
 /**
@@ -48,7 +48,15 @@ export class RescheduleReservationTool implements AssistantTool {
     // para quien eligió estilista, y el texto tiene que decir de qué depende.
     description:
       'Cambia la fecha y hora de una reserva de la clienta con sesión iniciada, conservando sus servicios. ' +
-      'Si la clienta eligió estilista, la conserva; si no eligió ninguna, la cita puede quedar con otra estilista que esté libre a la hora nueva.',
+      'Si la clienta eligió estilista, la conserva; si no eligió ninguna, la cita puede quedar con otra estilista que esté libre a la hora nueva. ' +
+      // Consentimiento informado: el aviso previo. Solo tiene sentido cuando
+      // puede ocurrir —a quien eligió estilista no se la cambia nunca—, y esa
+      // condición la da `misReservas` en `estilistaElegida`. Avisar a quien
+      // eligió sería preocuparla por algo que no puede pasarle.
+      'Antes de llamarla, si la reserva viene con estilistaElegida en false, avisa a la clienta de que cambiar la hora puede significar que la atienda otra estilista y espera su confirmación. ' +
+      // Y el aviso posterior, solo si de verdad cambió. Genérico a propósito: el
+      // asistente no nombra estilistas (no tiene esa capacidad ni ese permiso).
+      'Si la respuesta trae estilistaCambio en true, dile que le reasignamos estilista; nunca digas nombres de estilistas.',
     parameters: {
       type: 'object',
       properties: {
@@ -80,14 +88,21 @@ export class RescheduleReservationTool implements AssistantTool {
     if (!id || !fecha) return { ok: false, motivo: 'argumentos_invalidos' };
 
     try {
-      const reservation = await this.reschedule.execute(
+      const { reservation, workerChanged } = await this.reschedule.execute(
         id,
         fecha,
         context.isAdmin
           ? { kind: 'admin' }
           : { kind: 'user', userId: context.userId },
       );
-      return { ok: true, estado: reservation.status };
+      // Un sí/no, nunca un nombre: el chat no nombra estilistas. Sin este campo
+      // el modelo no tendría cómo enterarse —`misReservas` tampoco proyecta
+      // estilista— y la clienta lo sabría el día de la cita.
+      return {
+        ok: true,
+        estado: reservation.status,
+        estilistaCambio: workerChanged,
+      };
     } catch (error) {
       return { ok: false, motivo: mapRescheduleErrorToReason(error) };
     }

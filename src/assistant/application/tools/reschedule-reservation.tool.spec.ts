@@ -14,12 +14,26 @@ import {
   ChosenWorkerBusyError,
 } from 'src/reservations/domain/errors';
 
+/**
+ * El caso de uso devuelve la **operación**, no la reserva: `workerChanged` es un
+ * hecho del movimiento («cambió la persona que te atiende»), no un campo de la
+ * reserva guardada. El doble refleja esa forma.
+ */
 class FakeReschedule {
   calls: { id: string; scheduledAt: string; actor: unknown }[] = [];
-  constructor(private readonly behaviour: () => { status: string }) {}
+  constructor(
+    private readonly behaviour: () => {
+      status: string;
+      workerChanged?: boolean;
+    },
+  ) {}
   async execute(id: string, scheduledAt: string, actor: unknown) {
     this.calls.push({ id, scheduledAt, actor });
-    return this.behaviour();
+    const { status, workerChanged } = this.behaviour();
+    return {
+      reservation: { status },
+      workerChanged: workerChanged ?? false,
+    };
   }
 }
 
@@ -87,7 +101,14 @@ describe('RescheduleReservationTool', () => {
       ctx('admin-1', true),
     );
 
-    expect(res).toEqual({ ok: true, estado: 'confirmada' });
+    // La respuesta lleva además `estilistaCambio`: el modelo no puede inferirlo
+    // de ningún otro sitio —`misReservas` no proyecta estilista— y sin él no
+    // podría contarle a la clienta que la reasignaron.
+    expect(res).toEqual({
+      ok: true,
+      estado: 'confirmada',
+      estilistaCambio: false,
+    });
     expect(uc.calls[0].actor).toEqual({ kind: 'admin' });
   });
 
@@ -111,12 +132,81 @@ describe('RescheduleReservationTool', () => {
    * se convierte en una mentira dicha a la clienta.
    */
   it('no promete que la estilista se conserve siempre', () => {
-    const uc = { execute: async () => ({ status: 'pendiente' }) };
+    const uc = new FakeReschedule(() => ({ status: 'pendiente' }));
     const tool = new RescheduleReservationTool(uc as never);
 
     expect(tool.definition.description).not.toMatch(/y su estilista/);
     // Y sí dice de qué depende, para que el modelo pueda explicarlo.
     expect(tool.definition.description).toMatch(/estilista/);
+  });
+});
+
+/**
+ * El aviso de que cambió la estilista, en el chat.
+ *
+ * **Después**, y solo si de verdad cambió. El modelo no tiene forma de saberlo:
+ * `misReservas` no proyecta estilista (RF57/RF58 no le dan esa capacidad), así
+ * que si la herramienta no lo dice, nadie se lo dice a la clienta.
+ *
+ * El aviso es **genérico a propósito**: un booleano, nunca un nombre. Que el
+ * asistente nombre estilistas es requerimiento nuevo —y arrastra una decisión de
+ * privacidad—, y aquí no se abre esa puerta. En el portal y en WhatsApp sí se
+ * nombran porque allí ya se muestran hoy.
+ */
+describe('RescheduleReservationTool · aviso de cambio de estilista', () => {
+  it('dice que cambió cuando el caso de uso reasignó', async () => {
+    const uc = new FakeReschedule(() => ({
+      status: 'pendiente',
+      workerChanged: true,
+    }));
+    const tool = new RescheduleReservationTool(uc as never);
+
+    const res = await tool.execute(
+      { reservaId: 'r1', nuevaFecha: '2026-04-21T16:00:00.000Z' },
+      ctx('u1'),
+    );
+
+    expect(res).toEqual({
+      ok: true,
+      estado: 'pendiente',
+      estilistaCambio: true,
+    });
+  });
+
+  it('el aviso es un sí/no: la respuesta no lleva NINGÚN nombre de estilista', async () => {
+    // Límite duro: el chat no nombra estilistas. Si algún día hiciera falta,
+    // es requerimiento nuevo, no un retoque de presentación.
+    const uc = new FakeReschedule(() => ({
+      status: 'pendiente',
+      workerChanged: true,
+    }));
+    const tool = new RescheduleReservationTool(uc as never);
+
+    const res = (await tool.execute(
+      { reservaId: 'r1', nuevaFecha: '2026-04-21T16:00:00.000Z' },
+      ctx('u1'),
+    )) as Record<string, unknown>;
+
+    expect(Object.keys(res).sort()).toEqual([
+      'estado',
+      'estilistaCambio',
+      'ok',
+    ]);
+    expect(typeof res.estilistaCambio).toBe('boolean');
+  });
+
+  /**
+   * La descripción es el contrato con el modelo: si no le dice que avise antes,
+   * la clienta se entera cuando ya está hecho. El aviso previo solo tiene
+   * sentido para las reservas sin estilista elegida —a quien la eligió no puede
+   * pasarle—, y esa condición se la da `misReservas` con `estilistaElegida`.
+   */
+  it('la descripción le pide avisar ANTES, y solo cuando puede pasar', () => {
+    const uc = new FakeReschedule(() => ({ status: 'pendiente' }));
+    const tool = new RescheduleReservationTool(uc as never);
+
+    expect(tool.definition.description).toMatch(/estilistaElegida/);
+    expect(tool.definition.description).toMatch(/antes/i);
   });
 });
 

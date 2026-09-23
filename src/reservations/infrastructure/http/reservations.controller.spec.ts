@@ -156,6 +156,30 @@ describe('ReservationsController', () => {
       );
     });
 
+    /**
+     * El caso de uso pasó a devolver la **operación**
+     * (`{ reservation, workerChanged }`) para poder decir si la reasignación
+     * cambió de estilista. El cuerpo de la respuesta HTTP **no** cambia: sigue
+     * siendo la reserva, y el portal deduce el cambio comparando `workerId` con
+     * el que ya tenía en pantalla. Envolverla habría roto a todo consumidor del
+     * endpoint sin darle nada que no pudiera calcular.
+     */
+    it('PATCH /reservations/:id/reschedule devuelve la reserva, no el envoltorio', async () => {
+      const reservation = { id: ID, status: 'pendiente', workerId: 'w-2' };
+      reschedule.execute.mockResolvedValue({
+        reservation,
+        workerChanged: true,
+      });
+
+      await expect(
+        controller.rescheduleReservation(
+          ID,
+          { scheduledAt: '2026-04-21T16:00:00.000Z' } as any,
+          { id: 'u-1', roles: ['user'] } as any,
+        ),
+      ).resolves.toBe(reservation);
+    });
+
     it('DELETE /reservations/:id cancela como administración', async () => {
       cancel.execute.mockResolvedValue({ id: ID, status: 'cancelada' });
       await controller.removeAsAdmin(ID);

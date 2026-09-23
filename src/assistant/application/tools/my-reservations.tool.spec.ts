@@ -21,6 +21,7 @@ function reserva(over: Record<string, unknown> = {}) {
     status: 'pendiente',
     totalDurationMinutes: 60,
     services: [{ name: 'Corte' }, { name: 'Peinado' }],
+    workerPinned: false,
     ...over,
   };
 }
@@ -59,12 +60,48 @@ describe('MyReservationsTool', () => {
     >;
 
     expect(res).toHaveLength(10);
+    // `estilistaElegida` se suma a la proyección. Es la condición del aviso
+    // previo: a quien eligió estilista no se la cambian nunca al mover la cita,
+    // así que avisarla sería preocuparla por algo que no puede pasarle. Sigue
+    // siendo un sí/no —el chat no nombra estilistas—.
     expect(res[0]).toEqual({
       id: 'r0',
       cuando: new Date('2026-08-20T14:00:00.000Z'),
       estado: 'pendiente',
       servicios: ['Corte', 'Peinado'],
       minutos: 60,
+      estilistaElegida: false,
     });
+  });
+
+  it('proyecta estilistaElegida en true cuando la clienta la eligió', async () => {
+    const getMine = new FakeGetMine([reserva({ workerPinned: true })]);
+    const tool = new MyReservationsTool(getMine as never);
+
+    const res = (await tool.execute({}, ctx('u1'))) as Array<
+      Record<string, unknown>
+    >;
+
+    expect(res[0].estilistaElegida).toBe(true);
+  });
+
+  it('la proyección sigue sin llevar NINGÚN nombre de estilista', async () => {
+    // Límite: RF57/RF58 no dan estilistas al chat. `estilistaElegida` es un
+    // sí/no sobre el origen de la asignación, no una identidad.
+    const getMine = new FakeGetMine([reserva({ workerPinned: true })]);
+    const tool = new MyReservationsTool(getMine as never);
+
+    const res = (await tool.execute({}, ctx('u1'))) as Array<
+      Record<string, unknown>
+    >;
+
+    expect(Object.keys(res[0]).sort()).toEqual([
+      'cuando',
+      'estado',
+      'estilistaElegida',
+      'id',
+      'minutos',
+      'servicios',
+    ]);
   });
 });

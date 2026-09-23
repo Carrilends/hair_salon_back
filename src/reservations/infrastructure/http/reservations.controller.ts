@@ -103,12 +103,22 @@ export class ReservationsController {
    */
   @Auth()
   @Patch(':id/reschedule')
-  rescheduleReservation(
+  async rescheduleReservation(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: RescheduleReservationDto,
     @GetUser() user: User,
   ) {
-    return this.reschedule.execute(id, dto.scheduledAt, actorFromUser(user));
+    // El caso de uso devuelve la **operación** (`{ reservation, workerChanged }`)
+    // porque «cambió la estilista» es un hecho del movimiento, no un campo de la
+    // reserva. El cuerpo de la respuesta se queda como estaba: la reserva trae su
+    // `workerId`, y el portal deduce el cambio comparándolo con el que ya tenía
+    // en pantalla. Envolverla rompería a todo consumidor sin darle nada nuevo.
+    const { reservation } = await this.reschedule.execute(
+      id,
+      dto.scheduledAt,
+      actorFromUser(user),
+    );
+    return reservation;
   }
 
   // RF33: el borrado de administración se implementa como cancelación (no borrado físico).

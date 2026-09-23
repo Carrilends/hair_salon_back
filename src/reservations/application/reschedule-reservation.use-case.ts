@@ -28,6 +28,21 @@ import { RESERVATION_REPOSITORY, CLOCK, RESERVATION_NOTIFIER } from './tokens';
  * estilista) como si fuera una elección de la clienta. Quien sí eligió conserva
  * la suya: es el agregado quien lo impide, no este caso de uso.
  */
+/**
+ * Lo que sale de reprogramar. Es un objeto y no el agregado a secas porque
+ * **«cambió la estilista» no es un estado de la reserva, sino de la operación**:
+ * la reserva guardada no sabe con quién estaba antes, y el agregado que devuelve
+ * el repositorio se rehidrata desde la base, así que cualquier marca transitoria
+ * que se le colgara encima se perdería justo en el camino real.
+ *
+ * Lo necesitan las puertas que tienen que **contarlo** (el asistente en su
+ * respuesta, el portal comparando estilistas); las que no, ignoran el campo.
+ */
+export interface RescheduleResult {
+  reservation: Reservation;
+  workerChanged: boolean;
+}
+
 @Injectable()
 export class RescheduleReservationUseCase {
   private readonly scheduling = new ReservationScheduling();
@@ -47,7 +62,7 @@ export class RescheduleReservationUseCase {
     id: string,
     scheduledAt: string,
     actor: ReservationActor,
-  ): Promise<Reservation> {
+  ): Promise<RescheduleResult> {
     const tz = process.env.SALON_TZ ?? 'America/Bogota';
     const minLeadMinutes = Number(
       process.env.RESCHEDULE_MIN_LEAD_MINUTES ?? '0',
@@ -61,8 +76,10 @@ export class RescheduleReservationUseCase {
     assertCanActOn(reservation, actor);
 
     const byAdmin = isAdminActor(actor);
-    // Se captura ANTES de mutar: el aviso muestra «antes → después».
+    // Se capturan ANTES de mutar: el aviso muestra «antes → después», y sin la
+    // estilista de partida no habría forma de saber si cambió.
     const previousScheduledAt = reservation.scheduledAt;
+    const previousWorkerId = reservation.workerId;
     reservation.reschedule({
       scheduledAt: new Date(scheduledAt),
       now: this.clock.now(),
@@ -110,18 +127,27 @@ export class RescheduleReservationUseCase {
 
     const saved = await this.repository.save(reservation);
 
+    // Se mide contra lo **guardado**, no contra lo que el reparto dijo que iba a
+    // hacer: lo que cuenta el día de la cita es quién quedó en la base. Y solo
+    // se avisa si de verdad cambió: el reparto ordena por carga y devolver la
+    // misma estilista es lo más probable con la agenda tranquila; repetir «sigue
+    // siendo la misma» en cada movimiento sería ruido, y el ruido se ignora.
+    const workerChanged = saved.workerId !== previousWorkerId;
+
     try {
       await this.notifier.reservationRescheduled(saved, {
         byAdmin,
         previousScheduledAt,
+        workerChanged,
       });
     } catch (error) {
+      // NF11: un canal caído no revierte una cita que ya está persistida.
       this.logger.error(
         `Reserva ${saved.id} reprogramada, pero falló la notificación`,
         error as Error,
       );
     }
 
-    return saved;
+    return { reservation: saved, workerChanged };
   }
 }

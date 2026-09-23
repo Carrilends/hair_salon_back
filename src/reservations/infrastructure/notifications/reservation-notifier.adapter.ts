@@ -37,12 +37,19 @@ export class ReservationNotifierAdapter implements ReservationNotifierPort {
 
   async reservationRescheduled(
     reservation: Reservation,
-    meta: { byAdmin: boolean; previousScheduledAt: Date },
+    meta: {
+      byAdmin: boolean;
+      previousScheduledAt: Date;
+      workerChanged: boolean;
+    },
   ): Promise<void> {
     await this.dispatcher.notify({
       type: 'reservation.rescheduled',
       byAdmin: meta.byAdmin,
       previousScheduledAt: meta.previousScheduledAt,
+      // Viaja tal cual: quién decide qué hacer con él es cada canal. El nombre
+      // de la estilista nueva ya va en `workerName` (lo resuelve `baseEvent`).
+      workerChanged: meta.workerChanged,
       // La reserva ya viene movida: `scheduledAt` es la hora nueva, y la
       // anterior llega aparte para poder mostrar «antes → después».
       ...(await this.baseEvent(reservation)),

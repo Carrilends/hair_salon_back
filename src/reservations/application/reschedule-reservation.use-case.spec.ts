@@ -122,7 +122,10 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
       userId: 'u-1',
     });
 
-    expect(result.scheduledAt).toEqual(NUEVA);
+    // El caso de uso ya no devuelve el agregado a secas: devuelve la operación
+    // (`{ reservation, workerChanged }`), porque «cambió la estilista» es un
+    // hecho del movimiento y no un campo de la reserva guardada.
+    expect(result.reservation.scheduledAt).toEqual(NUEVA);
     expect(guardados).toHaveLength(1);
   });
 
@@ -313,9 +316,13 @@ describe('RescheduleReservationUseCase · aviso', () => {
     });
 
     expect(avisos).toHaveLength(1);
+    // `workerChanged` se suma a la meta: es el tercer motivo por el que a la
+    // clienta hay que contarle una reprogramación (ver el describe del aviso).
+    // Aquí la reserva tiene estilista elegida, así que nunca cambia.
     expect(avisos[0].meta).toEqual({
       previousScheduledAt: ORIGINAL,
       byAdmin: false,
+      workerChanged: false,
     });
   });
 
@@ -338,7 +345,7 @@ describe('RescheduleReservationUseCase · aviso', () => {
       userId: 'u-1',
     });
 
-    expect(result.scheduledAt).toEqual(NUEVA);
+    expect(result.reservation.scheduledAt).toEqual(NUEVA);
     expect(guardados).toHaveLength(1);
   });
 });
@@ -390,7 +397,7 @@ describe('RescheduleReservationUseCase · reparto de estilista', () => {
       userId: 'u-1',
     });
 
-    expect(result.workerId).toBe('w-2');
+    expect(result.reservation.workerId).toBe('w-2');
     // Y llega así a la persistencia, que es lo único que cuenta el día de la cita.
     expect(guardados[0].workerId).toBe('w-2');
     expect(guardados[0].scheduledAt).toEqual(NUEVA);
@@ -505,5 +512,123 @@ describe('RescheduleReservationUseCase · el 409 dice por qué', () => {
    */
   it('el motivo específico sigue siendo un solape para quien solo mira el genérico', () => {
     expect(new ChosenWorkerBusyError()).toBeInstanceOf(WorkerOverlapError);
+  });
+});
+
+/**
+ * El aviso de que cambió la estilista.
+ *
+ * Reasignar resuelve un 409 innecesario, pero cambia algo que la clienta no
+ * pidió: se movió la hora **y** cambió la persona. RF68 c.3 solo le cuenta las
+ * reprogramaciones hechas por la peluquería (`byAdmin`), porque las suyas ya se
+ * las confirmó el canal por el que las hizo; aquí aparece un **tercer motivo**
+ * que el requerimiento no contemplaba: su estilista cambió, aunque moviera ella
+ * la cita. Sin este dato el aviso no puede existir, así que el caso de uso —el
+ * único sitio que conoce el antes y el después— tiene que declararlo.
+ *
+ * Y solo cuando **de verdad** cambió: decir «tu estilista sigue siendo la misma»
+ * en cada reprogramación sería ruido, y el ruido se acaba ignorando.
+ */
+describe('RescheduleReservationUseCase · aviso de cambio de estilista', () => {
+  /** Notificador espía: guarda la meta con la que se le avisó. */
+  function notificador() {
+    const avisos: { meta: Record<string, unknown> }[] = [];
+    const port = {
+      reservationRescheduled: async (
+        _r: Reservation,
+        meta: Record<string, unknown>,
+      ) => {
+        avisos.push({ meta });
+      },
+    } as any;
+    return { port, avisos };
+  }
+
+  it('sin estilista elegida y con reasignación: lo declara en el resultado y en el aviso', async () => {
+    const { port } = repo(reserva({ workerPinned: false }));
+    const reparto = asignador('w-2');
+    const espia = notificador();
+    const uc = new RescheduleReservationUseCase(
+      port,
+      clock,
+      espia.port,
+      reparto.port,
+    );
+
+    const result = await uc.execute('r-1', NUEVA.toISOString(), {
+      kind: 'user',
+      userId: 'u-1',
+    });
+
+    expect(result.workerChanged).toBe(true);
+    expect(espia.avisos[0].meta).toMatchObject({ workerChanged: true });
+  });
+
+  it('si el reparto devuelve la MISMA estilista, no hay nada que avisar', async () => {
+    // El reparto ordena por carga, así que devolver la misma es lo más probable
+    // cuando la agenda está tranquila. Avisar de un cambio que no ocurrió sería
+    // mentir; repetir «sigue siendo la misma» en cada movimiento sería ruido.
+    const { port } = repo(reserva({ workerPinned: false }));
+    const reparto = asignador('w-1');
+    const espia = notificador();
+    const uc = new RescheduleReservationUseCase(
+      port,
+      clock,
+      espia.port,
+      reparto.port,
+    );
+
+    const result = await uc.execute('r-1', NUEVA.toISOString(), {
+      kind: 'user',
+      userId: 'u-1',
+    });
+
+    expect(result.workerChanged).toBe(false);
+    expect(espia.avisos[0].meta).toMatchObject({ workerChanged: false });
+  });
+
+  it('con estilista elegida nunca hay cambio que avisar', async () => {
+    const { port } = repo(reserva({ workerPinned: true }));
+    const espia = notificador();
+    const uc = new RescheduleReservationUseCase(
+      port,
+      clock,
+      espia.port,
+      asignadorProhibido,
+    );
+
+    const result = await uc.execute('r-1', NUEVA.toISOString(), {
+      kind: 'user',
+      userId: 'u-1',
+    });
+
+    expect(result.workerChanged).toBe(false);
+    expect(espia.avisos[0].meta).toMatchObject({ workerChanged: false });
+  });
+
+  it('un fallo del aviso NO deshace la reprogramación ni la reasignación (NF11)', async () => {
+    // El canal que avisa del cambio de estilista es uno más: si se cae, la cita
+    // ya está movida y persistida. NF11 manda que el fallo no propague.
+    const { port, guardados } = repo(reserva({ workerPinned: false }));
+    const reparto = asignador('w-2');
+    const roto = {
+      reservationRescheduled: async () => {
+        throw new Error('sin red');
+      },
+    } as any;
+    const uc = new RescheduleReservationUseCase(
+      port,
+      clock,
+      roto,
+      reparto.port,
+    );
+
+    const result = await uc.execute('r-1', NUEVA.toISOString(), {
+      kind: 'user',
+      userId: 'u-1',
+    });
+
+    expect(result.workerChanged).toBe(true);
+    expect(guardados[0].workerId).toBe('w-2');
   });
 });

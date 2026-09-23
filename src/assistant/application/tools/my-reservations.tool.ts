@@ -12,6 +12,8 @@ export interface MyReservationView {
   status: string;
   totalDurationMinutes: number;
   services: { name: string }[];
+  /** ¿La estilista la eligió la clienta, o la repartió el sistema? */
+  workerPinned: boolean;
 }
 
 /**
@@ -62,6 +64,11 @@ export class MyReservationsTool implements AssistantTool {
       estado: r.status,
       servicios: r.services.map((s) => s.name),
       minutos: r.totalDurationMinutes,
+      // La condición del aviso previo al reprogramar: si la eligió la clienta,
+      // mover la cita no se la cambia nunca, así que advertirla sería
+      // preocuparla por algo imposible. Es un sí/no sobre el **origen** de la
+      // asignación, no una identidad: el chat sigue sin nombrar estilistas.
+      estilistaElegida: r.workerPinned,
     }));
   }
 }

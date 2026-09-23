@@ -43,6 +43,16 @@ export interface ReservationRescheduledEvent extends ReservationEventBase {
   byAdmin: boolean;
   /** Dónde estaba la cita antes de moverla; el aviso muestra antes → después. */
   previousScheduledAt: Date;
+  /**
+   * ¿Cambió la persona que la atiende? Desde que mover una cita sin estilista
+   * elegida la reparte de nuevo, `byAdmin` ya no basta para decidir si a la
+   * clienta hay que contarle algo: puede haberla movido ella y aun así acabar
+   * con otra estilista. Es un motivo **añadido**, no un sustituto.
+   *
+   * No lleva nombres: el nombre efectivo ya viaja en `workerName`, que es el
+   * único que las plantillas usan (minimización de datos).
+   */
+  workerChanged: boolean;
 }
 
 /**

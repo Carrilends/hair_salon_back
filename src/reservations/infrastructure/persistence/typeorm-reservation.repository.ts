@@ -200,6 +200,7 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
       scheduledAt: r.scheduledAt,
       endedAt: r.endedAt,
       workerId: r.workerId,
+      workerPinned: r.workerPinned,
       totalDurationMinutes: r.totalDurationMinutes,
       status: r.status,
       userId: r.userId,

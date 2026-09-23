@@ -401,7 +401,15 @@ export class HandleInboundMessageUseCase {
       kind: 'interactive-list',
       to: from,
       header: this.diaCorto(dateYmd),
-      body: '¿A qué hora?',
+      // Pulsar una hora **es** la confirmación: no hay paso siguiente donde
+      // advertirla. El aviso es genérico —«puede»— porque hasta que no se
+      // intenta mover nadie sabe quién quedará libre. Y solo se le muestra a
+      // quien no eligió estilista: a quien la eligió, mover la cita nunca se la
+      // cambia (o la conserva, o se rechaza), así que avisarla sería
+      // preocuparla por algo que no puede pasarle.
+      body: cita.workerPinned
+        ? '¿A qué hora?'
+        : '¿A qué hora? Ten en cuenta que cambiar la hora puede significar que te atienda otra estilista.',
       buttonText: 'Ver horas',
       rows: filas,
     });
