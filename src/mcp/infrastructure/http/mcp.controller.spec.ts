@@ -99,7 +99,12 @@ describe('McpController (HTTP)', () => {
     app.useGlobalPipes(
       new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
     );
-    await app.init();
+    // `listen(0)` y no `init()`: con la app sin escuchar, supertest abre y
+    // cierra un servidor efimero POR PETICION sobre el mismo `http.Server`.
+    // Con 113 suites en paralelo esa carrera se pierde de vez en cuando y la
+    // respuesta se corta a medias (`socket hang up`). Escuchando una sola vez,
+    // supertest reutiliza el puerto y no cierra nada; lo cierra el `afterAll`.
+    await app.listen(0);
   });
 
   afterAll(async () => {
