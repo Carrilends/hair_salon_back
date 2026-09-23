@@ -34,6 +34,20 @@ export class ReservationOrmEntity {
   @JoinColumn({ name: 'worker_id' })
   worker: Worker;
 
+  /**
+   * ¿La estilista la fijó la clienta o la repartió el sistema? Se guarda como
+   * un solo bit y no como un `preferred_worker_id` aparte porque la única
+   * pregunta que se le hace es de sí o no —«¿puedo reasignar esta reserva?»— y
+   * `worker_id` sigue siendo la única verdad sobre quién atiende: no aparece
+   * una segunda fuente que pueda desincronizarse de ella.
+   *
+   * `DEFAULT false` es deliberado: significa «la repartió el sistema», que es
+   * lo que era cierto de todas las reservas anteriores a la asignación
+   * automática.
+   */
+  @Column('boolean', { name: 'worker_pinned', default: false })
+  workerPinned: boolean;
+
   @Column('int', { name: 'total_duration_minutes' })
   totalDurationMinutes: number;
 

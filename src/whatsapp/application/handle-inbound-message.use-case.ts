@@ -15,6 +15,7 @@ import {
   ReservationNotReschedulableError,
   ReservationOwnershipError,
   WorkerOverlapError,
+  ChosenWorkerBusyError,
 } from 'src/reservations/domain/errors';
 import { salonLocalToUtcIso } from 'src/reservations/salon-time';
 import { ClockPort } from 'src/reservations/domain/ports/clock.port';
@@ -429,6 +430,18 @@ export class HandleInboundMessageUseCase {
       // El caso más probable —y el único que ella puede resolver sola— es que la
       // franja se ocupara entre que se envió la lista y ella pulsó: se le vuelve
       // a ofrecer el día en vez de dejarla en un callejón sin salida.
+      //
+      // El específico va ANTES que el genérico, del que hereda: si no, las dos
+      // causas contarían la misma historia y una de las dos sería mentira. Las
+      // dos siguen volviendo a ofrecer el día.
+      if (error instanceof ChosenWorkerBusyError) {
+        await this.texto(
+          from,
+          'Tu estilista no tiene libre esa hora. Mira las que sí.',
+        );
+        await this.ofrecerHoras(id, from, dateYmd, 0);
+        return;
+      }
       if (error instanceof WorkerOverlapError) {
         await this.texto(
           from,
@@ -481,6 +494,11 @@ export class HandleInboundMessageUseCase {
     }
     if (error instanceof ReservationNotReschedulableError) {
       return 'Esa cita ya está cerrada y no se puede mover.';
+    }
+    // Específico antes que genérico: `ChosenWorkerBusyError` hereda de
+    // `WorkerOverlapError` y el orden es lo único que los distingue.
+    if (error instanceof ChosenWorkerBusyError) {
+      return 'Tu estilista no tiene libre esa hora. Elige otra, por favor.';
     }
     if (error instanceof WorkerOverlapError) {
       return 'Esa hora acaba de ocuparse. Elige otra, por favor.';

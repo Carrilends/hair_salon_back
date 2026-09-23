@@ -8,6 +8,7 @@ import {
   InvalidStatusTransitionError,
   RescheduleTooLateError,
   ReservationNotReschedulableError,
+  WorkerReassignmentNotAllowedError,
 } from './errors';
 
 const lines = [
@@ -19,6 +20,7 @@ function make(userId: string): Reservation {
   return Reservation.schedule({
     scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
     workerId: 'w-1',
+    workerPinned: false,
     userId,
     lines,
   });
@@ -29,6 +31,7 @@ describe('Reservation (agregado maduro)', () => {
     const r = Reservation.schedule({
       scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
       workerId: 'w-1',
+      workerPinned: false,
       userId: 'u-1',
       lines,
     });
@@ -42,6 +45,7 @@ describe('Reservation (agregado maduro)', () => {
       Reservation.schedule({
         scheduledAt: new Date('no-es-fecha'),
         workerId: 'w-1',
+        workerPinned: false,
         userId: 'u-1',
         lines,
       }),
@@ -53,6 +57,7 @@ describe('Reservation (agregado maduro)', () => {
       Reservation.schedule({
         scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
         workerId: 'w-1',
+        workerPinned: false,
         userId: 'u-1',
         lines: [],
       }),
@@ -64,6 +69,7 @@ describe('Reservation (agregado maduro)', () => {
       Reservation.schedule({
         scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
         workerId: 'w-1',
+        workerPinned: false,
         lines,
       }),
     ).toThrow(MissingContactError);
@@ -73,6 +79,7 @@ describe('Reservation (agregado maduro)', () => {
     const r = Reservation.schedule({
       scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
       workerId: 'w-1',
+      workerPinned: false,
       lines,
       contact: { name: 'Ana', phone: '3001234567' },
     });
@@ -150,6 +157,7 @@ describe('Reservation.reschedule', () => {
     return Reservation.schedule({
       scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
       workerId: 'w-1',
+      workerPinned: false,
       userId: 'u-1',
       lines,
     });
@@ -285,5 +293,51 @@ describe('Reservation.reschedule', () => {
 
     expect(r.scheduledAt).toEqual(antes);
     expect(r.endedAt).toEqual(new Date('2026-04-20T15:45:00.000Z'));
+  });
+});
+
+/**
+ * Reasignación de estilista.
+ *
+ * La invariante «una reserva con estilista elegida por la clienta no se
+ * reasigna» vive **dentro del agregado** a propósito. Podría vivir en el caso de
+ * uso —hoy solo hay uno que reasigna—, pero entonces cualquier adaptador o caso
+ * de uso futuro podría saltársela por descuido, y el fallo es silencioso: la
+ * clienta se entera el día de la cita, en el salón.
+ */
+describe('Reservation.assignWorker', () => {
+  function con(workerPinned: boolean): Reservation {
+    return Reservation.schedule({
+      scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
+      workerId: 'w-1',
+      workerPinned,
+      userId: 'u-1',
+      lines,
+    });
+  }
+
+  it('reasigna cuando la estilista la había repartido el sistema', () => {
+    const r = con(false);
+
+    r.assignWorker('w-2');
+
+    expect(r.workerId).toBe('w-2');
+  });
+
+  it('se niega a reasignar cuando la clienta eligió estilista', () => {
+    const r = con(true);
+
+    expect(() => r.assignWorker('w-2')).toThrow(
+      WorkerReassignmentNotAllowedError,
+    );
+    expect(r.workerId).toBe('w-1'); // y no la deja a medias
+  });
+
+  it('reasignar no cambia la marca: sigue siendo una asignación del sistema', () => {
+    const r = con(false);
+
+    r.assignWorker('w-2');
+
+    expect(r.workerPinned).toBe(false);
   });
 });

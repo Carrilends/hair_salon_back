@@ -7,14 +7,12 @@ import {
   DuplicateServicesError,
 } from '../domain/errors';
 import { ReservationRepositoryPort } from '../domain/ports/reservation-repository.port';
-import { WorkerAvailabilityPort } from '../domain/ports/worker-availability.port';
-import { getDatePartsInTz } from '../salon-time';
+import { WorkerAssigner } from './worker-assigner';
 import { ServiceCatalogPort } from '../domain/ports/service-catalog.port';
 import { ClockPort } from '../domain/ports/clock.port';
 import { ReservationNotifierPort } from '../domain/ports/reservation-notifier.port';
 import {
   RESERVATION_REPOSITORY,
-  WORKER_AVAILABILITY,
   SERVICE_CATALOG,
   CLOCK,
   RESERVATION_NOTIFIER,
@@ -25,10 +23,6 @@ import {
  * existe mientras se valida el horario, que no depende de quién atienda.
  */
 const ESTILISTA_POR_DECIDIR = '';
-
-function pad2(n: number): string {
-  return String(n).padStart(2, '0');
-}
 
 export interface CreateReservationCommand {
   scheduledAt: string;
@@ -46,8 +40,7 @@ export class CreateReservationUseCase {
   constructor(
     @Inject(RESERVATION_REPOSITORY)
     private readonly repository: ReservationRepositoryPort,
-    @Inject(WORKER_AVAILABILITY)
-    private readonly workers: WorkerAvailabilityPort,
+    private readonly assigner: WorkerAssigner,
     @Inject(SERVICE_CATALOG)
     private readonly catalog: ServiceCatalogPort,
     @Inject(CLOCK)
@@ -79,10 +72,17 @@ export class CreateReservationUseCase {
       durationMinutes: s.durationMinutes,
     }));
 
+    // El origen de la asignación se decide aquí y solo aquí: este es el único
+    // punto del sistema que ve si el `workerId` llegó de fuera (la clienta lo
+    // eligió en el portal) o va a decidirlo el reparto interno. Un adaptador no
+    // puede saberlo —le llega un mandato ya armado— y por eso ninguno lo fija.
+    const laEligioLaClienta = command.workerId != null;
+
     const armar = (workerId: string) =>
       Reservation.schedule({
         scheduledAt: new Date(command.scheduledAt),
         workerId,
+        workerPinned: laEligioLaClienta,
         lines,
         userId: command.userId ?? null,
         contact: command.contact ?? null,
@@ -100,7 +100,7 @@ export class CreateReservationUseCase {
 
     const workerId =
       command.workerId ??
-      (await this.elegirEstilista(borrador.scheduledAt, borrador.endedAt, tz));
+      (await this.assigner.elegir(borrador.scheduledAt, borrador.endedAt, tz));
     const reservation =
       workerId === borrador.workerId ? borrador : armar(workerId);
 
@@ -129,57 +129,5 @@ export class CreateReservationUseCase {
     }
 
     return saved;
-  }
-
-  /**
-   * Elige la estilista que atenderá una reserva que no pidió ninguna.
-   *
-   * **Por qué existe.** La restricción de exclusión de `reservations` es *por
-   * estilista* (`worker_id WITH =, tstzrange(...) WITH &&`). Mandar al
-   * pseudo-estilista por defecto todo lo que llega sin `workerId` dejaba al
-   * salón con capacidad efectiva 1: Postgres rechazaba la segunda cita
-   * simultánea aunque hubiera sillas libres. Llegan aquí sin `workerId` el chat
-   * (RF57/RF58 no hablan de estilistas) y el portal cuando la clienta marca
-   * «Sin preferencia». La clienta sigue sin elegir: el reparto es interno.
-   *
-   * **Reparto.** Entre las libres, la que menos minutos tenga ocupados ese día.
-   * No es una optimización sino equidad: sin criterio, el orden de la consulta
-   * cargaría siempre a la primera. El desempate por `id` hace la elección
-   * determinista y, por tanto, comprobable.
-   *
-   * **Si ninguna está libre** se rechaza igual que antes (409 por solape). No
-   * hay cola ni sobrecupo: el salón no puede atender más de lo que puede.
-   *
-   * **Si no hay estilistas asignables dadas de alta** se conserva el
-   * comportamiento anterior —el estilista por defecto—, que es lo único
-   * posible; es también el caso del salón recién instalado.
-   */
-  private async elegirEstilista(
-    scheduledAt: Date,
-    endedAt: Date,
-    tz: string,
-  ): Promise<string> {
-    const p = getDatePartsInTz(scheduledAt, tz);
-    const dateYmd = `${p.year}-${pad2(p.month)}-${pad2(p.day)}`;
-
-    const cargas = await this.workers.listAssignableWorkloads(dateYmd);
-    if (cargas.length === 0) return this.workers.getDefaultWorkerId();
-
-    const candidatas = [...cargas].sort(
-      (a, b) => a.usedMinutes - b.usedMinutes || a.id.localeCompare(b.id),
-    );
-
-    // En serie y no en paralelo a propósito: en cuanto una sirve, las demás
-    // consultas sobran, y son pocas (el salón tiene un puñado de estilistas).
-    for (const candidata of candidatas) {
-      const solapes = await this.repository.countOverlaps(
-        candidata.id,
-        scheduledAt,
-        endedAt,
-      );
-      if (solapes === 0) return candidata.id;
-    }
-
-    throw new WorkerOverlapError();
   }
 }

@@ -5,6 +5,7 @@ import {
   CancellationTooLateError,
   RescheduleTooLateError,
   ReservationNotReschedulableError,
+  WorkerReassignmentNotAllowedError,
 } from './errors';
 import {
   ReservationStatus,
@@ -21,6 +22,13 @@ export interface ReservationProps {
   scheduledAt: Date;
   endedAt: Date;
   workerId: string;
+  /**
+   * Opcional al rehidratar porque la columna tiene `DEFAULT false` y las filas
+   * anteriores a la migración ya vienen rellenas: la base es aquí la autoridad.
+   * Al **crear** sí es obligatorio (ver `schedule`), que es donde se conoce el
+   * origen y donde olvidarlo costaría una clienta.
+   */
+  workerPinned?: boolean;
   status: ReservationStatus;
   lines: ReservationLine[];
 }
@@ -34,7 +42,13 @@ export class Reservation {
   readonly id?: string;
   readonly userId: string | null;
   readonly contact: ContactInfo | null;
-  readonly workerId: string;
+  /**
+   * ¿La estilista la **eligió la clienta** (`true`) o la **repartió el sistema**
+   * (`false`)? `workerId` dice quién atiende, nunca por qué, y sin ese «por qué»
+   * la reprogramación no puede saber si reasignar resuelve un 409 innecesario o
+   * traiciona a quien pidió a su estilista de confianza.
+   */
+  readonly workerPinned: boolean;
   readonly lines: ReservationLine[];
   // La ventana es privada desde que existe la reprogramación: sigue siendo de
   // solo lectura desde fuera (los getters), pero el agregado necesita poder
@@ -42,6 +56,10 @@ export class Reservation {
   private _scheduledAt: Date;
   private _endedAt: Date;
   private _status: ReservationStatus;
+  // Privado desde que la reprogramación puede repartir de nuevo una reserva sin
+  // preferencia. Sigue siendo de solo lectura desde fuera (el getter); el único
+  // camino para cambiarlo es `assignWorker`, que se niega si la clienta eligió.
+  private _workerId: string;
 
   private constructor(props: ReservationProps) {
     this.id = props.id;
@@ -49,13 +67,18 @@ export class Reservation {
     this.contact = props.contact ?? null;
     this._scheduledAt = props.scheduledAt;
     this._endedAt = props.endedAt;
-    this.workerId = props.workerId;
+    this._workerId = props.workerId;
+    this.workerPinned = props.workerPinned ?? false;
     this.lines = props.lines;
     this._status = props.status;
   }
 
   get status(): ReservationStatus {
     return this._status;
+  }
+
+  get workerId(): string {
+    return this._workerId;
   }
 
   get scheduledAt(): Date {
@@ -71,10 +94,18 @@ export class Reservation {
     return this.lines.reduce((sum, line) => sum + line.durationMinutes, 0);
   }
 
-  /** Crea una reserva nueva (`pendiente`) calculando el fin de la ventana. */
+  /**
+   * Crea una reserva nueva (`pendiente`) calculando el fin de la ventana.
+   *
+   * `workerPinned` es **obligatorio** a propósito: solo quien construye el
+   * mandato sabe si el `workerId` vino de fuera (la clienta eligió) o lo decidió
+   * el reparto interno, y si ese dato se pierde la reprogramación reasignará a
+   * quien no debía. Que el compilador lo exija sale gratis.
+   */
   static schedule(input: {
     scheduledAt: Date;
     workerId: string;
+    workerPinned: boolean;
     lines: ReservationLine[];
     userId?: string | null;
     contact?: ContactInfo | null;
@@ -92,6 +123,7 @@ export class Reservation {
       scheduledAt: input.scheduledAt,
       endedAt: endOfWindow(input.scheduledAt, input.lines),
       workerId: input.workerId,
+      workerPinned: input.workerPinned,
       lines: input.lines,
       userId: input.userId ?? null,
       contact: input.contact ?? null,
@@ -117,10 +149,28 @@ export class Reservation {
       scheduledAt: this.scheduledAt,
       endedAt: this.endedAt,
       workerId: this.workerId,
+      workerPinned: this.workerPinned,
       status: this.status,
       totalDurationMinutes: this.totalDurationMinutes,
       lines: this.lines,
     };
+  }
+
+  /**
+   * Cambia la estilista que atenderá la cita. **Solo** si la repartió el
+   * sistema: si la eligió la clienta, se niega.
+   *
+   * La invariante vive aquí, y no en el caso de uso que hoy la necesita, porque
+   * es la única forma de que ningún adaptador ni caso de uso futuro pueda
+   * saltársela. Traicionar a quien pidió a su estilista de confianza es un fallo
+   * silencioso: no lo ve nadie hasta el día de la cita, en el salón.
+   *
+   * No toca `workerPinned`: reasignar no convierte una asignación del sistema en
+   * una elección de la clienta.
+   */
+  assignWorker(workerId: string): void {
+    if (this.workerPinned) throw new WorkerReassignmentNotAllowedError();
+    this._workerId = workerId;
   }
 
   confirm(): void {
@@ -147,9 +197,14 @@ export class Reservation {
   }
 
   /**
-   * Mueve la cita en el tiempo. **Conserva el estado y el estilista**: solo
-   * cambia la ventana, y el fin se recalcula desde la duración de las líneas
-   * (nunca se confía en un `endedAt` de fuera).
+   * Mueve la cita en el tiempo. **Conserva el estado**: solo cambia la ventana,
+   * y el fin se recalcula desde la duración de las líneas (nunca se confía en un
+   * `endedAt` de fuera).
+   *
+   * **No toca la estilista**, pero tampoco la garantiza: quien mueve la cita
+   * puede después llamar a `assignWorker`, que se niega si la eligió la clienta.
+   * Mover y reasignar son dos operaciones distintas del agregado a propósito —la
+   * segunda tiene su propia guarda—.
    *
    * Por qué conserva el estado: degradar una `confirmada` a `pendiente` la
    * dejaría a merced del cron de saldado, que cancela las pendientes vencidas.

@@ -55,3 +55,54 @@ describe('ReservationMapper · columna derivada del teléfono', () => {
     expect(escalares.customerPhoneE164).toBeNull();
   });
 });
+
+/**
+ * Origen de la asignación de estilista.
+ *
+ * `worker_id` dice **quién** atiende, pero no **por qué**: si la eligió la
+ * clienta o la repartió el sistema. Esa diferencia decide si la reprogramación
+ * puede reasignar, así que tiene que sobrevivir al viaje de ida y vuelta a la
+ * base; si se pierde en el mapper, el fallo es silencioso y solo se descubre el
+ * día de la cita.
+ */
+describe('ReservationMapper · origen de la asignación de estilista', () => {
+  it('persiste la marca de estilista elegida en las columnas escalares', () => {
+    const elegida = Reservation.fromPersistence({
+      id: 'r-1',
+      userId: 'u-1',
+      contact: null,
+      scheduledAt: new Date('2026-08-20T14:00:00.000Z'),
+      endedAt: new Date('2026-08-20T15:00:00.000Z'),
+      workerId: 'w-1',
+      workerPinned: true,
+      status: ReservationStatus.Pendiente,
+      lines: [{ ...line }],
+    });
+
+    expect(ReservationMapper.toOrmScalars(elegida).workerPinned).toBe(true);
+  });
+
+  it('deja la marca en false cuando la estilista la repartió el sistema', () => {
+    expect(ReservationMapper.toOrmScalars(conTelefono(null)).workerPinned).toBe(
+      false,
+    );
+  });
+
+  it('toDomain devuelve la marca que traía la fila', () => {
+    const fila = {
+      id: 'r-1',
+      userId: null,
+      customerName: null,
+      customerPhone: null,
+      customerEmail: null,
+      scheduledAt: new Date('2026-08-20T14:00:00.000Z'),
+      endedAt: new Date('2026-08-20T15:00:00.000Z'),
+      workerId: 'w-1',
+      workerPinned: true,
+      status: 'pendiente',
+      services: [],
+    } as unknown as Parameters<typeof ReservationMapper.toDomain>[0];
+
+    expect(ReservationMapper.toDomain(fila).workerPinned).toBe(true);
+  });
+});

@@ -13,6 +13,7 @@ describe('ReservationScheduling.assertWithinBusinessHours', () => {
     Reservation.schedule({
       scheduledAt: new Date(isoUtc),
       workerId: 'w-1',
+      workerPinned: false,
       userId: 'w-1',
       lines: [
         {

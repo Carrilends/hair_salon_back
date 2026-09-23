@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import {
   CancellationTooLateError,
+  ChosenWorkerBusyError,
   DomainError,
   ReservationNotFoundError,
   ReservationOwnershipError,
@@ -41,6 +42,32 @@ export class ReservationDomainExceptionFilter implements ExceptionFilter {
       http = new BadRequestException(error.message);
     }
     const res = host.switchToHttp().getResponse();
-    res.status(http.getStatus()).json(http.getResponse());
+    const cuerpo = http.getResponse();
+    const reason = motivoDelConflicto(error);
+    res
+      .status(http.getStatus())
+      .json(
+        reason && typeof cuerpo === 'object' ? { ...cuerpo, reason } : cuerpo,
+      );
   }
+}
+
+/**
+ * Código estable del motivo del 409, para que el portal pueda decirle a la
+ * clienta cuál de los dos remedios le sirve: si la ocupada es **su** estilista
+ * cabe cambiar de hora o reservar sin preferencia; si el salón está lleno, solo
+ * cambiar de hora.
+ *
+ * Viaja como código y no como texto a propósito: el mensaje se reescribe, se
+ * acorta y se traduce, y el día que alguien lo retoque el portal empezaría a
+ * contar la historia equivocada sin que ninguna prueba se entere.
+ *
+ * El `instanceof` específico va ANTES que el genérico porque
+ * `ChosenWorkerBusyError` hereda de `WorkerOverlapError`; al revés, el genérico
+ * se los comería a los dos.
+ */
+function motivoDelConflicto(error: DomainError): string | null {
+  if (error instanceof ChosenWorkerBusyError) return 'estilista_ocupada';
+  if (error instanceof WorkerOverlapError) return 'hora_ocupada';
+  return null;
 }

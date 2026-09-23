@@ -87,8 +87,21 @@ export class ReservationActionsAdapter implements ReservationActionsPort {
     durationMinutes: number,
   ): Promise<string[]> {
     const disponibilidad = await this.workers.getAvailabilityByDate(dateYmd);
-    // El estilista de la cita, no el de por defecto: mover una cita no la
-    // reasigna, así que los huecos que importan son los suyos.
+    // El estilista de la cita, no el de por defecto.
+    //
+    // **Ojo: esto ofrece de menos.** Era exacto cuando mover una cita nunca la
+    // reasignaba. Ya no: una reserva sin estilista elegida puede moverse a una
+    // hora en la que su estilista actual está ocupada pero otra está libre, y
+    // esas horas no aparecen aquí. Es conservador —nunca ofrece una hora que
+    // luego se rechace— pero se queda corto justo en los casos en los que la
+    // reprogramación ya sabe decir que sí.
+    //
+    // Arreglarlo es una **consulta**, no la regla de solape (que vive en el caso
+    // de uso y no se duplica aquí): habría que mirar la ocupación con criterio
+    // de salón cuando la reserva no está marcada, con la misma fuente que ya usa
+    // el asistente (`AvailabilityQueryAdapter`: `ocupacionSimultanea` +
+    // `assignableWorkers`). Queda pendiente de decidir si ese cálculo se
+    // generaliza a un puerto compartido o se acepta una segunda implementación.
     const suyo = disponibilidad.workers.find((w) => w.id === workerId);
     if (!suyo) return [];
 

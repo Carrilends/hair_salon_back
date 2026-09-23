@@ -8,6 +8,7 @@ import {
   DuplicateServicesError,
 } from '../domain/errors';
 import { Reservation } from '../domain/reservation';
+import { WorkerAssigner } from './worker-assigner';
 
 const catalog = {
   getSnapshots: async (ids: string[]) =>
@@ -27,6 +28,16 @@ const workers = {
   getDefaultWorkerId: async () => 'default-w',
   listAssignableWorkloads: async () => [],
 };
+
+/**
+ * El reparto ya no vive dentro del caso de uso: se extrajo a `WorkerAssigner`
+ * para que la reprogramación use exactamente el mismo. Las pruebas siguen
+ * pasando los mismos dobles, solo que envueltos en el repartidor REAL, de modo
+ * que lo que se comprueba —y lo que se espera— no cambia.
+ */
+function assigner(repository: any, workersPort: any): WorkerAssigner {
+  return new WorkerAssigner(repository, workersPort);
+}
 
 // "ahora" fijado antes de las fechas de prueba (2026-04-20): las reservas no
 // son pasadas salvo que un test lo fuerce con su propio reloj.
@@ -49,6 +60,7 @@ function repo() {
         scheduledAt: r.scheduledAt,
         endedAt: r.endedAt,
         workerId: r.workerId,
+        workerPinned: r.workerPinned,
         status: r.status,
         lines: r.lines,
       }),
@@ -61,9 +73,10 @@ describe('CreateReservationUseCase (maduro)', () => {
   });
 
   it('crea con 2 servicios y deriva 60 min de duración', async () => {
+    const repositorio = repo();
     const uc = new CreateReservationUseCase(
-      repo(),
-      workers as any,
+      repositorio,
+      assigner(repositorio, workers as any),
       catalog as any,
       clock as any,
       noopNotifier as any,
@@ -83,9 +96,10 @@ describe('CreateReservationUseCase (maduro)', () => {
   // que ocurre cuando NO hay ninguna asignable dada de alta. El valor esperado
   // (`default-w`) no cambia; lo que cambia es la condición que lo justifica.
   it('usa el estilista por defecto solo si no hay estilistas asignables', async () => {
+    const repositorio = repo();
     const uc = new CreateReservationUseCase(
-      repo(),
-      workers as any,
+      repositorio,
+      assigner(repositorio, workers as any),
       catalog as any,
       clock as any,
       noopNotifier as any,
@@ -99,9 +113,10 @@ describe('CreateReservationUseCase (maduro)', () => {
   });
 
   it('exige contacto si la reserva es anónima', async () => {
+    const repositorio = repo();
     const uc = new CreateReservationUseCase(
-      repo(),
-      workers as any,
+      repositorio,
+      assigner(repositorio, workers as any),
       catalog as any,
       clock as any,
       noopNotifier as any,
@@ -116,9 +131,11 @@ describe('CreateReservationUseCase (maduro)', () => {
 
   it('rechaza cuando algún servicio no existe en el catálogo', async () => {
     const emptyCatalog = { getSnapshots: async () => [] };
+    const repositorio = repo();
     const uc = new CreateReservationUseCase(
-      repo(),
-      workers as any,
+      repositorio,
+      assigner(repositorio, workers as any),
+
       emptyCatalog as any,
       clock as any,
       noopNotifier as any,
@@ -133,9 +150,10 @@ describe('CreateReservationUseCase (maduro)', () => {
   });
 
   it('rechaza fuera de horario', async () => {
+    const repositorio = repo();
     const uc = new CreateReservationUseCase(
-      repo(),
-      workers as any,
+      repositorio,
+      assigner(repositorio, workers as any),
       catalog as any,
       clock as any,
       noopNotifier as any,
@@ -150,9 +168,10 @@ describe('CreateReservationUseCase (maduro)', () => {
   });
 
   it('rechaza serviceIds duplicados con un error claro (no "no existe")', async () => {
+    const repositorio = repo();
     const uc = new CreateReservationUseCase(
-      repo(),
-      workers as any,
+      repositorio,
+      assigner(repositorio, workers as any),
       catalog as any,
       clock as any,
       noopNotifier as any,
@@ -169,9 +188,10 @@ describe('CreateReservationUseCase (maduro)', () => {
   it('rechaza una reserva cuya hora de inicio ya pasó', async () => {
     // "ahora" es una hora posterior al inicio solicitado: la reserva es pasada.
     const lateClock = { now: () => new Date('2026-04-20T16:00:00.000Z') };
+    const repositorio = repo();
     const uc = new CreateReservationUseCase(
-      repo(),
-      workers as any,
+      repositorio,
+      assigner(repositorio, workers as any),
       catalog as any,
       lateClock as any,
       noopNotifier as any,
@@ -188,9 +208,10 @@ describe('CreateReservationUseCase (maduro)', () => {
   it('rechaza por solapamiento', async () => {
     const r = repo();
     r.overlaps = 1;
+    const repositorio = r;
     const uc = new CreateReservationUseCase(
-      r,
-      workers as any,
+      repositorio,
+      assigner(repositorio, workers as any),
       catalog as any,
       clock as any,
       noopNotifier as any,
@@ -211,9 +232,10 @@ describe('CreateReservationUseCase (maduro)', () => {
         notificadas.push(r);
       },
     };
+    const repositorio = repo();
     const uc = new CreateReservationUseCase(
-      repo(),
-      workers as any,
+      repositorio,
+      assigner(repositorio, workers as any),
       catalog as any,
       clock as any,
       notifier as any,
@@ -236,9 +258,10 @@ describe('CreateReservationUseCase (maduro)', () => {
         throw new Error('canal caído');
       },
     };
+    const repositorio = repo();
     const uc = new CreateReservationUseCase(
-      repo(),
-      workers as any,
+      repositorio,
+      assigner(repositorio, workers as any),
       catalog as any,
       clock as any,
       notifier as any,
@@ -280,6 +303,7 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
           scheduledAt: r.scheduledAt,
           endedAt: r.endedAt,
           workerId: r.workerId,
+          workerPinned: r.workerPinned,
           status: r.status,
           lines: r.lines,
         }),
@@ -296,12 +320,16 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
   }
 
   it('asigna una estilista asignable libre en vez del estilista por defecto', async () => {
+    const repositorio = repoPorEstilista(['w-ocupada']);
     const uc = new CreateReservationUseCase(
-      repoPorEstilista(['w-ocupada']),
-      workersCon([
-        { id: 'w-ocupada', usedMinutes: 0 },
-        { id: 'w-libre', usedMinutes: 120 },
-      ]),
+      repositorio,
+      assigner(
+        repositorio,
+        workersCon([
+          { id: 'w-ocupada', usedMinutes: 0 },
+          { id: 'w-libre', usedMinutes: 120 },
+        ]),
+      ),
       catalog as any,
       clock as any,
       noopNotifier as any,
@@ -315,13 +343,17 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
   });
 
   it('entre varias libres elige la que menos minutos tiene ocupados ese día', async () => {
+    const repositorio = repoPorEstilista([]);
     const uc = new CreateReservationUseCase(
-      repoPorEstilista([]),
-      workersCon([
-        { id: 'w-cargada', usedMinutes: 300 },
-        { id: 'w-descansada', usedMinutes: 30 },
-        { id: 'w-media', usedMinutes: 120 },
-      ]),
+      repositorio,
+      assigner(
+        repositorio,
+        workersCon([
+          { id: 'w-cargada', usedMinutes: 300 },
+          { id: 'w-descansada', usedMinutes: 30 },
+          { id: 'w-media', usedMinutes: 120 },
+        ]),
+      ),
       catalog as any,
       clock as any,
       noopNotifier as any,
@@ -335,12 +367,16 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
   });
 
   it('rechaza por solape solo cuando NINGUNA asignable está libre', async () => {
+    const repositorio = repoPorEstilista(['w-a', 'w-b']);
     const uc = new CreateReservationUseCase(
-      repoPorEstilista(['w-a', 'w-b']),
-      workersCon([
-        { id: 'w-a', usedMinutes: 0 },
-        { id: 'w-b', usedMinutes: 0 },
-      ]),
+      repositorio,
+      assigner(
+        repositorio,
+        workersCon([
+          { id: 'w-a', usedMinutes: 0 },
+          { id: 'w-b', usedMinutes: 0 },
+        ]),
+      ),
       catalog as any,
       clock as any,
       noopNotifier as any,
@@ -355,12 +391,16 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
   });
 
   it('respeta el workerId explícito y no lo reasigna aunque esté ocupado', async () => {
+    const repositorio = repoPorEstilista(['w-elegida']);
     const uc = new CreateReservationUseCase(
-      repoPorEstilista(['w-elegida']),
-      workersCon([
-        { id: 'w-elegida', usedMinutes: 0 },
-        { id: 'w-libre', usedMinutes: 0 },
-      ]),
+      repositorio,
+      assigner(
+        repositorio,
+        workersCon([
+          { id: 'w-elegida', usedMinutes: 0 },
+          { id: 'w-libre', usedMinutes: 0 },
+        ]),
+      ),
       catalog as any,
       clock as any,
       noopNotifier as any,
@@ -377,13 +417,77 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
     ).rejects.toThrow(WorkerOverlapError);
   });
 
+  /**
+   * El origen de la asignación se decide AQUÍ y en ningún otro sitio: el caso de
+   * uso es el único que ve si el `workerId` llegó de fuera. Si esta marca se
+   * pierde, la reprogramación reasignará a una clienta que sí había elegido
+   * estilista, y ella se entera el día de la cita.
+   */
+  it('marca la reserva cuando la clienta eligió estilista', async () => {
+    const repositorio = repoPorEstilista([]);
+    const uc = new CreateReservationUseCase(
+      repositorio,
+      assigner(repositorio, workersCon([{ id: 'w-elegida', usedMinutes: 0 }])),
+      catalog as any,
+      clock as any,
+      noopNotifier as any,
+    );
+    const result = await uc.execute({
+      scheduledAt: '2026-04-20T15:00:00.000Z',
+      serviceIds: ['s1'],
+      workerId: 'w-elegida',
+      userId: 'u-1',
+    });
+    expect(result.workerPinned).toBe(true);
+  });
+
+  it('NO la marca cuando la estilista la repartió el sistema', async () => {
+    const repositorio = repoPorEstilista([]);
+    const uc = new CreateReservationUseCase(
+      repositorio,
+      assigner(repositorio, workersCon([{ id: 'w-a', usedMinutes: 0 }])),
+      catalog as any,
+      clock as any,
+      noopNotifier as any,
+    );
+    const result = await uc.execute({
+      scheduledAt: '2026-04-20T15:00:00.000Z',
+      serviceIds: ['s1'],
+      userId: 'u-1',
+    });
+    expect(result.workerId).toBe('w-a');
+    expect(result.workerPinned).toBe(false);
+  });
+
+  it('tampoco la marca en el caso degenerado del estilista por defecto', async () => {
+    // Sin estilistas asignables dadas de alta la reserva cae en el
+    // pseudo-estilista por defecto. Sigue siendo una asignación del sistema, no
+    // una elección: marcarla la dejaría clavada ahí para siempre.
+    const repositorio = repoPorEstilista([]);
+    const uc = new CreateReservationUseCase(
+      repositorio,
+      assigner(repositorio, workersCon([])),
+      catalog as any,
+      clock as any,
+      noopNotifier as any,
+    );
+    const result = await uc.execute({
+      scheduledAt: '2026-04-20T15:00:00.000Z',
+      serviceIds: ['s1'],
+      userId: 'u-1',
+    });
+    expect(result.workerId).toBe('default-w');
+    expect(result.workerPinned).toBe(false);
+  });
+
   it('el horario manda sobre la asignación: fuera de horario no se busca estilista', async () => {
     // Si se eligiera estilista antes de validar la agenda, una petición a las
     // 22:00 con todas ocupadas diría "no hay disponibilidad" en vez de "está
     // cerrado", que es la razón verdadera.
+    const repositorio = repoPorEstilista(['w-a']);
     const uc = new CreateReservationUseCase(
-      repoPorEstilista(['w-a']),
-      workersCon([{ id: 'w-a', usedMinutes: 0 }]),
+      repositorio,
+      assigner(repositorio, workersCon([{ id: 'w-a', usedMinutes: 0 }])),
       catalog as any,
       clock as any,
       noopNotifier as any,

@@ -20,6 +20,7 @@ export const ReservationMapper = {
       scheduledAt: row.scheduledAt,
       endedAt: row.endedAt,
       workerId: row.workerId,
+      workerPinned: row.workerPinned,
       status: row.status as ReservationStatus,
       lines: (row.services ?? []).map((s) => ({
         serviceId: s.serviceId,
@@ -48,6 +49,9 @@ export const ReservationMapper = {
       scheduledAt: reservation.scheduledAt,
       endedAt: reservation.endedAt,
       workerId: reservation.workerId,
+      // Viaja en la ruta de actualización igual que `workerId`: la
+      // reprogramación puede cambiar la estilista, pero nunca la marca.
+      workerPinned: reservation.workerPinned,
       totalDurationMinutes: reservation.totalDurationMinutes,
       status: reservation.status,
       userId: reservation.userId,

@@ -14,6 +14,28 @@ export class WorkerOverlapError extends DomainError {
   }
 }
 
+/**
+ * Caso particular del solape: la estilista ocupada es la que **eligió la
+ * clienta**, así que no se le puede dar otra. Existe porque los dos rechazos
+ * tienen remedios distintos —aquí cabe cambiar de hora **o** reservar sin
+ * preferencia; en el genérico (salón lleno) solo cambiar de hora— y un 409 mudo
+ * obliga a la clienta a adivinar cuál de los dos es.
+ *
+ * **Hereda de `WorkerOverlapError` a propósito:** todo lo que ya comprobaba el
+ * genérico —el filtro HTTP que lo traduce a 409, el mapeo de motivos del
+ * asistente, el texto de WhatsApp— sigue funcionando sin tocar nada, así que
+ * ningún camino se queda sin traducción por olvido. **El precio:** allí donde se
+ * quieran distinguir, el `instanceof` específico tiene que ir ANTES que el
+ * genérico, o el genérico se los come a los dos.
+ */
+export class ChosenWorkerBusyError extends WorkerOverlapError {
+  constructor() {
+    super();
+    this.message = 'La estilista que elegiste ya tiene una reserva a esa hora';
+    this.name = 'ChosenWorkerBusyError';
+  }
+}
+
 export class ReservationNotFoundError extends DomainError {
   constructor(id: string) {
     super(`Reservation ${id} not found`);
@@ -95,5 +117,20 @@ export class ReservationNotReschedulableError extends DomainError {
   constructor(status: string) {
     super(`Una reserva ${status} no se puede reprogramar`);
     this.name = 'ReservationNotReschedulableError';
+  }
+}
+
+/**
+ * Se intentó cambiar la estilista de una reserva cuya estilista **eligió la
+ * clienta**. No es un error que un usuario pueda provocar desde fuera —el caso
+ * de uso comprueba la marca antes de reasignar—: es la guarda que impide que un
+ * adaptador o un caso de uso futuro se salte la invariante por descuido. Que
+ * viva en el agregado y no en el caso de uso es deliberado: reasignar a quien sí
+ * había elegido estilista falla en silencio y se descubre el día de la cita.
+ */
+export class WorkerReassignmentNotAllowedError extends DomainError {
+  constructor() {
+    super('Esta reserva conserva la estilista que eligió la clienta');
+    this.name = 'WorkerReassignmentNotAllowedError';
   }
 }

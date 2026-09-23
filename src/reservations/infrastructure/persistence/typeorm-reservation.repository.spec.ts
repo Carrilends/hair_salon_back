@@ -72,6 +72,7 @@ describe('TypeOrmReservationRepository.save', () => {
     const nueva = Reservation.schedule({
       scheduledAt: new Date('2026-08-20T14:00:00.000Z'),
       workerId: 'w-1',
+      workerPinned: false,
       userId: 'u-1',
       lines: [{ ...line }],
     });
@@ -104,6 +105,7 @@ describe('TypeOrmReservationRepository.save', () => {
     const nueva = Reservation.schedule({
       scheduledAt: new Date('2026-08-20T14:00:00.000Z'),
       workerId: 'w-1',
+      workerPinned: false,
       userId: 'u-1',
       lines: [{ ...line }],
     });

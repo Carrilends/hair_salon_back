@@ -11,6 +11,7 @@ import {
   ReservationNotReschedulableError,
   ReservationOwnershipError,
   WorkerOverlapError,
+  ChosenWorkerBusyError,
 } from 'src/reservations/domain/errors';
 
 class FakeReschedule {
@@ -101,6 +102,22 @@ describe('RescheduleReservationTool', () => {
     expect(Object.keys(props).sort()).toEqual(['nuevaFecha', 'reservaId']);
     expect(tool.definition.parameters.additionalProperties).toBe(false);
   });
+
+  /**
+   * La descripción es **contrato con el modelo**: lo que diga aquí es lo que el
+   * asistente le promete a la clienta. Prometía «conservando sus servicios y su
+   * estilista», y eso solo es cierto ya para las reservas cuya estilista eligió
+   * la clienta; en las demás, mover la cita puede reasignarla. Una mentira aquí
+   * se convierte en una mentira dicha a la clienta.
+   */
+  it('no promete que la estilista se conserve siempre', () => {
+    const uc = { execute: async () => ({ status: 'pendiente' }) };
+    const tool = new RescheduleReservationTool(uc as never);
+
+    expect(tool.definition.description).not.toMatch(/y su estilista/);
+    // Y sí dice de qué depende, para que el modelo pueda explicarlo.
+    expect(tool.definition.description).toMatch(/estilista/);
+  });
 });
 
 describe('mapRescheduleErrorToReason', () => {
@@ -110,10 +127,23 @@ describe('mapRescheduleErrorToReason', () => {
     [new RescheduleTooLateError(), 'fuera_de_plazo'],
     [new ReservationNotReschedulableError('cancelada'), 'estado_no_movible'],
     [new WorkerOverlapError(), 'hora_ocupada'],
+    [new ChosenWorkerBusyError(), 'estilista_ocupada'],
     [new OutOfBusinessHoursError(), 'fuera_de_horario'],
     [new ReservationInThePastError(), 'fecha_pasada'],
     [new Error('otra cosa'), 'error_desconocido'],
   ])('traduce %s a un motivo legible', (error, motivo) => {
     expect(mapRescheduleErrorToReason(error)).toBe(motivo);
+  });
+
+  /**
+   * `ChosenWorkerBusyError` hereda de `WorkerOverlapError`, así que el orden de
+   * los `instanceof` **es** la lógica: si el genérico va primero se come al
+   * específico y el modelo vuelve a recibir un motivo que no distingue «tu
+   * estilista no puede» de «el salón está lleno». Esto lo fija.
+   */
+  it('el motivo específico gana al genérico del que hereda', () => {
+    expect(mapRescheduleErrorToReason(new ChosenWorkerBusyError())).not.toBe(
+      'hora_ocupada',
+    );
   });
 });

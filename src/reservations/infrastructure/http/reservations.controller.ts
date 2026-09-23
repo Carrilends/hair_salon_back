@@ -95,9 +95,11 @@ export class ReservationsController {
 
   /**
    * Mueve una cita. Es `PATCH` y no `PUT` porque solo cambia la ventana: la
-   * reserva sigue siendo la misma, con su id, sus servicios y su estilista. Que
-   * conserve el id importa además fuera de aquí: es el asa que viaja dentro de
-   * los botones de WhatsApp.
+   * reserva sigue siendo la misma, con su id y sus servicios. La estilista sí
+   * puede cambiar, pero solo si la repartió el sistema —quien la eligió conserva
+   * la suya—; esa decisión vive entera en el caso de uso y aquí no se replica
+   * ninguna línea de ella. Que conserve el id importa además fuera de aquí: es
+   * el asa que viaja dentro de los botones de WhatsApp.
    */
   @Auth()
   @Patch(':id/reschedule')

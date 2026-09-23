@@ -17,6 +17,7 @@ function pending(): Reservation {
   return Reservation.schedule({
     scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
     workerId: 'w-1',
+    workerPinned: false,
     userId: 'u-1',
     lines,
   });

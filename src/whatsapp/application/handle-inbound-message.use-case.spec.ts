@@ -4,6 +4,7 @@ import {
   RescheduleTooLateError,
   ReservationOwnershipError,
   WorkerOverlapError,
+  ChosenWorkerBusyError,
 } from 'src/reservations/domain/errors';
 import { HandleInboundMessageUseCase } from './handle-inbound-message.use-case';
 import { ReservationSummary } from '../domain/ports/reservation-actions.port';
@@ -342,6 +343,27 @@ describe('HandleInboundMessage · reprogramar', () => {
     await sut.handle(mensaje({ payload: `RSAT|${RID}|2026-09-12T15:30` }));
 
     expect(comoTexto(enviados[0]).body).toContain('acaba de ocuparse');
+    expect(comoLista(enviados[1]).rows[0].id).toBe(
+      `RSAT|${RID}|2026-09-12T09:00`,
+    );
+  });
+
+  it('si la ocupada es la estilista que ella eligió, lo dice y NO la deja atascada', async () => {
+    // `ChosenWorkerBusyError` hereda de `WorkerOverlapError`, así que lo que hay
+    // que comprobar es doble: que el bucle de «vuelve a ofrecer el día» sigue
+    // entrando (si el `instanceof` se rompiera, la clienta acabaría en un
+    // callejón sin salida) y que el texto no le miente diciéndole que la hora se
+    // acaba de ocupar, cuando lo que pasa es que su estilista no la tiene libre.
+    const { sut, enviados } = montar({
+      horas: ['09:00'],
+      alMover: () => {
+        throw new ChosenWorkerBusyError();
+      },
+    });
+
+    await sut.handle(mensaje({ payload: `RSAT|${RID}|2026-09-12T15:30` }));
+
+    expect(comoTexto(enviados[0]).body).toContain('estilista');
     expect(comoLista(enviados[1]).rows[0].id).toBe(
       `RSAT|${RID}|2026-09-12T09:00`,
     );

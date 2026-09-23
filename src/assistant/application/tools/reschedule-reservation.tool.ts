@@ -9,6 +9,7 @@ import {
   ReservationNotReschedulableError,
   ReservationOwnershipError,
   WorkerOverlapError,
+  ChosenWorkerBusyError,
 } from 'src/reservations/domain/errors';
 import { ReservationActor } from 'src/reservations/domain/reservation-actor';
 
@@ -40,8 +41,14 @@ export class RescheduleReservationTool implements AssistantTool {
 
   readonly definition: LlmToolDefinition = {
     name: this.name,
+    // Contrato con el modelo: lo que diga aquí es lo que el asistente le promete
+    // a la clienta. Prometía «conservando sus servicios y su estilista», y eso
+    // dejó de ser cierto para las reservas cuya estilista repartió el sistema:
+    // moverlas puede reasignarlas a otra que sí esté libre. Sigue siendo cierto
+    // para quien eligió estilista, y el texto tiene que decir de qué depende.
     description:
-      'Cambia la fecha y hora de una reserva de la clienta con sesión iniciada, conservando sus servicios y su estilista.',
+      'Cambia la fecha y hora de una reserva de la clienta con sesión iniciada, conservando sus servicios. ' +
+      'Si la clienta eligió estilista, la conserva; si no eligió ninguna, la cita puede quedar con otra estilista que esté libre a la hora nueva.',
     parameters: {
       type: 'object',
       properties: {
@@ -94,6 +101,11 @@ export function mapRescheduleErrorToReason(error: unknown): string {
   if (error instanceof RescheduleTooLateError) return 'fuera_de_plazo';
   if (error instanceof ReservationNotReschedulableError)
     return 'estado_no_movible';
+  // ANTES que `WorkerOverlapError`, del que hereda: si el genérico fuera primero
+  // se comería al específico y el modelo no podría distinguir «tu estilista no
+  // puede a esa hora» (cabe cambiar de hora o reservar sin preferencia) de «el
+  // salón está lleno» (solo cabe cambiar de hora).
+  if (error instanceof ChosenWorkerBusyError) return 'estilista_ocupada';
   if (error instanceof WorkerOverlapError) return 'hora_ocupada';
   if (error instanceof OutOfBusinessHoursError) return 'fuera_de_horario';
   if (error instanceof ReservationInThePastError) return 'fecha_pasada';

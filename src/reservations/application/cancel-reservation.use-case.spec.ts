@@ -14,6 +14,7 @@ function make(userId: string): Reservation {
   return Reservation.schedule({
     scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
     workerId: 'w-1',
+    workerPinned: false,
     userId,
     lines,
   });
@@ -97,6 +98,7 @@ describe('CancelReservationUseCase', () => {
     const anonima = Reservation.schedule({
       scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
       workerId: 'w-1',
+      workerPinned: false,
       contact: { name: 'Ana', phone: '+57 300 123 4567' },
       lines,
     });
@@ -119,6 +121,7 @@ describe('CancelReservationUseCase', () => {
     const anonima = Reservation.schedule({
       scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
       workerId: 'w-1',
+      workerPinned: false,
       contact: { name: 'Ana', phone: '3001234567' },
       lines,
     });

@@ -45,6 +45,7 @@ const reservaDe = (userId: string): Reservation =>
   Reservation.schedule({
     scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
     workerId: 'w-1',
+    workerPinned: false,
     userId,
     lines: LINEAS,
   });

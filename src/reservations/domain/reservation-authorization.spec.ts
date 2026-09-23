@@ -11,6 +11,7 @@ function deUsuario(userId: string): Reservation {
   return Reservation.schedule({
     scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
     workerId: 'w-1',
+    workerPinned: false,
     userId,
     lines,
   });
@@ -20,6 +21,7 @@ function anonima(phone: string): Reservation {
   return Reservation.schedule({
     scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
     workerId: 'w-1',
+    workerPinned: false,
     contact: { name: 'Ana', phone },
     lines,
   });
