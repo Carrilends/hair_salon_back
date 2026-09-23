@@ -7,14 +7,30 @@ export interface AssistantServiceSummary {
 }
 
 /**
- * Consulta del catálogo **por texto** para el asistente. Distinto del
- * `ServiceCatalogPort` de Reservas (que resuelve snapshots por id): aquí se busca
- * por nombre y se acota el número de resultados. **Nunca** expone
+ * Criterios de `listarServicios`. El texto libre resuelve el **concepto** que la
+ * clienta busca; el género y el tope de precio viajan aparte porque son filtros,
+ * no palabras del catálogo: colarlos en el texto («corte para hombre barato»)
+ * obligaba a que el nombre o la etiqueta los contuviera literalmente, y la
+ * búsqueda volvía vacía.
+ */
+export interface ServiceSearchCriteria {
+  /** Concepto a buscar; se parte en palabras y cada una debe encajar. */
+  texto?: string;
+  /** Nombre de la etiqueta de género: `Hombre`, `Mujer`, `Unisex` o `Niños`. */
+  genero?: string;
+  /** Tope de precio en pesos, inclusive. */
+  precioMaximo?: number;
+}
+
+/**
+ * Consulta del catálogo para el asistente. Distinto del `ServiceCatalogPort` de
+ * Reservas (que resuelve snapshots por id): aquí se busca por concepto, género y
+ * precio, y se acota el número de resultados. **Nunca** expone
  * `Detail.description` ni `Detail.specifications` (coste impredecible).
  */
 export interface ServiceCatalogQueryPort {
   search(
-    text: string | undefined,
+    criteria: ServiceSearchCriteria,
     limit: number,
   ): Promise<AssistantServiceSummary[]>;
 
