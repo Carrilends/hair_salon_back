@@ -178,6 +178,11 @@ export class WorkersService implements OnModuleInit {
       start_min: string;
       duration: string;
     };
+    // Una reserva cancelada ya no ocupa nada: la franja vuelve a estar a la
+    // venta. Se excluye aquí con el mismo literal que usan `countOverlaps` y
+    // `findOccupancyRows`, y que la restricción de exclusión (btree_gist) de la
+    // tabla: si la agenda del portal contara las canceladas, cada cancelación
+    // mataría una franja vendible.
     const resRows = (await this.reservationRepository.manager.query(
       `
       SELECT
@@ -187,6 +192,7 @@ export class WorkersService implements OnModuleInit {
         total_duration_minutes::text AS duration
       FROM reservations
       WHERE (scheduled_at AT TIME ZONE $1)::date = $2::date
+        AND status <> 'cancelada'
       `,
       [tz, dateYmd],
     )) as ResRow[];

@@ -109,6 +109,79 @@ describe('WorkersService', () => {
     );
   });
 
+  describe('getAvailabilityByDate y las reservas canceladas', () => {
+    /**
+     * Doble de la base: aplica el `WHERE` que se le pide. Si el SQL excluye las
+     * canceladas, no las devuelve; si no, las devuelve todas. Así la prueba mide
+     * el comportamiento (minutos y bloques) y no solo el texto de la consulta.
+     */
+    function fakeDb(
+      filas: {
+        worker_id: string;
+        start_min: string;
+        duration: string;
+        status: string;
+      }[],
+    ) {
+      return jest.fn().mockImplementation(async (sql: string) => {
+        const excluyeCanceladas = /status\s*<>\s*'cancelada'/.test(sql);
+        return filas
+          .filter((f) => !excluyeCanceladas || f.status !== 'cancelada')
+          .map((f) => ({
+            // La consulta real no trae `status`: solo se usa aquí para decidir
+            // qué filas devolvería el motor.
+            worker_id: f.worker_id,
+            start_min: f.start_min,
+            duration: f.duration,
+          }));
+      });
+    }
+
+    it('no cuenta una reserva cancelada ni en usedMinutes ni en reservations', async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-04-20T23:00:00.000Z')); // 18:00 Bogotá
+
+      (workerRepository.find as jest.Mock).mockResolvedValue([
+        { id: 'w-1', name: 'Ana', isDefault: false },
+      ]);
+
+      (reservationRepository.manager as any).query = fakeDb([
+        {
+          worker_id: 'w-1',
+          start_min: '600',
+          duration: '60',
+          status: 'confirmada',
+        },
+        {
+          worker_id: 'w-1',
+          start_min: '780',
+          duration: '90',
+          status: 'cancelada',
+        },
+      ]);
+
+      // Fecha distinta de hoy: la capacidad es el día entero y los minutos usados
+      // son la duración completa, sin recortes contra «ahora».
+      const result = await service.getAvailabilityByDate('2026-04-21');
+      const ana = result.workers.find((w) => w.id === 'w-1');
+
+      // Una cancelación libera la franja: la única ocupación real es la de 60 min.
+      expect(ana?.usedMinutes).toBe(60);
+      expect(ana?.reservations).toEqual([{ startMin: 600, endMin: 660 }]);
+    });
+
+    it('excluye las canceladas en el propio SQL, como countOverlaps', async () => {
+      (workerRepository.find as jest.Mock).mockResolvedValue([]);
+      const query = fakeDb([]);
+      (reservationRepository.manager as any).query = query;
+
+      await service.getAvailabilityByDate('2026-04-21');
+
+      const [sql] = query.mock.calls[0] as [string, unknown[]];
+      expect(sql.replace(/\s+/g, ' ')).toContain("status <> 'cancelada'");
+    });
+  });
+
   describe('create', () => {
     it('persiste un nuevo empleado con isDefault=false y nombre recortado', async () => {
       const created = { name: 'Ana', isDefault: false } as Partial<Worker>;

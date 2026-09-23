@@ -87,15 +87,25 @@ function daysBetween(fromYmd: string, toYmd: string): number {
   );
 }
 
-/** Franjas de 30 min con hueco libre en el día. Advisory: A6 es la autoridad. */
+/**
+ * Franjas de 30 min con hueco libre en el día. Advisory: A6 es la autoridad.
+ *
+ * Una franja solo se descarta cuando la ocupación simultánea agota al salón: con
+ * tres estilistas, que una esté ocupada no cierra la hora. Si no hay ninguna
+ * asignable (`assignableWorkers` = 0), cualquier tramo ocupado la cierra, que es
+ * lo único prudente cuando la única agenda es la del trabajador por defecto.
+ */
 function freeSlots(day: DayAvailability): string[] {
   const start = ceilToSlot(day.effectiveStartMin);
   const slots: string[] = [];
   for (let t = start; t + SLOT_MINUTES <= day.closeMin; t += SLOT_MINUTES) {
-    const busy = day.busyBlocks.some(
-      (b) => t < b.endMin && t + SLOT_MINUTES > b.startMin,
+    const lleno = day.busySegments.some(
+      (s) =>
+        t < s.endMin &&
+        t + SLOT_MINUTES > s.startMin &&
+        s.busyWorkers >= day.assignableWorkers,
     );
-    if (!busy) slots.push(fmtHHmm(t));
+    if (!lleno) slots.push(fmtHHmm(t));
   }
   return slots;
 }
