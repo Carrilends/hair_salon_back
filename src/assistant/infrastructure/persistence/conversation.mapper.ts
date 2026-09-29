@@ -13,6 +13,7 @@ export class ConversationMapper {
       summary: c.summary,
       promptTokens: c.usage.promptTokens,
       completionTokens: c.usage.completionTokens,
+      cachedTokens: c.usage.cachedTokens,
       messageCount: c.messageCount,
     };
   }
@@ -30,6 +31,7 @@ export class ConversationMapper {
       toolCallId: m.toolCallId,
       promptTokens: m.usage ? m.usage.promptTokens : null,
       completionTokens: m.usage ? m.usage.completionTokens : null,
+      cachedTokens: m.usage ? m.usage.cachedTokens : null,
     };
   }
 
@@ -42,7 +44,11 @@ export class ConversationMapper {
       id: c.id,
       userId: c.userId,
       summary: c.summary,
-      usage: TokenUsage.of(c.promptTokens, c.completionTokens),
+      usage: TokenUsage.of(
+        c.promptTokens,
+        c.completionTokens,
+        c.cachedTokens ?? 0,
+      ),
       messages: messages.map((m) =>
         Message.fromPersistence({
           id: m.id,
@@ -52,7 +58,11 @@ export class ConversationMapper {
           toolCallId: m.toolCallId,
           usage:
             m.promptTokens != null
-              ? TokenUsage.of(m.promptTokens, m.completionTokens ?? 0)
+              ? TokenUsage.of(
+                  m.promptTokens,
+                  m.completionTokens ?? 0,
+                  m.cachedTokens ?? 0,
+                )
               : null,
         }),
       ),

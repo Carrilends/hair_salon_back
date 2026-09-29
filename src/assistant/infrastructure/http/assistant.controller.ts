@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Inject,
   Logger,
   NotFoundException,
@@ -12,10 +13,15 @@ import {
 import { OptionalJwtAuthGuard } from 'src/reservations/infrastructure/http/optional-jwt-auth.guard';
 import { User } from 'src/auth/entities/user.entity';
 import { ValidRoles } from 'src/auth/interfaces/valid-roles';
+import { Auth } from 'src/auth/decorators/auth.decorator';
 import { SlidingWindowRateLimiter } from 'src/common/rate-limit/sliding-window-rate-limiter';
 import { SendMessageDto } from './dto/send-message.dto';
 import { clavePorIp } from './client-ip';
 import { SendMessageUseCase } from '../../application/send-message.use-case';
+import {
+  AssistantUsageReport,
+  GetAssistantUsageUseCase,
+} from '../../application/get-usage.use-case';
 import { ASSISTANT_IP_LIMITER } from '../../application/tokens';
 import {
   BudgetExceededError,
@@ -36,11 +42,26 @@ export class AssistantController {
 
   constructor(
     private readonly sendMessage: SendMessageUseCase,
+    private readonly getUsage: GetAssistantUsageUseCase,
     // El tope por origen es de este borde, no del caso de uso: la IP es un dato
     // del transporte y el asistente por MCP o por WhatsApp no tiene ninguna.
     @Inject(ASSISTANT_IP_LIMITER)
     private readonly ipLimiter: SlidingWindowRateLimiter,
   ) {}
+
+  /**
+   * Gasto del día, solo para la peluquería. Sin esta lectura el techo diario
+   * sería un interruptor a ciegas: no habría manera de saber si está cerca de
+   * saltar ni de calibrarlo con datos.
+   *
+   * Solo administración: el consumo agregado dice cuánta actividad tiene el
+   * negocio, y eso no es de nadie más.
+   */
+  @Auth(ValidRoles.admin)
+  @Get('usage')
+  usage(): Promise<AssistantUsageReport> {
+    return this.getUsage.execute();
+  }
 
   // Auth OPCIONAL: consultar es público (A3); crear reserva exige sesión, y eso
   // lo decide la herramienta según `userId`. El id sale del JWT, no del chat, así

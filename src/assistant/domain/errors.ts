@@ -15,6 +15,14 @@ export class BudgetExceededError extends AssistantDomainError {
 }
 
 /**
+ * Texto del techo diario de la instalación. Distinto del de los topes
+ * personales a propósito: no es culpa de quien escribe, así que no se le dice
+ * «has alcanzado el límite». Se le ofrece la salida de siempre.
+ */
+export const DAILY_CEILING_REPLY =
+  'El asistente no está disponible por ahora. Puedes reservar por el flujo web de siempre.';
+
+/**
  * El solicitante intenta reanudar una conversación que pertenece a otro usuario.
  * El borde HTTP la traduce a 404 (no se revela la existencia de la conversación).
  */

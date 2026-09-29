@@ -31,6 +31,15 @@ export class ConversationOrmEntity {
   @Column('int', { name: 'completion_tokens', default: 0 })
   completionTokens: number;
 
+  /**
+   * Parte de `prompt_tokens` que el proveedor sirvió de su caché y factura más
+   * barata. No se suma al total: es un desglose. Antes vivía solo en memoria y
+   * se perdía al guardar, con lo que el ahorro del prompt caching (§6.2) era
+   * invisible justo en la tabla donde se mide el gasto.
+   */
+  @Column('int', { name: 'cached_tokens', default: 0 })
+  cachedTokens: number;
+
   @Column('int', { name: 'message_count', default: 0 })
   messageCount: number;
 

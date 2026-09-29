@@ -19,6 +19,9 @@ import { ConversationOrmEntity } from './conversation.orm-entity';
  */
 @Entity('assistant_messages')
 @Index('IDX_assistant_messages_conversation_seq', ['conversationId', 'seq'])
+// El techo diario de gasto suma los tokens del día en cada turno; sin este
+// índice esa suma recorre la tabla entera en el camino crítico de cada mensaje.
+@Index('IDX_assistant_messages_created_at', ['createdAt'])
 export class AssistantMessageOrmEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -57,6 +60,10 @@ export class AssistantMessageOrmEntity {
 
   @Column('int', { name: 'completion_tokens', nullable: true })
   completionTokens: number | null;
+
+  /** Desglose de `prompt_tokens` servido desde la caché del proveedor. */
+  @Column('int', { name: 'cached_tokens', nullable: true })
+  cachedTokens: number | null;
 
   @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
   createdAt: Date;

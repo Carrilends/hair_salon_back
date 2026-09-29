@@ -8,7 +8,10 @@ import { TokenUsage } from '../domain/token-usage';
 import { BudgetExceededError, ConversationAccessError } from '../domain/errors';
 import { AssistantContext, AssistantTool } from './tools/assistant-tool';
 import { LlmCompletion, LlmToolDefinition } from '../domain/ports/llm.port';
-import { ConversationRepositoryPort } from '../domain/ports/conversation-repository.port';
+import {
+  AssistantUsage,
+  ConversationRepositoryPort,
+} from '../domain/ports/conversation-repository.port';
 import { ClockPort } from '../domain/ports/clock.port';
 import { SYSTEM_PROMPT } from './system-prompt';
 
@@ -84,10 +87,30 @@ class FakePresentableTool implements AssistantTool {
 
 class FakeRepo implements ConversationRepositoryPort {
   saved?: Conversation;
+  /** Gasto agregado del día que devuelve `sumTokensSince`. */
+  gastoDelDia = 0;
+  /** Si está puesto, `sumTokensSince` falla con él (para probar el fallo cerrado). */
+  falloDelContador?: Error;
+  ventanaPedida?: Date;
   constructor(
     private readonly existing: Conversation | null = null,
     private readonly dailyCount = 0,
   ) {}
+  async sumTokensSince(since: Date): Promise<number> {
+    this.ventanaPedida = since;
+    if (this.falloDelContador) throw this.falloDelContador;
+    return this.gastoDelDia;
+  }
+  async usageSince(): Promise<AssistantUsage> {
+    return {
+      promptTokens: 0,
+      completionTokens: 0,
+      cachedTokens: 0,
+      totalTokens: 0,
+      mensajes: 0,
+      conversaciones: 0,
+    };
+  }
   async findById(): Promise<Conversation | null> {
     return this.existing;
   }
@@ -112,6 +135,8 @@ const clock: ClockPort = { now: () => new Date('2026-08-19T14:00:00Z') };
 const DEFAULT_BUDGET: AssistantBudget = {
   maxMessagesPerConversation: 20,
   maxMessagesPerUserPerDay: 50,
+  // 0 = sin techo de instalación: las pruebas que no lo miran no lo sufren.
+  maxTokensPerDay: 0,
 };
 
 function makeUseCase(opts: {
@@ -244,6 +269,100 @@ describe('SendMessageUseCase', () => {
     const respuesta = guardados[guardados.length - 1];
     expect(respuesta.usage!.promptTokens).toBe(500);
     expect(respuesta.usage!.completionTokens).toBe(50);
+  });
+
+  describe('techo diario de la instalación', () => {
+    function llmDeUnTurno(): FakeLlmAdapter {
+      return new FakeLlmAdapter([
+        {
+          message: { role: 'assistant', content: 'Hola.' },
+          usage: TokenUsage.of(50, 10),
+        },
+      ]);
+    }
+
+    it('superado el techo se responde con cortesía SIN llamar al proveedor', async () => {
+      const llm = llmDeUnTurno();
+      const repo = new FakeRepo(null);
+      repo.gastoDelDia = 1500;
+      const useCase = makeUseCase({
+        llm,
+        repo,
+        budget: { ...DEFAULT_BUDGET, maxTokensPerDay: 1500 },
+      });
+
+      await expect(
+        useCase.execute({ message: 'hola', userId: null }),
+      ).rejects.toBeInstanceOf(BudgetExceededError);
+      expect(llm.calls).toHaveLength(0);
+    });
+
+    it('por debajo del techo el turno sigue su curso', async () => {
+      const llm = llmDeUnTurno();
+      const repo = new FakeRepo(null);
+      repo.gastoDelDia = 1499;
+      const useCase = makeUseCase({
+        llm,
+        repo,
+        budget: { ...DEFAULT_BUDGET, maxTokensPerDay: 1500 },
+      });
+
+      await expect(
+        useCase.execute({ message: 'hola', userId: null }),
+      ).resolves.toMatchObject({ reply: 'Hola.' });
+    });
+
+    it('con el techo en 0 no se consulta el gasto: la instalación no lo quiere', async () => {
+      const llm = llmDeUnTurno();
+      const repo = new FakeRepo(null);
+      repo.gastoDelDia = 999_999;
+      const useCase = makeUseCase({
+        llm,
+        repo,
+        budget: { ...DEFAULT_BUDGET, maxTokensPerDay: 0 },
+      });
+
+      await useCase.execute({ message: 'hola', userId: null });
+
+      expect(repo.ventanaPedida).toBeUndefined();
+    });
+
+    it('si el contador falla se rechaza: en el límite se falla CERRADO', async () => {
+      // Criterio del plan 02: fallar cerrado en el límite, abierto en la
+      // telemetría. Un contador caído no puede convertirse en barra libre.
+      const llm = llmDeUnTurno();
+      const repo = new FakeRepo(null);
+      repo.falloDelContador = new Error('la base no responde');
+      const useCase = makeUseCase({
+        llm,
+        repo,
+        budget: { ...DEFAULT_BUDGET, maxTokensPerDay: 1500 },
+      });
+
+      await expect(
+        useCase.execute({ message: 'hola', userId: null }),
+      ).rejects.toBeInstanceOf(BudgetExceededError);
+      expect(llm.calls).toHaveLength(0);
+    });
+
+    it('la ventana es el día del salón, no las últimas 24 horas', async () => {
+      // El reloj de las pruebas marca las 14:00 UTC del 19/08/2026, que en
+      // Bogotá son las 09:00 del mismo día: el corte es la medianoche local,
+      // las 05:00 UTC.
+      const llm = llmDeUnTurno();
+      const repo = new FakeRepo(null);
+      const useCase = makeUseCase({
+        llm,
+        repo,
+        budget: { ...DEFAULT_BUDGET, maxTokensPerDay: 1500 },
+      });
+
+      await useCase.execute({ message: 'hola', userId: null });
+
+      expect(repo.ventanaPedida!.toISOString()).toBe(
+        '2026-08-19T05:00:00.000Z',
+      );
+    });
   });
 
   it('propaga isAdmin del input al contexto que reciben las herramientas', async () => {
@@ -439,7 +558,7 @@ describe('SendMessageUseCase', () => {
     const useCase = makeUseCase({
       llm,
       repo,
-      budget: { maxMessagesPerConversation: 20, maxMessagesPerUserPerDay: 50 },
+      budget: { ...DEFAULT_BUDGET, maxMessagesPerUserPerDay: 50 },
     });
 
     await expect(
@@ -508,6 +627,7 @@ describe('SendMessageUseCase', () => {
       llm,
       repo,
       budget: {
+        ...DEFAULT_BUDGET,
         maxMessagesPerConversation: 100,
         maxMessagesPerUserPerDay: 100,
       },

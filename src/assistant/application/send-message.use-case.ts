@@ -5,10 +5,14 @@ import { ClockPort } from '../domain/ports/clock.port';
 import { Conversation } from '../domain/conversation';
 import { Message } from '../domain/message';
 import { TokenUsage } from '../domain/token-usage';
-import { BudgetExceededError, ConversationAccessError } from '../domain/errors';
+import {
+  BudgetExceededError,
+  ConversationAccessError,
+  DAILY_CEILING_REPLY,
+} from '../domain/errors';
 import { AssistantContext, AssistantTool } from './tools/assistant-tool';
 import { SYSTEM_PROMPT } from './system-prompt';
-import { getDatePartsInTz } from 'src/reservations/salon-time';
+import { fechaDelSalon, inicioDelDiaDelSalon } from './salon-day';
 import { AssistantBudget } from './assistant-budget';
 import { ConversationSummarizer } from './summarize-conversation.use-case';
 import {
@@ -74,6 +78,11 @@ export class SendMessageUseCase {
 
   async execute(input: SendMessageInput): Promise<SendMessageResult> {
     const conversation = await this.loadOrStart(input);
+
+    // (0) Techo de la instalación, antes que los topes personales y para todo
+    // el mundo —administración incluida—: quien pone tope a una factura no hace
+    // excepciones. Es la última red si los otros tres fallan.
+    await this.assertDailyCeiling();
 
     // A7: los dos límites duros se comprueban ANTES de la primera llamada, para no
     // pagar por rechazar. (1) tope por conversación.
@@ -190,6 +199,31 @@ export class SendMessageUseCase {
     };
   }
 
+  /**
+   * Techo diario de tokens de toda la instalación.
+   *
+   * Se falla **cerrado**: si el contador no responde, se rechaza. Un contador
+   * caído no puede convertirse en barra libre — es el mismo criterio que el
+   * plan fija para el tope por origen, y lo contrario del que rige la
+   * telemetría, donde perder una métrica nunca tumba un turno.
+   */
+  private async assertDailyCeiling(): Promise<void> {
+    if (this.budget.maxTokensPerDay <= 0) return;
+
+    let gastoDelDia: number;
+    try {
+      gastoDelDia = await this.repository.sumTokensSince(
+        inicioDelDiaDelSalon(this.clock.now()),
+      );
+    } catch {
+      throw new BudgetExceededError(DAILY_CEILING_REPLY);
+    }
+
+    if (gastoDelDia >= this.budget.maxTokensPerDay) {
+      throw new BudgetExceededError(DAILY_CEILING_REPLY);
+    }
+  }
+
   private async loadOrStart(input: SendMessageInput): Promise<Conversation> {
     if (input.conversationId) {
       const existing = await this.repository.findById(input.conversationId);
@@ -237,14 +271,6 @@ export class SendMessageUseCase {
 function toLlmRole(role: string): 'system' | 'user' | 'assistant' | 'tool' {
   if (role === 'assistant' || role === 'system' || role === 'tool') return role;
   return 'user';
-}
-
-/** Fecha de hoy en la zona del salón, en el mismo formato que espera `consultarDisponibilidad`. */
-function fechaDelSalon(now: Date): string {
-  const tz = process.env.SALON_TZ ?? 'America/Bogota';
-  const { year, month, day } = getDatePartsInTz(now, tz);
-  const dosDigitos = (n: number) => String(n).padStart(2, '0');
-  return `${year}-${dosDigitos(month)}-${dosDigitos(day)}`;
 }
 
 /** Un resultado surfaceable: objeto que no es un error (`ok: false`). */

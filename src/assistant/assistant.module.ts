@@ -21,6 +21,7 @@ import { IpLimiterPruneScheduler } from './infrastructure/scheduling/ip-limiter-
 import { SlidingWindowRateLimiter } from 'src/common/rate-limit/sliding-window-rate-limiter';
 
 import { SendMessageUseCase } from './application/send-message.use-case';
+import { GetAssistantUsageUseCase } from './application/get-usage.use-case';
 import { SummarizeConversationUseCase } from './application/summarize-conversation.use-case';
 import { buildAssistantTools } from './build-assistant-tools';
 import {
@@ -47,6 +48,10 @@ const IP_WINDOW_MS = 60 * 60 * 1000;
 // Veinte por hora y origen (decisión de Luis, 2026-09-29): una clienta real
 // rara vez pasa de diez turnos para cerrar una cita, así que sobra margen.
 const DEFAULT_MAX_MESSAGES_PER_IP_PER_HOUR = 20;
+// Techo diario de la instalación, en tokens facturables. Se calibra con
+// `GET /api/assistant/usage` una vez haya tráfico real; hasta entonces es una
+// red de seguridad holgada, no un presupuesto ajustado.
+const DEFAULT_MAX_TOKENS_PER_DAY = 200_000;
 
 @Module({
   imports: [
@@ -62,6 +67,7 @@ const DEFAULT_MAX_MESSAGES_PER_IP_PER_HOUR = 20;
   controllers: [AssistantController],
   providers: [
     SendMessageUseCase,
+    GetAssistantUsageUseCase,
     IpLimiterPruneScheduler,
     SummarizeConversationUseCase,
     ServiceCatalogQueryAdapter,
@@ -94,6 +100,13 @@ const DEFAULT_MAX_MESSAGES_PER_IP_PER_HOUR = 20;
         ),
         maxMessagesPerUserPerDay: Number(
           process.env.ASSISTANT_MAX_MESSAGES_PER_USER_PER_DAY ?? 50,
+        ),
+        // Techo de la instalación, en tokens facturables del día del salón.
+        // En tokens y no en mensajes porque un turno son hasta seis llamadas al
+        // modelo: contar mensajes no acota la factura. 0 = sin techo.
+        maxTokensPerDay: Number(
+          process.env.ASSISTANT_MAX_TOKENS_PER_DAY ??
+            DEFAULT_MAX_TOKENS_PER_DAY,
         ),
       }),
     },

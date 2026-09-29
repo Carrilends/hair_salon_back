@@ -32,9 +32,26 @@ function req(
 function controlador(
   uc: FakeSendMessage,
   limitador = new SlidingWindowRateLimiter(1000, 3_600_000),
+  usage: { execute: () => Promise<unknown> } = {
+    execute: async () => INFORME_DE_GASTO,
+  },
 ): AssistantController {
-  return new AssistantController(uc as never, limitador);
+  return new AssistantController(uc as never, usage as never, limitador);
 }
+
+const INFORME_DE_GASTO = {
+  desde: '2026-09-29T05:00:00.000Z',
+  hoy: {
+    promptTokens: 1200,
+    completionTokens: 340,
+    cachedTokens: 900,
+    totalTokens: 1540,
+    mensajes: 14,
+    conversaciones: 3,
+  },
+  techoDiarioTokens: 200_000,
+  restanteTokens: 198_460,
+};
 
 describe('AssistantController', () => {
   it('pasa el userId del JWT y devuelve la respuesta (sin aviso al reanudar)', async () => {
@@ -277,5 +294,16 @@ describe('AssistantController', () => {
 
       expect(uc.veces).toBe(3);
     });
+  });
+  it('devuelve el informe de gasto del día tal cual lo da el caso de uso', async () => {
+    const uc = new FakeSendMessage(() => ({
+      conversationId: 'c1',
+      reply: 'ok',
+    }));
+    const ctrl = controlador(uc, undefined, {
+      execute: async () => INFORME_DE_GASTO,
+    });
+
+    await expect(ctrl.usage()).resolves.toEqual(INFORME_DE_GASTO);
   });
 });

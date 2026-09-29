@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Conversation } from '../../domain/conversation';
-import { ConversationRepositoryPort } from '../../domain/ports/conversation-repository.port';
+import {
+  AssistantUsage,
+  ConversationRepositoryPort,
+} from '../../domain/ports/conversation-repository.port';
 import { ConversationOrmEntity } from './conversation.orm-entity';
 import { AssistantMessageOrmEntity } from './assistant-message.orm-entity';
 import { ConversationMapper } from './conversation.mapper';
@@ -65,6 +68,40 @@ export class TypeOrmConversationRepository
     return (await this.findById(conversation.id)) as Conversation;
   }
 
+  async sumTokensSince(since: Date): Promise<number> {
+    const fila = await this.messages
+      .createQueryBuilder('m')
+      .select('COALESCE(SUM("m"."prompt_tokens"), 0)', 'prompt')
+      .addSelect('COALESCE(SUM("m"."completion_tokens"), 0)', 'completion')
+      .where('m.createdAt >= :since', { since: since.toISOString() })
+      .getRawOne<{ prompt: string; completion: string }>();
+
+    return aNumero(fila?.prompt) + aNumero(fila?.completion);
+  }
+
+  async usageSince(since: Date): Promise<AssistantUsage> {
+    const fila = await this.messages
+      .createQueryBuilder('m')
+      .select('COALESCE(SUM("m"."prompt_tokens"), 0)', 'prompt')
+      .addSelect('COALESCE(SUM("m"."completion_tokens"), 0)', 'completion')
+      .addSelect('COALESCE(SUM("m"."cached_tokens"), 0)', 'cached')
+      .addSelect('COUNT(*)', 'mensajes')
+      .addSelect('COUNT(DISTINCT "m"."conversation_id")', 'conversaciones')
+      .where('m.createdAt >= :since', { since: since.toISOString() })
+      .getRawOne<Record<string, string>>();
+
+    const promptTokens = aNumero(fila?.prompt);
+    const completionTokens = aNumero(fila?.completion);
+    return {
+      promptTokens,
+      completionTokens,
+      cachedTokens: aNumero(fila?.cached),
+      totalTokens: promptTokens + completionTokens,
+      mensajes: aNumero(fila?.mensajes),
+      conversaciones: aNumero(fila?.conversaciones),
+    };
+  }
+
   countMessagesOfUserSince(userId: string, since: Date): Promise<number> {
     // Cuenta los mensajes DE la clienta (role='user') en sus conversaciones desde
     // `since`: sustenta el tope diario por usuario (A7).
@@ -76,4 +113,15 @@ export class TypeOrmConversationRepository
       .andWhere('m.createdAt >= :since', { since: since.toISOString() })
       .getCount();
   }
+}
+
+/**
+ * `SUM` y `COUNT` sobre Postgres devuelven `bigint`, y el driver `pg` los
+ * entrega como **cadena** para no perder precisión. Sin convertir, sumar dos
+ * agregados los concatenaría (`'120' + '20' === '12020'`) y el techo diario de
+ * gasto no saltaría nunca.
+ */
+function aNumero(valor: string | undefined): number {
+  const n = Number(valor ?? 0);
+  return Number.isFinite(n) ? n : 0;
 }
