@@ -17,6 +17,8 @@ import { ServiceCatalogQueryAdapter } from './infrastructure/catalog/service-cat
 import { AvailabilityQueryAdapter } from './infrastructure/availability/availability-query.adapter';
 import { GeminiLlmAdapter } from './infrastructure/llm/gemini-llm.adapter';
 import { AssistantController } from './infrastructure/http/assistant.controller';
+import { IpLimiterPruneScheduler } from './infrastructure/scheduling/ip-limiter-prune.scheduler';
+import { SlidingWindowRateLimiter } from 'src/common/rate-limit/sliding-window-rate-limiter';
 
 import { SendMessageUseCase } from './application/send-message.use-case';
 import { SummarizeConversationUseCase } from './application/summarize-conversation.use-case';
@@ -24,6 +26,7 @@ import { buildAssistantTools } from './build-assistant-tools';
 import {
   ASSISTANT_BUDGET,
   ASSISTANT_CLOCK,
+  ASSISTANT_IP_LIMITER,
   ASSISTANT_SUMMARIZER,
   ASSISTANT_TOOLS,
   CONVERSATION_REPOSITORY,
@@ -36,6 +39,14 @@ import {
 // confirma Luis vía GEMINI_MODEL_ROUTER/_MAIN (A2, decisión de catálogo).
 const DEFAULT_ROUTER_MODEL = 'gemini-3.5-flash-lite';
 const DEFAULT_MAIN_MODEL = 'gemini-3.8-flash';
+
+// Ventana del tope por origen. Una hora, y no un minuto, porque lo que se
+// quiere acotar es el gasto sostenido, no la ráfaga: una ráfaga de veinte
+// mensajes en un minuto cuesta lo mismo que veinte repartidos en la hora.
+const IP_WINDOW_MS = 60 * 60 * 1000;
+// Veinte por hora y origen (decisión de Luis, 2026-09-29): una clienta real
+// rara vez pasa de diez turnos para cerrar una cita, así que sobra margen.
+const DEFAULT_MAX_MESSAGES_PER_IP_PER_HOUR = 20;
 
 @Module({
   imports: [
@@ -51,6 +62,7 @@ const DEFAULT_MAIN_MODEL = 'gemini-3.8-flash';
   controllers: [AssistantController],
   providers: [
     SendMessageUseCase,
+    IpLimiterPruneScheduler,
     SummarizeConversationUseCase,
     ServiceCatalogQueryAdapter,
     AvailabilityQueryAdapter,
@@ -84,6 +96,21 @@ const DEFAULT_MAIN_MODEL = 'gemini-3.8-flash';
           process.env.ASSISTANT_MAX_MESSAGES_PER_USER_PER_DAY ?? 50,
         ),
       }),
+    },
+    {
+      // Tope por origen del borde HTTP, para quien conversa sin sesión. En
+      // memoria porque la API corre en una sola instancia; si algún día son
+      // varias, esto hay que sustituirlo por un almacén compartido, no
+      // multiplicarlo.
+      provide: ASSISTANT_IP_LIMITER,
+      useFactory: () =>
+        new SlidingWindowRateLimiter(
+          Number(
+            process.env.ASSISTANT_MAX_MESSAGES_PER_IP_PER_HOUR ??
+              DEFAULT_MAX_MESSAGES_PER_IP_PER_HOUR,
+          ),
+          IP_WINDOW_MS,
+        ),
     },
     {
       // El orden del `inject` DEBE coincidir con los parámetros de

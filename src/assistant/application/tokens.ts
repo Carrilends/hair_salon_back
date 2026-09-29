@@ -8,3 +8,9 @@ export const ASSISTANT_TOOLS = Symbol('AssistantTools');
 export const ASSISTANT_CLOCK = Symbol('AssistantClockPort');
 export const ASSISTANT_BUDGET = Symbol('AssistantBudget');
 export const ASSISTANT_SUMMARIZER = Symbol('ConversationSummarizer');
+/**
+ * Limitador por origen del borde HTTP (`SlidingWindowRateLimiter`). Vive aquí,
+ * con el resto de tokens del contexto, aunque solo lo consuma la capa de
+ * infraestructura: es el mismo criterio que sigue el canal de WhatsApp.
+ */
+export const ASSISTANT_IP_LIMITER = Symbol('AssistantIpRateLimiter');

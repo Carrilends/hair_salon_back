@@ -7,6 +7,7 @@ import {
   LlmUnavailableError,
 } from '../../domain/errors';
 import { SendMessageInput } from '../../application/send-message.use-case';
+import { SlidingWindowRateLimiter } from 'src/common/rate-limit/sliding-window-rate-limiter';
 
 class FakeSendMessage {
   lastInput?: SendMessageInput;
@@ -17,8 +18,22 @@ class FakeSendMessage {
   }
 }
 
-function req(user: User | null): { user?: User | null } {
-  return { user };
+function req(
+  user: User | null,
+  ip = '190.24.1.5',
+): { user?: User | null; ip?: string } {
+  return { user, ip };
+}
+
+/**
+ * El tope por IP de las pruebas que no lo miran es holgado a propósito: solo
+ * las suyas lo aprietan.
+ */
+function controlador(
+  uc: FakeSendMessage,
+  limitador = new SlidingWindowRateLimiter(1000, 3_600_000),
+): AssistantController {
+  return new AssistantController(uc as never, limitador);
 }
 
 describe('AssistantController', () => {
@@ -27,7 +42,7 @@ describe('AssistantController', () => {
       conversationId: 'c1',
       reply: 'Hola',
     }));
-    const ctrl = new AssistantController(uc as never);
+    const ctrl = controlador(uc);
 
     const res = await ctrl.messages(
       { conversationId: 'c1', message: 'hola' },
@@ -49,7 +64,7 @@ describe('AssistantController', () => {
       conversationId: 'c1',
       reply: 'ok',
     }));
-    const ctrl = new AssistantController(uc as never);
+    const ctrl = controlador(uc);
 
     await ctrl.messages(
       { conversationId: 'c1', message: 'cancela la reserva' },
@@ -65,7 +80,7 @@ describe('AssistantController', () => {
       conversationId: 'c1',
       reply: 'ok',
     }));
-    const ctrl = new AssistantController(uc as never);
+    const ctrl = controlador(uc);
 
     await ctrl.messages(
       { conversationId: 'c1', message: 'hola' },
@@ -86,7 +101,7 @@ describe('AssistantController', () => {
       reply: 'Aquí tu paquete.',
       propuesta,
     }));
-    const ctrl = new AssistantController(uc as never);
+    const ctrl = controlador(uc);
 
     const res = (await ctrl.messages(
       { conversationId: 'c1', message: 'me caso' },
@@ -101,7 +116,7 @@ describe('AssistantController', () => {
       conversationId: 'c1',
       reply: 'Hola',
     }));
-    const ctrl = new AssistantController(uc as never);
+    const ctrl = controlador(uc);
 
     const res = (await ctrl.messages(
       { conversationId: 'c1', message: 'hola' },
@@ -116,7 +131,7 @@ describe('AssistantController', () => {
       conversationId: 'c9',
       reply: 'ok',
     }));
-    const ctrl = new AssistantController(uc as never);
+    const ctrl = controlador(uc);
 
     await ctrl.messages({ message: 'hola' }, req(null));
 
@@ -128,7 +143,7 @@ describe('AssistantController', () => {
       conversationId: 'c-new',
       reply: 'ok',
     }));
-    const ctrl = new AssistantController(uc as never);
+    const ctrl = controlador(uc);
 
     const res = (await ctrl.messages({ message: 'hola' }, req(null))) as {
       aviso?: string;
@@ -140,7 +155,7 @@ describe('AssistantController', () => {
     const uc = new FakeSendMessage(() => {
       throw new BudgetExceededError();
     });
-    const ctrl = new AssistantController(uc as never);
+    const ctrl = controlador(uc);
 
     const res = (await ctrl.messages(
       { conversationId: 'c1', message: 'hola' },
@@ -153,7 +168,7 @@ describe('AssistantController', () => {
     const uc = new FakeSendMessage(() => {
       throw new ConversationAccessError();
     });
-    const ctrl = new AssistantController(uc as never);
+    const ctrl = controlador(uc);
 
     await expect(
       ctrl.messages(
@@ -168,7 +183,7 @@ describe('AssistantController', () => {
     const uc = new FakeSendMessage(() => {
       throw new LlmUnavailableError(causa);
     });
-    const ctrl = new AssistantController(uc as never);
+    const ctrl = controlador(uc);
 
     const error = await ctrl
       .messages({ message: 'hola' }, req(null))
@@ -178,5 +193,89 @@ describe('AssistantController', () => {
     expect(error).toBeInstanceOf(ServiceUnavailableException);
     // El detalle del proveedor no viaja al cliente: queda para el log.
     expect(JSON.stringify(error)).not.toMatch(/invalid argument/);
+  });
+  describe('tope por IP (anónimos)', () => {
+    function contador(): FakeSendMessage & { veces: number } {
+      const uc = new FakeSendMessage(() => ({
+        conversationId: 'c1',
+        reply: 'ok',
+      }));
+      const espia = uc as FakeSendMessage & { veces: number };
+      espia.veces = 0;
+      const original = uc.execute.bind(uc);
+      uc.execute = async (i: SendMessageInput) => {
+        espia.veces++;
+        return original(i);
+      };
+      return espia;
+    }
+
+    it('pasado el tope, la petición se rechaza SIN llamar al caso de uso', async () => {
+      const uc = contador();
+      const ctrl = controlador(uc, new SlidingWindowRateLimiter(2, 3_600_000));
+
+      await ctrl.messages({ message: 'una' }, req(null));
+      await ctrl.messages({ message: 'dos' }, req(null));
+      const tercera = (await ctrl.messages({ message: 'tres' }, req(null))) as {
+        reply: string;
+        conversationId: string | null;
+      };
+
+      // Lo que se compra con el tope es justamente no pagar la llamada.
+      expect(uc.veces).toBe(2);
+      expect(tercera.reply).toContain('límite de mensajes');
+      expect(tercera.conversationId).toBeNull();
+    });
+
+    it('se responde 200 con cortesía, no un 429 crudo al widget', async () => {
+      const uc = contador();
+      const ctrl = controlador(uc, new SlidingWindowRateLimiter(0, 3_600_000));
+
+      const res = await ctrl.messages({ message: 'hola' }, req(null));
+
+      expect(res).toEqual({ conversationId: null, reply: expect.any(String) });
+    });
+
+    it('quien tiene sesión no pasa por el tope por IP: ya lo acota el tope diario', async () => {
+      const uc = contador();
+      const ctrl = controlador(uc, new SlidingWindowRateLimiter(0, 3_600_000));
+
+      await ctrl.messages({ message: 'hola' }, req({ id: 'u1' } as User));
+
+      expect(uc.veces).toBe(1);
+    });
+
+    it('dos orígenes distintos no comparten cubo', async () => {
+      const uc = contador();
+      const ctrl = controlador(uc, new SlidingWindowRateLimiter(1, 3_600_000));
+
+      await ctrl.messages({ message: 'hola' }, req(null, '190.24.1.5'));
+      await ctrl.messages({ message: 'hola' }, req(null, '186.30.2.9'));
+
+      expect(uc.veces).toBe(2);
+    });
+
+    it('sin IP conocida las peticiones comparten cubo: falla cerrado', async () => {
+      const uc = contador();
+      const ctrl = controlador(uc, new SlidingWindowRateLimiter(1, 3_600_000));
+
+      await ctrl.messages({ message: 'hola' }, { user: null });
+      await ctrl.messages({ message: 'hola' }, { user: null });
+
+      expect(uc.veces).toBe(1);
+    });
+
+    it('omitir conversationId no permite saltarse el tope por conversación (T2)', async () => {
+      // La evasión consistía en abrir conversación nueva en cada POST: el tope
+      // de 20 por conversación nunca se alcanzaba. Ahora el origen sí se acota.
+      const uc = contador();
+      const ctrl = controlador(uc, new SlidingWindowRateLimiter(3, 3_600_000));
+
+      for (let i = 0; i < 10; i++) {
+        await ctrl.messages({ message: `mensaje ${i}` }, req(null));
+      }
+
+      expect(uc.veces).toBe(3);
+    });
   });
 });

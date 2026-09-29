@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Inject,
   Logger,
   NotFoundException,
   Post,
@@ -11,8 +12,11 @@ import {
 import { OptionalJwtAuthGuard } from 'src/reservations/infrastructure/http/optional-jwt-auth.guard';
 import { User } from 'src/auth/entities/user.entity';
 import { ValidRoles } from 'src/auth/interfaces/valid-roles';
+import { SlidingWindowRateLimiter } from 'src/common/rate-limit/sliding-window-rate-limiter';
 import { SendMessageDto } from './dto/send-message.dto';
+import { clavePorIp } from './client-ip';
 import { SendMessageUseCase } from '../../application/send-message.use-case';
+import { ASSISTANT_IP_LIMITER } from '../../application/tokens';
 import {
   BudgetExceededError,
   ConversationAccessError,
@@ -30,7 +34,13 @@ export const LEGAL_NOTICE =
 export class AssistantController {
   private readonly logger = new Logger(AssistantController.name);
 
-  constructor(private readonly sendMessage: SendMessageUseCase) {}
+  constructor(
+    private readonly sendMessage: SendMessageUseCase,
+    // El tope por origen es de este borde, no del caso de uso: la IP es un dato
+    // del transporte y el asistente por MCP o por WhatsApp no tiene ninguna.
+    @Inject(ASSISTANT_IP_LIMITER)
+    private readonly ipLimiter: SlidingWindowRateLimiter,
+  ) {}
 
   // Auth OPCIONAL: consultar es público (A3); crear reserva exige sesión, y eso
   // lo decide la herramienta según `userId`. El id sale del JWT, no del chat, así
@@ -39,9 +49,31 @@ export class AssistantController {
   @Post('messages')
   async messages(
     @Body() dto: SendMessageDto,
-    @Req() req: { user?: User | null },
+    @Req() req: { user?: User | null; ip?: string },
   ) {
     const userId = req.user?.id ?? null;
+
+    // Tope por origen, solo para quien no tiene sesión. Quien la tiene ya está
+    // acotado por el tope diario por usuario, y limitar además por IP echaría a
+    // dos clientas que comparten la red de casa o de la oficina.
+    //
+    // Va ANTES del caso de uso a propósito: rechazar tiene que ser gratis. Un
+    // turno cuesta hasta seis llamadas al proveedor, y el prompt del sistema
+    // más las nueve definiciones de herramientas viajan antes de que el modelo
+    // decida siquiera que la pregunta no es del salón.
+    //
+    // Cierra además la evasión del tope por conversación: omitir
+    // `conversationId` abre una conversación nueva en cada POST, así que el
+    // tope de 20 mensajes por conversación nunca se alcanzaba. El origen sí se
+    // acota, venga o no con conversación.
+    if (userId === null && !this.ipLimiter.allow(clavePorIp(req))) {
+      // Mismo trato que el presupuesto agotado: 200 con texto cortés, no un 429
+      // crudo que el widget tendría que traducir.
+      return {
+        conversationId: dto.conversationId ?? null,
+        reply: new BudgetExceededError().message,
+      };
+    }
     // El rol admin sale del JWT, nunca de la conversación (regla de seguridad F6).
     // Mismo criterio que el borde de Reservas: solo el rol `admin` habilita la
     // cancelación de administración de §6.4.
