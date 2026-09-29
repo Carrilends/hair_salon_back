@@ -16,7 +16,7 @@ export class TokenUsage {
   }
 
   static of(prompt: number, completion: number, cached = 0): TokenUsage {
-    return new TokenUsage(prompt, completion, cached);
+    return new TokenUsage(sano(prompt), sano(completion), sano(cached));
   }
 
   plus(other: TokenUsage): TokenUsage {
@@ -31,4 +31,17 @@ export class TokenUsage {
   get total(): number {
     return this.promptTokens + this.completionTokens;
   }
+}
+
+/**
+ * Un contador que se pueda escribir en una columna `int`.
+ *
+ * El consumo lo informa el proveedor y aquí solo se transporta. Si algún día
+ * llega un `NaN`, un infinito o un decimal, el INSERT de `assistant_messages`
+ * fallaría y con él se perdería la conversación entera: la clienta pagaría con
+ * su turno un contador que solo sirve para auditar. La telemetría se degrada a
+ * cero y el turno sigue —mismo criterio que NF11 con los avisos—.
+ */
+function sano(valor: number): number {
+  return Number.isFinite(valor) && valor > 0 ? Math.floor(valor) : 0;
 }

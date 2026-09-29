@@ -4,6 +4,7 @@ import { ConversationRepositoryPort } from '../domain/ports/conversation-reposit
 import { ClockPort } from '../domain/ports/clock.port';
 import { Conversation } from '../domain/conversation';
 import { Message } from '../domain/message';
+import { TokenUsage } from '../domain/token-usage';
 import { BudgetExceededError, ConversationAccessError } from '../domain/errors';
 import { AssistantContext, AssistantTool } from './tools/assistant-tool';
 import { SYSTEM_PROMPT } from './system-prompt';
@@ -112,6 +113,11 @@ export class SendMessageUseCase {
 
     let reply = '';
     let propuesta: unknown;
+    // Consumo de ESTE turno, aparte del acumulado de la conversación: es lo que
+    // se imputa al mensaje de respuesta para que la auditoría por mensaje
+    // (`assistant_messages.prompt_tokens`) diga algo. Sin él, un abuso no se
+    // puede reconstruir: solo se vería el total de la conversación.
+    let usoDelTurno = TokenUsage.zero();
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
       const completion = await this.llm.complete({
         messages,
@@ -119,6 +125,7 @@ export class SendMessageUseCase {
       });
       // Acumular el consumo en CADA vuelta, no solo en la última.
       conversation.recordUsage(completion.usage);
+      usoDelTurno = usoDelTurno.plus(completion.usage);
 
       const toolCalls = completion.message.toolCalls ?? [];
       if (toolCalls.length === 0) {
@@ -163,9 +170,11 @@ export class SendMessageUseCase {
       propuesta = undefined;
     }
 
-    // Historia durable: el mensaje de la clienta y la respuesta final.
+    // Historia durable: el mensaje de la clienta y la respuesta final. El
+    // consumo se imputa a la respuesta, que es la fila que lo causó; el mensaje
+    // de la clienta se guarda sin nada que cobrar.
     conversation.append(Message.user(input.message));
-    conversation.append(Message.assistant(reply));
+    conversation.append(Message.assistant(reply, { usage: usoDelTurno }));
 
     if (conversation.needsSummary(SUMMARY_EVERY)) {
       const { summary, usage } = await this.summarizer.execute(conversation);

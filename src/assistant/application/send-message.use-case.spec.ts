@@ -171,6 +171,81 @@ describe('SendMessageUseCase', () => {
     expect(repo.saved!.usage.completionTokens).toBe(60);
   });
 
+  it('imputa al mensaje del asistente el consumo del turno ENTERO, no el de la última vuelta', async () => {
+    // Las columnas `prompt_tokens`/`completion_tokens` de `assistant_messages`
+    // existían desde la Fase 5 y estaban vacías en el 100 % de las filas: sin
+    // ellas, un abuso no se puede ni investigar después. Se imputa la suma de
+    // todas las llamadas del turno porque las vueltas de herramienta también se
+    // pagan; quedarse con la última escondería el grueso del coste.
+    const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const llm = new FakeLlmAdapter([
+      {
+        message: {
+          role: 'assistant',
+          content: '',
+          toolCalls: [{ id: 't1', name: 'listarServicios', arguments: {} }],
+        },
+        usage: TokenUsage.of(120, 20),
+      },
+      {
+        message: { role: 'assistant', content: 'Tenemos Corte.' },
+        usage: TokenUsage.of(180, 40),
+      },
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [tool] });
+
+    await useCase.execute({ message: 'quiero un corte', userId: 'u1' });
+
+    const guardados = repo.saved!.messages;
+    const respuesta = guardados[guardados.length - 1];
+    expect(respuesta.role).toBe('assistant');
+    expect(respuesta.usage!.promptTokens).toBe(300);
+    expect(respuesta.usage!.completionTokens).toBe(60);
+  });
+
+  it('el mensaje de la clienta no lleva consumo imputado: lo paga la respuesta', async () => {
+    const llm = new FakeLlmAdapter([
+      {
+        message: { role: 'assistant', content: 'Hola.' },
+        usage: TokenUsage.of(50, 10),
+      },
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo });
+
+    await useCase.execute({ message: 'hola', userId: null });
+
+    const [pregunta, respuesta] = repo.saved!.messages;
+    expect(pregunta.role).toBe('user');
+    expect(pregunta.usage).toBeNull();
+    expect(respuesta.usage!.total).toBe(60);
+  });
+
+  it('imputa también el turno que se corta por cortesía al agotar las vueltas', async () => {
+    // Agotar las cinco vueltas es el turno MÁS caro que existe; si ése fuera el
+    // que se guarda sin consumo, la auditoría mentiría justo donde importa.
+    const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const vuelta = {
+      message: {
+        role: 'assistant' as const,
+        content: '',
+        toolCalls: [{ id: 't1', name: 'listarServicios', arguments: {} }],
+      },
+      usage: TokenUsage.of(100, 10),
+    };
+    const llm = new FakeLlmAdapter([vuelta, vuelta, vuelta, vuelta, vuelta]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [tool] });
+
+    await useCase.execute({ message: 'dame vueltas', userId: 'u1' });
+
+    const guardados = repo.saved!.messages;
+    const respuesta = guardados[guardados.length - 1];
+    expect(respuesta.usage!.promptTokens).toBe(500);
+    expect(respuesta.usage!.completionTokens).toBe(50);
+  });
+
   it('propaga isAdmin del input al contexto que reciben las herramientas', async () => {
     // Regla de seguridad de la Fase 6: el rol admin sale del solicitante
     // autenticado (JWT), no de la conversación. El bucle debe trasladarlo al
