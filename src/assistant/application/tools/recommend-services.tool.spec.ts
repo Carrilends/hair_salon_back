@@ -4,7 +4,17 @@ import { AssistantServiceSummary } from '../../domain/ports/service-catalog-quer
 class FakeCatalog {
   lastTags?: string[];
   lastLimit?: number;
-  constructor(private readonly map: Map<string, AssistantServiceSummary[]>) {}
+  idsDeImagenesPedidas?: string[];
+  constructor(
+    private readonly map: Map<string, AssistantServiceSummary[]>,
+    private readonly imagenes: Record<string, string> = {},
+  ) {}
+  async findPrincipalImages(ids: string[]): Promise<Map<string, string>> {
+    this.idsDeImagenesPedidas = ids;
+    return new Map(
+      ids.flatMap((id) => (this.imagenes[id] ? [[id, this.imagenes[id]]] : [])),
+    );
+  }
   async findByTagNames(
     tagNames: string[],
     limitPerTag: number,
@@ -123,5 +133,53 @@ describe('RecommendServicesTool', () => {
     })) as { recomendaciones: { servicios: { id: string }[] }[] };
 
     expect(res.recomendaciones[0].servicios.map((s) => s.id)).toEqual(['r1']);
+  });
+
+  describe('presentar', () => {
+    it('presenta los servicios recomendados con su imagen, sin repetir los que caen en dos categorías', async () => {
+      // El mismo servicio puede estar etiquetado en dos categorías pedidas; la
+      // tarjeta es una lista plana, así que se enseña una sola vez.
+      const compartido = svc('c1', 40000);
+      const catalog = new FakeCatalog(
+        new Map([
+          ['Manicure', [svc('u1', 35000), compartido]],
+          ['Pedicure', [compartido]],
+        ]),
+        { u1: 'https://res.cloudinary.com/x/image/upload/v1/u1.jpg' },
+      );
+      const tool = new RecommendServicesTool(catalog as never);
+
+      const result = await tool.execute({
+        categorias: ['Manicure', 'Pedicure'],
+      });
+      const presentacion = await tool.presentar(result);
+
+      expect(presentacion).toEqual({
+        tipo: 'servicios',
+        servicios: [
+          {
+            id: 'u1',
+            nombre: 'Servicio u1',
+            precio: 35000,
+            minutos: 45,
+            imagen: 'https://res.cloudinary.com/x/image/upload/v1/u1.jpg',
+          },
+          { id: 'c1', nombre: 'Servicio c1', precio: 40000, minutos: 45 },
+        ],
+      });
+      expect(catalog.idsDeImagenesPedidas).toEqual(['u1', 'c1']);
+    });
+
+    it('no presenta nada cuando no hubo recomendaciones ni cuando la herramienta falló', async () => {
+      const catalog = new FakeCatalog(new Map());
+      const tool = new RecommendServicesTool(catalog as never);
+
+      const sinCategorias = await tool.execute({ categorias: [] });
+      const sinCandidatos = await tool.execute({ categorias: ['Inexistente'] });
+
+      expect(await tool.presentar(sinCategorias)).toBeNull();
+      expect(await tool.presentar(sinCandidatos)).toBeNull();
+      expect(catalog.idsDeImagenesPedidas).toBeUndefined();
+    });
   });
 });

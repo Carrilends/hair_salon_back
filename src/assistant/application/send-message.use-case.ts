@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { LlmMessage, LlmPort } from '../domain/ports/llm.port';
 import { ConversationRepositoryPort } from '../domain/ports/conversation-repository.port';
 import { ClockPort } from '../domain/ports/clock.port';
@@ -68,6 +68,7 @@ export interface SendMessageResult {
  */
 @Injectable()
 export class SendMessageUseCase {
+  private readonly logger = new Logger(SendMessageUseCase.name);
   private readonly toolsByName: Map<string, AssistantTool>;
   /** Siembra de la cuenta del día en curso, para no lanzar varias a la vez. */
   private siembraEnVuelo: Promise<void> | null = null;
@@ -195,9 +196,24 @@ export class SendMessageUseCase {
         // widget. Quien decide que un resultado no se presenta es la propia
         // herramienta (devolviendo `null`), no el bucle: solo ella sabe qué es
         // un error suyo.
-        const presentacion = await tool?.presentar?.(result);
-        if (presentacion && !yaPresentada(presentaciones, presentacion)) {
-          presentaciones.push(presentacion);
+        //
+        // Va dentro de un `try` porque `presentar` dejó de ser gratis el día que
+        // pasó a consultar imágenes: ahora puede fallar. Una tarjeta que no se
+        // puede construir tiene que degradar a «sin tarjeta» y nunca a «sin
+        // turno»: el mensaje de la clienta y la respuesta ya se pagaron, y si la
+        // excepción subiera se perderían —`save` viene después del bucle— junto
+        // con la fila de auditoría que este caso de uso se esfuerza en llevar.
+        try {
+          const presentacion = await tool?.presentar?.(result);
+          if (presentacion && !yaPresentada(presentaciones, presentacion)) {
+            presentaciones.push(presentacion);
+          }
+        } catch (error) {
+          this.logger.warn(
+            `No se pudo construir la presentación de ${call.name}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          );
         }
         messages.push({
           role: 'tool',

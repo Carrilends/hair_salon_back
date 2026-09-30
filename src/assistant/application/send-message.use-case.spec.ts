@@ -771,6 +771,44 @@ describe('SendMessageUseCase', () => {
     ]);
   });
 
+  it('una presentación que revienta no se lleva por delante el turno', async () => {
+    // `presentar` dejó de ser un booleano el día que pasó a consultar imágenes:
+    // ahora puede fallar. Una tarjeta que no se puede construir tiene que
+    // degradar a «sin tarjeta», nunca a «sin turno»: el mensaje de la clienta y
+    // la respuesta ya están pagados y deben persistirse igual.
+    class HerramientaConPresentacionRota extends FakePresentingTool {
+      presentar(): never {
+        throw new Error('la consulta de imágenes falló');
+      }
+    }
+    const tool = new HerramientaConPresentacionRota('listarServicios', {
+      servicios: [{ id: 's1' }],
+    });
+    const llm = new FakeLlmAdapter([
+      {
+        message: {
+          role: 'assistant',
+          content: '',
+          toolCalls: [{ id: 't1', name: 'listarServicios', arguments: {} }],
+        },
+        usage: TokenUsage.of(10, 5),
+      },
+      {
+        message: { role: 'assistant', content: 'Tenemos varios cortes.' },
+        usage: TokenUsage.of(10, 5),
+      },
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [tool] });
+
+    const res = await useCase.execute({ message: 'cortes', userId: 'u1' });
+
+    expect(res.reply).toBe('Tenemos varios cortes.');
+    expect(res.presentaciones).toBeUndefined();
+    // Y la conversación se guardó: la auditoría por mensaje no pierde la fila.
+    expect(repo.saved?.messages).toHaveLength(2);
+  });
+
   it('corta a las 5 vueltas y NO ejecuta la herramienta en la última (evita escritura fantasma)', async () => {
     const tool = new FakeTool('listarServicios', []);
     const script: LlmCompletion[] = Array.from({ length: 6 }, () => ({
