@@ -5,6 +5,12 @@
 export const LLM = Symbol('LlmPort');
 export const CONVERSATION_REPOSITORY = Symbol('ConversationRepositoryPort');
 export const ASSISTANT_TOOLS = Symbol('AssistantTools');
+/**
+ * Proveedor de juicios (`JudgmentPort`). Se llama así y no por el nombre del
+ * servicio que lo implementa: el núcleo no conoce al proveedor. Sin clave
+ * configurada se inyecta el adaptador nulo y todo pasa igual que hoy.
+ */
+export const JUDGMENT = Symbol('JudgmentPort');
 export const ASSISTANT_CLOCK = Symbol('AssistantClockPort');
 export const ASSISTANT_BUDGET = Symbol('AssistantBudget');
 export const ASSISTANT_SUMMARIZER = Symbol('ConversationSummarizer');
