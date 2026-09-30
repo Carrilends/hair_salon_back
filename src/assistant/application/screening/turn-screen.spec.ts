@@ -1,7 +1,10 @@
 import {
   RECIENTES_EN_EL_ESTADO,
+  UMBRAL_CORRESPONDENCIA,
   UMBRAL_PERTINENCIA,
+  construirCorrespondencia,
   construirPertinencia,
+  leerCorrespondencia,
   leerPertinencia,
 } from './turn-screen';
 
@@ -107,5 +110,101 @@ describe('leerPertinencia', () => {
     // clienta real cuesta una clienta. El umbral se elige para que el error
     // que se comete sea el barato.
     expect(UMBRAL_PERTINENCIA).toBeLessThan(0.5);
+  });
+});
+
+describe('construirCorrespondencia', () => {
+  const reserva = {
+    servicios: ['Corte de dama'],
+    fecha: 'viernes 3 de octubre de 2026',
+    hora: '15:00',
+  };
+
+  it('arma UN noul sobre la reserva que se va a crear y lo que se pidió', () => {
+    const req = construirCorrespondencia({
+      ...reserva,
+      recientes: [
+        { rol: 'clienta', texto: 'quiero un corte el viernes a las 3' },
+      ],
+    });
+
+    expect(req!.asked).toEqual(['correspondencia']);
+    expect(req!.questions.correspondencia.type).toBe('noul');
+    expect(req!.state.services).toEqual(['Corte de dama']);
+    expect(req!.state.date).toBe('viernes 3 de octubre de 2026');
+    expect(req!.state.time).toBe('15:00');
+  });
+
+  it('las instrucciones nombran los campos del estado y prohíben juzgar el horario', () => {
+    // Jev lee literalmente y trata las fechas como texto, no como cantidades
+    // ordenadas: preguntarle si la hora es válida, si cae en horario o si hay
+    // solape es pedirle justo lo que hace mal. Eso ya lo resuelven
+    // `salon-schedule.ts` y `countOverlaps`.
+    const instrucciones = construirCorrespondencia({
+      ...reserva,
+      recientes: [{ rol: 'clienta', texto: 'quiero un corte' }],
+    })!.questions.correspondencia.instructions;
+
+    expect(instrucciones).toContain('`recent`');
+    expect(instrucciones).toContain('`services`');
+    expect(instrucciones).toContain('`date`');
+    expect(instrucciones).toContain('`time`');
+    expect(instrucciones.toLowerCase()).toContain('do not judge');
+  });
+
+  it('el estado no lleva identificadores, ni nombres de personas, ni teléfonos', () => {
+    const req = construirCorrespondencia({
+      ...reserva,
+      recientes: [{ rol: 'asistente', texto: 'te agendo el corte' }],
+    });
+
+    // Sin `message`: el mensaje que disparó la reserva ya viaja dentro de
+    // `recent`, y un estado con ruido distrae al modelo.
+    expect(Object.keys(req!.state).sort()).toEqual([
+      'date',
+      'recent',
+      'services',
+      'time',
+    ]);
+  });
+
+  it('sin servicios no se pregunta: no hay reserva que comparar', () => {
+    expect(
+      construirCorrespondencia({ ...reserva, servicios: [], recientes: [] }),
+    ).toBeNull();
+  });
+
+  it('sin conversación previa tampoco se pregunta: no hay con qué comparar', () => {
+    // El juicio es una comparación. Sin `recent` no hay término contra el que
+    // comparar y preguntarlo sería pagar por una respuesta sin fundamento.
+    expect(construirCorrespondencia({ ...reserva, recientes: [] })).toBeNull();
+  });
+});
+
+describe('leerCorrespondencia', () => {
+  const asked = ['correspondencia'];
+
+  it('el umbral es ESTRICTO: aquí el fallo caro es dejar pasar una reserva desviada', () => {
+    // Al revés que la pertinencia. Un veredicto negativo no cancela nada: pide
+    // confirmación explícita, que es barato. Dejar pasar la reserva que no era
+    // toca la única operación irreversible del asistente.
+    expect(UMBRAL_CORRESPONDENCIA).toBeGreaterThanOrEqual(0.5);
+    expect(UMBRAL_CORRESPONDENCIA).toBeGreaterThan(UMBRAL_PERTINENCIA);
+  });
+
+  it('por debajo del umbral, no corresponde', () => {
+    expect(
+      leerCorrespondencia(
+        { correspondencia: { type: 'noul', noul: 0.4 } },
+        asked,
+      ).corresponde,
+    ).toBe(false);
+  });
+
+  it('sin veredicto la reserva se crea como hoy: fail-open', () => {
+    expect(leerCorrespondencia({}, asked)).toEqual({
+      corresponde: true,
+      prob: null,
+    });
   });
 });

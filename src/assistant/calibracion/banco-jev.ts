@@ -23,7 +23,9 @@ import { join, dirname } from 'node:path';
 import {
   MensajeReciente,
   PeticionDeJuicio,
+  UMBRAL_CORRESPONDENCIA,
   UMBRAL_PERTINENCIA,
+  construirCorrespondencia,
   construirPertinencia,
   probabilidadNoul,
 } from '../application/screening/turn-screen';
@@ -38,29 +40,64 @@ const MODELO_POR_DEFECTO = 'jev-1.13.0';
 const PRECIO_ENTRADA_POR_MILLON = 0.042;
 const UMBRALES = [0.02, 0.05, 0.1, 0.2, 0.3, 0.5, 0.7, 0.9];
 
-type Esperado = 'atender' | 'rechazar';
-
 interface Caso {
   clase: string;
   por: string;
-  esperado: Esperado;
-  mensaje: string;
+  /** Una de las dos etiquetas del juicio (`si` / `no` en `JUICIOS`). */
+  esperado: string;
   recientes?: MensajeReciente[];
+  /** Pertinencia. */
+  mensaje?: string;
+  /** Correspondencia. */
+  servicios?: string[];
+  fecha?: string;
+  hora?: string;
 }
 
 interface Banco {
   juicio: string;
   nota: string;
+  /** `true` si el fallo CARO es dejar pasar lo que debía frenarse. */
+  caroSiSePasa?: boolean;
   casos: Caso[];
 }
 
-/** Cada juicio del banco sabe armar su petición desde un caso. */
-const CONSTRUCTORES: Record<string, (caso: Caso) => PeticionDeJuicio | null> = {
-  pertinencia: (caso) =>
-    construirPertinencia({
-      mensaje: caso.mensaje,
-      recientes: caso.recientes,
-    }),
+/**
+ * Cada juicio del banco sabe armar su petición desde un caso, con qué umbral se
+ * lee y cómo se llaman sus dos etiquetas. Añadir un juicio nuevo es añadir una
+ * entrada aquí y un fichero en `casos/`: mismo método, mismo script.
+ */
+const JUICIOS: Record<
+  string,
+  {
+    construir: (caso: Caso) => PeticionDeJuicio | null;
+    umbral: number;
+    si: string;
+    no: string;
+  }
+> = {
+  pertinencia: {
+    construir: (caso) =>
+      construirPertinencia({
+        mensaje: caso.mensaje ?? '',
+        recientes: caso.recientes,
+      }),
+    umbral: UMBRAL_PERTINENCIA,
+    si: 'atender',
+    no: 'rechazar',
+  },
+  correspondencia: {
+    construir: (caso) =>
+      construirCorrespondencia({
+        servicios: caso.servicios ?? [],
+        fecha: caso.fecha ?? '',
+        hora: caso.hora ?? '',
+        recientes: caso.recientes,
+      }),
+    umbral: UMBRAL_CORRESPONDENCIA,
+    si: 'corresponde',
+    no: 'desviada',
+  },
 };
 
 function leerClave(): string {
@@ -131,12 +168,13 @@ async function main(): Promise<void> {
   const iModelo = process.argv.indexOf('--modelo');
   let modelo = iModelo > 0 ? process.argv[iModelo + 1] : MODELO_POR_DEFECTO;
 
-  const construir = CONSTRUCTORES[juicio];
-  if (!construir) {
+  const definicion = JUICIOS[juicio];
+  if (!definicion) {
     throw new Error(
-      `juicio desconocido: ${juicio}. Conocidos: ${Object.keys(CONSTRUCTORES).join(', ')}`,
+      `juicio desconocido: ${juicio}. Conocidos: ${Object.keys(JUICIOS).join(', ')}`,
     );
   }
+  const { construir, umbral, si: ETIQUETA_SI, no: ETIQUETA_NO } = definicion;
   const rutaCasos = join(__dirname, 'casos', `${juicio}.json`);
   const banco = JSON.parse(readFileSync(rutaCasos, 'utf8')) as Banco;
   const clave = leerClave();
@@ -144,7 +182,10 @@ async function main(): Promise<void> {
   console.log(
     `\n=== ${juicio} · ${banco.casos.length} casos · modelo ${modelo}`,
   );
-  console.log(`=== umbral por defecto en el código: ${UMBRAL_PERTINENCIA}\n`);
+  console.log(`=== umbral por defecto en el código: ${umbral}`);
+  console.log(
+    `=== el fallo CARO es ${banco.caroSiSePasa ? 'el falso pase' : 'el falso rechazo'}\n`,
+  );
 
   const resultados: (Caso & { prob: number | null; ms: number | null })[] = [];
   let entradaTotal = 0;
@@ -182,42 +223,49 @@ async function main(): Promise<void> {
     const prob = probabilidadNoul(respuesta.answers[peticion.asked[0]]);
     resultados.push({ ...caso, prob, ms: respuesta.ms });
 
-    const conUmbral = prob === null ? null : prob >= UMBRAL_PERTINENCIA;
+    const conUmbral = prob === null ? null : prob >= umbral;
     const acierta =
-      conUmbral === null ? null : conUmbral === (caso.esperado === 'atender');
+      conUmbral === null ? null : conUmbral === (caso.esperado === ETIQUETA_SI);
     const marca = acierta === null ? '  ?' : acierta ? '  ✓' : '  ✗';
     console.log(
-      `${marca} ${prob === null ? '  —  ' : dosDecimales(prob)}  ${String(respuesta.ms).padStart(4)} ms  ${caso.clase.padEnd(18)} ${caso.por} · «${caso.mensaje}»`,
+      `${marca} ${prob === null ? '  —  ' : dosDecimales(prob)}  ${String(
+        respuesta.ms,
+      ).padStart(4)} ms  ${caso.clase.padEnd(18)} ${caso.por}${
+        caso.mensaje ? ` · «${caso.mensaje}»` : ''
+      }`,
     );
   }
 
   // --- Barrido de umbrales: qué error se comete con cada listón.
-  console.log(
-    '\n--- Barrido de umbrales (el error CARO es el falso rechazo)\n',
-  );
+  console.log('\n--- Barrido de umbrales\n');
   console.log('  umbral   falsos rechazos   falsos pases');
-  const barrido = UMBRALES.map((umbral) => {
+  const nSi = resultados.filter((r) => r.esperado === ETIQUETA_SI).length;
+  const nNo = resultados.filter((r) => r.esperado === ETIQUETA_NO).length;
+  const barrido = UMBRALES.map((candidato) => {
     const falsosRechazos = resultados.filter(
-      (r) => r.esperado === 'atender' && r.prob !== null && r.prob < umbral,
+      (r) =>
+        r.esperado === ETIQUETA_SI && r.prob !== null && r.prob < candidato,
     );
     const falsosPases = resultados.filter(
-      (r) => r.esperado === 'rechazar' && r.prob !== null && r.prob >= umbral,
+      (r) =>
+        r.esperado === ETIQUETA_NO && r.prob !== null && r.prob >= candidato,
     );
     console.log(
-      `  ${umbral.toFixed(2).padStart(5)}    ${String(falsosRechazos.length).padStart(7)}/${
-        resultados.filter((r) => r.esperado === 'atender').length
-      }         ${String(falsosPases.length).padStart(5)}/${
-        resultados.filter((r) => r.esperado === 'rechazar').length
-      }`,
+      `  ${candidato.toFixed(2).padStart(5)}    ${String(
+        falsosRechazos.length,
+      ).padStart(
+        7,
+      )}/${nSi}         ${String(falsosPases.length).padStart(5)}/${nNo}`,
     );
     return {
-      umbral,
-      falsosRechazos: falsosRechazos.map((r) => r.mensaje),
-      falsosPases: falsosPases.map((r) => r.mensaje),
+      umbral: candidato,
+      falsosRechazos: falsosRechazos.map((r) => r.por),
+      falsosPases: falsosPases.map((r) => r.por),
     };
   });
 
-  // --- Resumen por clase: la clase que importa es «seguimiento».
+  // --- Resumen por clase: la que importa es la clase de riesgo de cada juicio
+  // («seguimiento» en pertinencia, «desviada» en correspondencia).
   console.log('\n--- Probabilidad por clase (mín / mediana / máx)\n');
   const porClase: Record<
     string,
@@ -271,7 +319,8 @@ async function main(): Promise<void> {
     fecha: new Date().toISOString(),
     modeloPedido: modelo,
     modeloQueRespondio: modeloReal,
-    umbralEnElCodigo: UMBRAL_PERTINENCIA,
+    umbralEnElCodigo: umbral,
+    caroSiSePasa: banco.caroSiSePasa ?? false,
     nota: banco.nota,
     entradaTotal,
     costeUsd: Number(coste.toFixed(8)),
@@ -287,7 +336,14 @@ async function main(): Promise<void> {
       : join(
           __dirname,
           'informes',
-          `${juicio}-${new Date().toISOString().slice(0, 10)}.json`,
+          // Con la hora, y no solo el día: dos tandas del mismo juicio en la
+          // misma jornada son la forma de ver cuánto se mueve el modelo, y una
+          // no puede pisar a la otra.
+          `${juicio}-${new Date()
+            .toISOString()
+            .slice(0, 16)
+            .replace('T', '-')
+            .replace(':', '')}.json`,
         );
   mkdirSync(dirname(ruta), { recursive: true });
   writeFileSync(ruta, JSON.stringify(informe, null, 2) + '\n', 'utf8');
