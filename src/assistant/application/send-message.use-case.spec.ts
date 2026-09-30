@@ -272,15 +272,26 @@ describe('SendMessageUseCase', () => {
     // Agotar las cinco vueltas es el turno MÁS caro que existe; si ése fuera el
     // que se guarda sin consumo, la auditoría mentiría justo donde importa.
     const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
-    const vuelta = {
+    // Argumentos DISTINTOS en cada vuelta: así el turno agota de verdad las
+    // cinco y no lo corta antes el detector de repetición literal, que es otra
+    // cosa y tiene sus propias pruebas.
+    const vuelta = (busqueda: string) => ({
       message: {
         role: 'assistant' as const,
         content: '',
-        toolCalls: [{ id: 't1', name: 'listarServicios', arguments: {} }],
+        toolCalls: [
+          { id: 't1', name: 'listarServicios', arguments: { busqueda } },
+        ],
       },
       usage: TokenUsage.of(100, 10),
-    };
-    const llm = new FakeLlmAdapter([vuelta, vuelta, vuelta, vuelta, vuelta]);
+    });
+    const llm = new FakeLlmAdapter([
+      vuelta('a'),
+      vuelta('b'),
+      vuelta('c'),
+      vuelta('d'),
+      vuelta('e'),
+    ]);
     const repo = new FakeRepo(null);
     const useCase = makeUseCase({ llm, repo, tools: [tool] });
 
@@ -809,13 +820,192 @@ describe('SendMessageUseCase', () => {
     expect(repo.saved?.messages).toHaveLength(2);
   });
 
-  it('corta a las 5 vueltas y NO ejecuta la herramienta en la última (evita escritura fantasma)', async () => {
-    const tool = new FakeTool('listarServicios', []);
-    const script: LlmCompletion[] = Array.from({ length: 6 }, () => ({
+  it('corta con cortesía cuando el modelo repite la MISMA llamada con los mismos argumentos', async () => {
+    // El turno más caro que existe es el que agota las cinco vueltas pidiendo
+    // siempre lo mismo. Repetir herramienta Y argumentos dentro del mismo turno
+    // no puede acercar la respuesta —el resultado ya está en el contexto—, así
+    // que el bucle corta ahí en vez de pagar tres vueltas más para acabar
+    // igualmente en cortesía. Exacto y gratis: no hace falta juicio ninguno.
+    const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const vuelta = {
       message: {
         role: 'assistant' as const,
         content: '',
-        toolCalls: [{ id: 't', name: 'listarServicios', arguments: {} }],
+        toolCalls: [
+          {
+            id: 't1',
+            name: 'listarServicios',
+            arguments: { busqueda: 'corte' },
+          },
+        ],
+      },
+      usage: TokenUsage.of(100, 10),
+    };
+    const llm = new FakeLlmAdapter([vuelta, vuelta, vuelta, vuelta, vuelta]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [tool] });
+
+    const res = await useCase.execute({
+      message: 'dame vueltas',
+      userId: 'u1',
+    });
+
+    // Vuelta 1: la llamada es nueva y se ejecuta. Vuelta 2: nada nuevo, pero una
+    // vuelta perdida puede ser un tropiezo (ver la prueba de la presentación
+    // repetida), así que se le devuelve el resultado que ya tenía y se le da otra
+    // oportunidad. Vuelta 3: sigue sin pedir nada nuevo → es un bucle, se corta.
+    // Dos vueltas menos que el tope, y la herramienta se ejecutó UNA vez.
+    expect(llm.calls).toHaveLength(3);
+    expect(tool.calls).toBe(1);
+    expect(res.reply).toContain('no logré completar');
+  });
+
+  it('una sola vuelta repetida NO tumba el turno: se le devuelve lo que ya tenía', async () => {
+    // El modelo reincide con los mismos argumentos también en turnos que acaban
+    // BIEN —está documentado en este mismo fichero, en la prueba de la
+    // presentación repetida—. Cortar en la primera repetición convertiría esos
+    // turnos en una disculpa. La repetición no se vuelve a ejecutar, pero el
+    // turno sigue.
+    const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const vuelta = {
+      message: {
+        role: 'assistant' as const,
+        content: '',
+        toolCalls: [{ id: 't1', name: 'listarServicios', arguments: {} }],
+      },
+      usage: TokenUsage.of(100, 10),
+    };
+    const llm = new FakeLlmAdapter([
+      vuelta,
+      vuelta,
+      {
+        message: { role: 'assistant' as const, content: 'Tenemos Corte.' },
+        usage: TokenUsage.of(100, 10),
+      },
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [tool] });
+
+    const res = await useCase.execute({ message: 'servicios', userId: 'u1' });
+
+    expect(res.reply).toBe('Tenemos Corte.');
+    // La segunda vez no se ejecuta: el resultado del turno se reutiliza. Así una
+    // llamada repetida a `crearReserva` tampoco puede duplicar el efecto.
+    expect(tool.calls).toBe(1);
+  });
+
+  it('una vuelta que repite una llamada pero pide otra nueva sigue avanzando', async () => {
+    const listado = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const disponibilidad = new FakeTool('consultarDisponibilidad', {
+      libre: [],
+    });
+    const llm = new FakeLlmAdapter([
+      {
+        message: {
+          role: 'assistant' as const,
+          content: '',
+          toolCalls: [
+            {
+              id: 't1',
+              name: 'listarServicios',
+              arguments: { busqueda: 'corte' },
+            },
+          ],
+        },
+        usage: TokenUsage.of(100, 10),
+      },
+      {
+        message: {
+          role: 'assistant' as const,
+          content: '',
+          toolCalls: [
+            // La repetida y una nueva en la misma vuelta: la vuelta SÍ avanza.
+            {
+              id: 't2',
+              name: 'listarServicios',
+              arguments: { busqueda: 'corte' },
+            },
+            {
+              id: 't3',
+              name: 'consultarDisponibilidad',
+              arguments: { dia: 'viernes' },
+            },
+          ],
+        },
+        usage: TokenUsage.of(100, 10),
+      },
+      {
+        message: {
+          role: 'assistant' as const,
+          content: 'El viernes hay hueco.',
+        },
+        usage: TokenUsage.of(100, 10),
+      },
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({
+      llm,
+      repo,
+      tools: [listado, disponibilidad],
+    });
+
+    const res = await useCase.execute({
+      message: '¿y el viernes?',
+      userId: 'u1',
+    });
+
+    expect(res.reply).toBe('El viernes hay hueco.');
+    expect(listado.calls).toBe(1);
+    expect(disponibilidad.calls).toBe(1);
+  });
+
+  it('el orden de las claves de los argumentos no crea una llamada nueva', async () => {
+    // Los argumentos llegan del proveedor y su orden no está garantizado. Si la
+    // firma dependiera de él, el detector se apagaría justo cuando el modelo
+    // reordena las claves, que es lo que hace al repetirse.
+    const tool = new FakeTool('consultarDisponibilidad', { libre: [] });
+    const conOrden = (args: Record<string, unknown>) => ({
+      message: {
+        role: 'assistant' as const,
+        content: '',
+        toolCalls: [
+          { id: 't', name: 'consultarDisponibilidad', arguments: args },
+        ],
+      },
+      usage: TokenUsage.of(100, 10),
+    });
+    const llm = new FakeLlmAdapter([
+      conOrden({ dia: '2026-09-30', servicio: 's1' }),
+      conOrden({ servicio: 's1', dia: '2026-09-30' }),
+      conOrden({ dia: '2026-09-30', servicio: 's1' }),
+      conOrden({ servicio: 's1', dia: '2026-09-30' }),
+      conOrden({ dia: '2026-09-30', servicio: 's1' }),
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [tool] });
+
+    await useCase.execute({ message: 'disponibilidad', userId: 'u1' });
+
+    expect(llm.calls).toHaveLength(3);
+    expect(tool.calls).toBe(1);
+  });
+
+  it('corta a las 5 vueltas y NO ejecuta la herramienta en la última (evita escritura fantasma)', async () => {
+    const tool = new FakeTool('listarServicios', []);
+    // Una búsqueda distinta por vuelta: el tope por conteo sigue siendo la red
+    // final incluso cuando cada llamada es legítimamente nueva, que es justo lo
+    // que el detector de repetición literal no puede cubrir (plan 04, T1).
+    const script: LlmCompletion[] = Array.from({ length: 6 }, (_, i) => ({
+      message: {
+        role: 'assistant' as const,
+        content: '',
+        toolCalls: [
+          {
+            id: 't',
+            name: 'listarServicios',
+            arguments: { busqueda: `q${i}` },
+          },
+        ],
       },
       usage: TokenUsage.of(10, 5),
     }));

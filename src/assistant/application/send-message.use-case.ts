@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { LlmMessage, LlmPort } from '../domain/ports/llm.port';
+import { LlmMessage, LlmPort, LlmToolCall } from '../domain/ports/llm.port';
 import { ConversationRepositoryPort } from '../domain/ports/conversation-repository.port';
 import { ClockPort } from '../domain/ports/clock.port';
 import { Conversation } from '../domain/conversation';
@@ -30,6 +30,14 @@ import {
 const WINDOW_SIZE = 8;
 const SUMMARY_EVERY = 10;
 const MAX_TOOL_ITERATIONS = 5;
+/**
+ * Vueltas consecutivas sin una sola llamada nueva que se toleran antes de cortar.
+ * Una sola se perdona: el modelo reincide con los mismos argumentos también en
+ * turnos que acaban bien, y cortar en la primera repetición convertiría esos
+ * turnos en una disculpa. Dos seguidas ya no son un tropiezo, son un bucle, y
+ * seguir hasta `MAX_TOOL_ITERATIONS` solo añade factura.
+ */
+const MAX_VUELTAS_SIN_NOVEDAD = 2;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const COURTESY_REPLY =
   'Disculpa, no logré completar la solicitud. ¿Quieres intentarlo de otra forma o reservar por el flujo web de siempre?';
@@ -161,6 +169,12 @@ export class SendMessageUseCase {
     // publicando hacia fuera para que la reserva del techo se liquide con la
     // cifra real aunque el turno acabe lanzando.
     let usoDelTurno = TokenUsage.zero();
+    // Lo que cada llamada a herramienta ya devolvió en ESTE turno, por firma
+    // (ver `firmaDeLlamada`). Sirve para dos cosas: cortar el bucle cuando el
+    // modelo no pide nada nuevo, y no volver a ejecutar lo que ya se ejecutó
+    // —así una llamada repetida a `crearReserva` no puede duplicar el efecto—.
+    const resultadosDelTurno = new Map<string, unknown>();
+    let vueltasSinNovedad = 0;
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
       const completion = await this.llm.complete({
         messages,
@@ -183,37 +197,60 @@ export class SendMessageUseCase {
       // corta con cortesía sin ejecutar.
       if (i === MAX_TOOL_ITERATIONS - 1) break;
 
+      // Corte por repetición literal (plan 04, T1). Si NINGUNA de las llamadas
+      // de esta vuelta es nueva, el modelo está pidiendo lo que ya tiene en el
+      // contexto y la vuelta no puede acercar la respuesta. La primera vez se le
+      // devuelve lo que ya tenía y se le da otra oportunidad; a la segunda
+      // seguida se corta con cortesía, sin esperar a la quinta vuelta.
+      const hayNovedad = toolCalls.some(
+        (c) => !resultadosDelTurno.has(firmaDeLlamada(c)),
+      );
+      vueltasSinNovedad = hayNovedad ? 0 : vueltasSinNovedad + 1;
+      if (vueltasSinNovedad >= MAX_VUELTAS_SIN_NOVEDAD) break;
+
       // La respuesta con llamadas de herramienta y sus resultados viven solo en
       // el contexto del turno (no se persisten): así la ventana rehidratada no
       // arrastra referencias de herramienta colgantes y se ahorran tokens.
       messages.push(completion.message);
       for (const call of toolCalls) {
-        const tool = this.toolsByName.get(call.name);
-        const result = tool
-          ? await tool.execute(call.arguments, context)
-          : { ok: false, motivo: 'herramienta_desconocida' };
-        // Si la herramienta sabe presentar, se le pide el dato tipado para el
-        // widget. Quien decide que un resultado no se presenta es la propia
-        // herramienta (devolviendo `null`), no el bucle: solo ella sabe qué es
-        // un error suyo.
-        //
-        // Va dentro de un `try` porque `presentar` dejó de ser gratis el día que
-        // pasó a consultar imágenes: ahora puede fallar. Una tarjeta que no se
-        // puede construir tiene que degradar a «sin tarjeta» y nunca a «sin
-        // turno»: el mensaje de la clienta y la respuesta ya se pagaron, y si la
-        // excepción subiera se perderían —`save` viene después del bucle— junto
-        // con la fila de auditoría que este caso de uso se esfuerza en llevar.
-        try {
-          const presentacion = await tool?.presentar?.(result);
-          if (presentacion && !yaPresentada(presentaciones, presentacion)) {
-            presentaciones.push(presentacion);
+        const firma = firmaDeLlamada(call);
+        let result: unknown;
+        if (resultadosDelTurno.has(firma)) {
+          // Repetición exacta: se le devuelve lo que ya devolvió, sin ejecutar.
+          // El modelo recibe el mismo dato y el efecto no se duplica.
+          result = resultadosDelTurno.get(firma);
+        } else {
+          const tool = this.toolsByName.get(call.name);
+          result = tool
+            ? await tool.execute(call.arguments, context)
+            : { ok: false, motivo: 'herramienta_desconocida' };
+          resultadosDelTurno.set(firma, result);
+          // Si la herramienta sabe presentar, se le pide el dato tipado para el
+          // widget. Quien decide que un resultado no se presenta es la propia
+          // herramienta (devolviendo `null`), no el bucle: solo ella sabe qué es
+          // un error suyo. Solo se pide en la ejecución de verdad: la repetición
+          // daría la misma tarjeta —que `yaPresentada` descartaría— pagando otra
+          // consulta de imágenes.
+          //
+          // Va dentro de un `try` porque `presentar` dejó de ser gratis el día
+          // que pasó a consultar imágenes: ahora puede fallar. Una tarjeta que no
+          // se puede construir tiene que degradar a «sin tarjeta» y nunca a «sin
+          // turno»: el mensaje de la clienta y la respuesta ya se pagaron, y si
+          // la excepción subiera se perderían —`save` viene después del bucle—
+          // junto con la fila de auditoría que este caso de uso se esfuerza en
+          // llevar.
+          try {
+            const presentacion = await tool?.presentar?.(result);
+            if (presentacion && !yaPresentada(presentaciones, presentacion)) {
+              presentaciones.push(presentacion);
+            }
+          } catch (error) {
+            this.logger.warn(
+              `No se pudo construir la presentación de ${call.name}: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
           }
-        } catch (error) {
-          this.logger.warn(
-            `No se pudo construir la presentación de ${call.name}: ${
-              error instanceof Error ? error.message : String(error)
-            }`,
-          );
         }
         messages.push({
           role: 'tool',
@@ -359,6 +396,34 @@ export class SendMessageUseCase {
 function toLlmRole(role: string): 'system' | 'user' | 'assistant' | 'tool' {
   if (role === 'assistant' || role === 'system' || role === 'tool') return role;
   return 'user';
+}
+
+/**
+ * Identidad de una llamada a herramienta dentro de un turno: nombre y
+ * argumentos. Es la clave del corte por repetición literal, y por eso tiene que
+ * ser exacta: se usa la cadena canónica completa y no un hash, porque dos
+ * llamadas distintas con el mismo hash cortarían un turno que iba bien.
+ */
+function firmaDeLlamada(call: LlmToolCall): string {
+  return `${call.name}\u0000${jsonCanonico(call.arguments)}`;
+}
+
+/**
+ * Serialización estable: las claves de objeto van ordenadas. Los argumentos
+ * llegan del proveedor y su orden no está garantizado; con `JSON.stringify` a
+ * secas, `{dia, servicio}` y `{servicio, dia}` serían llamadas distintas y el
+ * detector se apagaría justo cuando el modelo reordena las claves al repetirse.
+ */
+function jsonCanonico(valor: unknown): string {
+  if (Array.isArray(valor)) return `[${valor.map(jsonCanonico).join(',')}]`;
+  if (valor !== null && typeof valor === 'object') {
+    const campos = Object.entries(valor as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([k, v]) => `${JSON.stringify(k)}:${jsonCanonico(v)}`);
+    return `{${campos.join(',')}}`;
+  }
+  return JSON.stringify(valor) ?? 'null';
 }
 
 /**
