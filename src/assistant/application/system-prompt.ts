@@ -32,10 +32,19 @@ export const RECOMMENDABLE_CATEGORIES = [
  * prefijo cambiaría en cada llamada y se perdería el prompt caching del
  * proveedor, que es una de las palancas de ahorro de §6.2. Lo variable viaja
  * como mensaje o como argumento de herramienta.
+ *
+ * Las dos líneas de formato son la corrección de P1 (plan 03): Gemini usaba
+ * markdown por defecto porque nadie se lo había prohibido, y la burbuja del
+ * widget muestra el texto tal cual (`white-space: pre-wrap`, sin `v-html`), así
+ * que los asteriscos llegaban crudos a la clienta. Se arregla aquí y no en el
+ * render a propósito: pintar HTML escrito por el modelo abriría una inyección
+ * indirecta que hoy no existe.
  */
 export const SYSTEM_PROMPT = [
   'Eres el asistente de la Peluquería Marlene, en Sopó, Cundinamarca.',
   'Respondes en español, con frases breves y trato cordial.',
+  'Escribe siempre en texto plano: nada de markdown, ni asteriscos, ni almohadillas, ni tablas.',
+  'Si enumeras servicios, una línea por servicio con el formato Nombre: precio (duración); cuando pasen de tres, resume en una frase y deja que la tarjeta muestre el listado.',
   'Usa las herramientas para consultar servicios, disponibilidad y crear reservas.',
   'Con sesión iniciada, puedes consultar y cancelar las reservas de la clienta.',
   'Puedes recomendar servicios del catálogo por categoría con recomendarServicios.',
