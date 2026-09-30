@@ -1,0 +1,157 @@
+{
+  "juicio": "progreso",
+  "nota": "Trazas de llamadas a herramienta de un mismo turno (plan 04, T6). La repetición LITERAL ya la corta el código gratis (T1); aquí solo se juzga lo que el código no ve: los mismos fines con argumentos distintos. El fallo caro es cortar un turno que iba a converger, así que el listón es bajo. La frontera fina son los casos «otra búsqueda distinta» y «otro día tras un no hay cupo»: misma herramienta, argumentos distintos, y SÍ avanzan.",
+  "caroSiSePasa": false,
+  "casos": [
+    {
+      "clase": "atascado",
+      "por": "la misma búsqueda reescrita tres veces",
+      "esperado": "atascado",
+      "peticion": "¿cuánto vale un corte?",
+      "traza": [
+        { "herramienta": "listarServicios", "argumentos": { "busqueda": "corte" }, "resultado": "ok" },
+        { "herramienta": "listarServicios", "argumentos": { "busqueda": "cortes" }, "resultado": "ok" },
+        { "herramienta": "listarServicios", "argumentos": { "busqueda": "corte de dama" }, "resultado": "pendiente" }
+      ]
+    },
+    {
+      "clase": "atascado",
+      "por": "el mismo día preguntado con otro formato",
+      "esperado": "atascado",
+      "peticion": "¿tienen cupo el viernes?",
+      "traza": [
+        { "herramienta": "consultarDisponibilidad", "argumentos": { "fecha": "2026-10-02" }, "resultado": "ok" },
+        { "herramienta": "consultarDisponibilidad", "argumentos": { "fecha": "viernes" }, "resultado": "error" },
+        { "herramienta": "consultarDisponibilidad", "argumentos": { "fecha": "02/10/2026" }, "resultado": "pendiente" }
+      ]
+    },
+    {
+      "clase": "atascado",
+      "por": "el mismo paquete con otro nombre del evento",
+      "esperado": "atascado",
+      "peticion": "me caso en diciembre, ¿qué me ofrecen?",
+      "traza": [
+        { "herramienta": "componerPaquete", "argumentos": { "evento": "boda" }, "resultado": "ok" },
+        { "herramienta": "componerPaquete", "argumentos": { "evento": "bodas" }, "resultado": "ok" },
+        { "herramienta": "componerPaquete", "argumentos": { "evento": "matrimonio" }, "resultado": "pendiente" }
+      ]
+    },
+    {
+      "clase": "atascado",
+      "por": "insiste en un servicio que el catálogo no tiene",
+      "esperado": "atascado",
+      "peticion": "quiero micropigmentación de labios",
+      "traza": [
+        { "herramienta": "listarServicios", "argumentos": { "busqueda": "micropigmentacion" }, "resultado": "ok" },
+        { "herramienta": "listarServicios", "argumentos": { "busqueda": "micropigmentacion labios" }, "resultado": "ok" },
+        { "herramienta": "recomendarServicios", "argumentos": { "categorias": ["micropigmentacion"] }, "resultado": "pendiente" }
+      ]
+    },
+    {
+      "clase": "atascado",
+      "por": "da vueltas entre dos herramientas sin pedir nada nuevo",
+      "esperado": "atascado",
+      "peticion": "¿me recomiendas algo para las uñas?",
+      "traza": [
+        { "herramienta": "recomendarServicios", "argumentos": { "categorias": ["Manicure"] }, "resultado": "ok" },
+        { "herramienta": "listarServicios", "argumentos": { "busqueda": "manicure" }, "resultado": "ok" },
+        { "herramienta": "recomendarServicios", "argumentos": { "categorias": ["Manicure", "Pedicure"] }, "resultado": "ok" },
+        { "herramienta": "listarServicios", "argumentos": { "busqueda": "uñas" }, "resultado": "pendiente" }
+      ]
+    },
+    {
+      "clase": "atascado",
+      "por": "reintenta una reserva que ya falló, igual",
+      "esperado": "atascado",
+      "peticion": "resérvame el corte el viernes a las 3",
+      "traza": [
+        { "herramienta": "crearReserva", "argumentos": { "fechaHoraIso": "2026-10-02T20:00:00.000Z" }, "resultado": "error" },
+        { "herramienta": "crearReserva", "argumentos": { "fechaHoraIso": "2026-10-02T20:00:00.001Z" }, "resultado": "error" },
+        { "herramienta": "crearReserva", "argumentos": { "fechaHoraIso": "2026-10-02T20:00:00.000Z" }, "resultado": "pendiente" }
+      ]
+    },
+
+    {
+      "clase": "avanza",
+      "por": "la cadena normal: listar y luego consultar disponibilidad",
+      "esperado": "avanza",
+      "peticion": "quiero un corte, ¿hay cupo el viernes?",
+      "traza": [
+        { "herramienta": "listarServicios", "argumentos": { "busqueda": "corte" }, "resultado": "ok" },
+        { "herramienta": "consultarDisponibilidad", "argumentos": { "fecha": "2026-10-02" }, "resultado": "pendiente" }
+      ]
+    },
+    {
+      "clase": "avanza",
+      "por": "la cadena completa hasta reservar",
+      "esperado": "avanza",
+      "peticion": "resérvame un corte el viernes a las 3",
+      "traza": [
+        { "herramienta": "listarServicios", "argumentos": { "busqueda": "corte" }, "resultado": "ok" },
+        { "herramienta": "consultarDisponibilidad", "argumentos": { "fecha": "2026-10-02" }, "resultado": "ok" },
+        { "herramienta": "crearReserva", "argumentos": { "fechaHoraIso": "2026-10-02T20:00:00.000Z" }, "resultado": "pendiente" }
+      ]
+    },
+    {
+      "clase": "avanza",
+      "por": "componer y reservar el paquete",
+      "esperado": "avanza",
+      "peticion": "me gradúo el viernes, agéndame lo del paquete",
+      "traza": [
+        { "herramienta": "componerPaquete", "argumentos": { "evento": "grado" }, "resultado": "ok" },
+        { "herramienta": "reservarPaquete", "argumentos": { "fechaHoraIso": "2026-10-02T21:00:00.000Z" }, "resultado": "pendiente" }
+      ]
+    },
+    {
+      "clase": "avanza",
+      "por": "FRONTERA: la misma herramienta con otra búsqueda porque preguntó por DOS servicios",
+      "esperado": "avanza",
+      "peticion": "¿cuánto vale el manicure y cuánto el pedicure?",
+      "traza": [
+        { "herramienta": "listarServicios", "argumentos": { "busqueda": "manicure" }, "resultado": "ok" },
+        { "herramienta": "listarServicios", "argumentos": { "busqueda": "pedicure" }, "resultado": "pendiente" }
+      ]
+    },
+    {
+      "clase": "avanza",
+      "por": "FRONTERA: otro día después de un «no hay cupo»",
+      "esperado": "avanza",
+      "peticion": "necesito cita esta semana para tinte",
+      "traza": [
+        { "herramienta": "consultarDisponibilidad", "argumentos": { "fecha": "2026-10-02" }, "resultado": "error" },
+        { "herramienta": "consultarDisponibilidad", "argumentos": { "fecha": "2026-10-03" }, "resultado": "pendiente" }
+      ]
+    },
+    {
+      "clase": "avanza",
+      "por": "consultar sus reservas y luego cancelar la que era",
+      "esperado": "avanza",
+      "peticion": "cancela mi cita del jueves",
+      "traza": [
+        { "herramienta": "misReservas", "argumentos": {}, "resultado": "ok" },
+        { "herramienta": "cancelarReserva", "argumentos": { "reservaId": "r1" }, "resultado": "pendiente" }
+      ]
+    },
+    {
+      "clase": "avanza",
+      "por": "listar y luego recomendar, porque pidió consejo",
+      "esperado": "avanza",
+      "peticion": "quiero cambiar de color, ¿qué me recomiendan?",
+      "traza": [
+        { "herramienta": "listarServicios", "argumentos": { "busqueda": "tinte" }, "resultado": "ok" },
+        { "herramienta": "recomendarServicios", "argumentos": { "categorias": ["Coloración completa"] }, "resultado": "pendiente" }
+      ]
+    },
+    {
+      "clase": "avanza",
+      "por": "tres días distintos porque preguntó por la semana",
+      "esperado": "avanza",
+      "peticion": "¿qué días tienen cupo esta semana?",
+      "traza": [
+        { "herramienta": "consultarDisponibilidad", "argumentos": { "fecha": "2026-10-01" }, "resultado": "ok" },
+        { "herramienta": "consultarDisponibilidad", "argumentos": { "fecha": "2026-10-02" }, "resultado": "ok" },
+        { "herramienta": "consultarDisponibilidad", "argumentos": { "fecha": "2026-10-03" }, "resultado": "pendiente" }
+      ]
+    }
+  ]
+}

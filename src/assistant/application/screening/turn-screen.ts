@@ -50,6 +50,23 @@ export const UMBRAL_PERTINENCIA = 0.1;
  */
 export const UMBRAL_CORRESPONDENCIA = 0.5;
 
+/**
+ * Umbral de progreso del bucle de herramientas. El fallo caro es cortar un
+ * turno que iba a converger: cuesta una clienta. El fallo barato es no cortar
+ * uno atascado: cuesta las dos vueltas que faltaban hasta el tope por conteo,
+ * unos $0,0004. Con esa asimetría, el listón se compra con margen.
+ *
+ * Y aquí el banco (T6) dio el peor resultado de los tres juicios, que también
+ * es un hallazgo: en dos tandas de 14 trazas, las que avanzan salieron entre
+ * 0,67 y 0,90 y las atascadas entre 0,20 y 0,59. **Solo 0,08 de separación.**
+ * No hay listón que coja las seis atascadas sin acercarse peligrosamente a la
+ * cadena legítima más floja —«listar, consultar, reservar», 0,67 en las dos
+ * tandas—. Con 0,5 se cortan cuatro de las seis y quedan 0,17 de margen, ocho
+ * veces la deriva observada; las otras dos caen en `MAX_TOOL_ITERATIONS`, que
+ * sigue ahí como red final. Por esto T6 es opcional en la recomendación.
+ */
+export const UMBRAL_PROGRESO = 0.5;
+
 export type RolReciente = 'clienta' | 'asistente';
 
 export interface MensajeReciente {
@@ -157,6 +174,30 @@ const CRITERIOS_CORRESPONDENCIA = Object.freeze({
 const INSTRUCCIONES_CORRESPONDENCIA =
   'An appointment is about to be booked for the client: the services in `services`, on `date`, at `time`. `recent` holds the last messages of the conversation, oldest first. Decide whether that is the appointment she asked for. Do not judge whether `date` or `time` is a valid date or hour, whether the salon is open then, or whether the slot is free: that is already decided elsewhere. Judge only whether what is about to be booked matches what she asked for.';
 
+/** Una llamada a herramienta ya hecha —o recién pedida— en el turno. */
+export interface LlamadaDeLaTraza {
+  herramienta: string;
+  argumentos: Record<string, unknown>;
+  /** `pendiente` es la que el modelo acaba de pedir y todavía no se ejecutó. */
+  resultado: 'ok' | 'error' | 'pendiente';
+}
+
+/**
+ * Criterios de progreso. Se pregunta por el **progreso** y no por el atasco a
+ * propósito: así el fail-open de `leerNoulUnico` —que devuelve «sí» cuando no
+ * hay veredicto— significa aquí «sigue el bucle», que es lo que debe pasar en
+ * la duda. Preguntando por el atasco, la misma ausencia de veredicto habría
+ * cortado el turno.
+ */
+const CRITERIOS_PROGRESO = Object.freeze({
+  true: 'the calls in `calls` are getting somewhere: each one asks for something the earlier ones did not, or one of them already returned what `request` needs and the turn only has to put it in words.',
+  false:
+    'the calls keep going after the same thing with small variations of the same arguments -a reworded search, the same day asked again- and none of them has brought the turn any closer to answering `request`.',
+});
+
+const INSTRUCCIONES_PROGRESO =
+  'While trying to answer `request`, the assistant made the tool calls in `calls`, oldest first; the ones marked `pendiente` are the ones it is asking for now. Decide whether those calls are getting closer to answering `request`. Do not count the calls and do not judge how long the list is: judge whether they are going anywhere.';
+
 /** Probabilidad de un `Noul`, o `null` si la respuesta no es un noul. */
 export function probabilidadNoul(respuesta: unknown): number | null {
   if (
@@ -213,6 +254,42 @@ export function construirCorrespondencia({
 }
 
 /**
+ * La pregunta de progreso del bucle (plan 04, T6), o `null` cuando no hay nada
+ * que juzgar.
+ *
+ * **Depende de T1**: la repetición literal ya la corta el código, gratis y
+ * exacta. Aquí solo queda el caso que el código no ve —los mismos fines con
+ * argumentos distintos, sin acercarse—.
+ */
+export function construirProgreso({
+  peticion,
+  traza,
+}: {
+  peticion: string;
+  traza: LlamadaDeLaTraza[];
+}): PeticionDeJuicio | null {
+  if (!esTexto(peticion) || !traza?.length) return null;
+  return {
+    state: {
+      request: peticion.trim(),
+      calls: traza.map((l) => ({
+        tool: l.herramienta,
+        arguments: l.argumentos,
+        result: l.resultado,
+      })),
+    },
+    questions: {
+      progreso: {
+        type: 'noul',
+        instructions: INSTRUCCIONES_PROGRESO,
+        criteria: CRITERIOS_PROGRESO,
+      },
+    },
+    asked: ['progreso'],
+  };
+}
+
+/**
  * El veredicto de pertinencia. **Fail-open**: si la respuesta no viene, no es
  * un noul o no es un número, se atiende igual (`pertinente: true`) y se anota
  * `prob: null`. Bloquear convertiría la caída de un tercero en la caída del
@@ -239,6 +316,19 @@ export function leerCorrespondencia(
 ): { corresponde: boolean; prob: number | null } {
   const { cumple, prob } = leerNoulUnico(answers, asked, umbral);
   return { corresponde: cumple, prob };
+}
+
+/**
+ * El veredicto de progreso. **Fail-open significa seguir el bucle**: sin
+ * veredicto, `avanza: true` y el turno continúa hasta el tope por conteo.
+ */
+export function leerProgreso(
+  answers: Record<string, unknown> | null | undefined,
+  asked: string[],
+  umbral: number = UMBRAL_PROGRESO,
+): { avanza: boolean; prob: number | null } {
+  const { cumple, prob } = leerNoulUnico(answers, asked, umbral);
+  return { avanza: cumple, prob };
 }
 
 /**

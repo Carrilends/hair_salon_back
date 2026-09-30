@@ -25,8 +25,17 @@ import {
   ASSISTANT_SUMMARIZER,
   ASSISTANT_TOOLS,
   CONVERSATION_REPOSITORY,
+  JUDGMENT,
+  JUDGMENT_SETTINGS,
   LLM,
 } from './tokens';
+import { JudgmentPort } from '../domain/ports/judgment.port';
+import { JudgmentSettings } from './judgment-settings';
+import {
+  LlamadaDeLaTraza,
+  construirProgreso,
+  leerProgreso,
+} from './screening/turn-screen';
 
 const WINDOW_SIZE = 8;
 const SUMMARY_EVERY = 10;
@@ -39,6 +48,13 @@ const MAX_TOOL_ITERATIONS = 5;
  * seguir hasta `MAX_TOOL_ITERATIONS` solo añade factura.
  */
 const MAX_VUELTAS_SIN_NOVEDAD = 2;
+/**
+ * Vuelta a partir de la cual se pregunta si el turno avanza (plan 04, T6).
+ * Antes de la tercera no se pregunta: encadenar dos herramientas es lo más
+ * normal que hace el asistente (`listarServicios` → `consultarDisponibilidad`),
+ * y preguntar ahí le cobraría el juicio a casi todos los turnos.
+ */
+const PRIMERA_VUELTA_QUE_SE_JUZGA = 3;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const COURTESY_REPLY =
   'Disculpa, no logré completar la solicitud. ¿Quieres intentarlo de otra forma o reservar por el flujo web de siempre?';
@@ -93,6 +109,10 @@ export class SendMessageUseCase {
     private readonly summarizer: ConversationSummarizer,
     @Inject(ASSISTANT_DAILY_LEDGER)
     private readonly ledger: DailyTokenLedger,
+    // Proveedor de juicios y qué colocaciones están encendidas (plan 04).
+    // Opcionales de verdad: sin ellos el bucle es exactamente el de antes.
+    @Inject(JUDGMENT) private readonly judge?: JudgmentPort,
+    @Inject(JUDGMENT_SETTINGS) private readonly ajustes?: JudgmentSettings,
   ) {
     this.toolsByName = new Map(this.tools.map((t) => [t.name, t]));
   }
@@ -191,6 +211,9 @@ export class SendMessageUseCase {
     // —así una llamada repetida a `crearReserva` no puede duplicar el efecto—.
     const resultadosDelTurno = new Map<string, unknown>();
     let vueltasSinNovedad = 0;
+    // Traza del turno para el corte semántico (T6): qué se pidió, con qué
+    // argumentos y cómo salió, en orden.
+    const traza: LlamadaDeLaTraza[] = [];
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
       const completion = await this.llm.complete({
         messages,
@@ -223,6 +246,16 @@ export class SendMessageUseCase {
       );
       vueltasSinNovedad = hayNovedad ? 0 : vueltasSinNovedad + 1;
       if (vueltasSinNovedad >= MAX_VUELTAS_SIN_NOVEDAD) break;
+
+      // Corte semántico (plan 04, T6): desde la tercera vuelta se pregunta si
+      // estas llamadas van a alguna parte. Solo llega aquí la minoría de turnos
+      // que encadena tres vueltas, así que la mayoría no paga ningún juicio.
+      if (
+        i + 1 >= PRIMERA_VUELTA_QUE_SE_JUZGA &&
+        !(await this.turnoAvanza(input.message, traza, toolCalls))
+      ) {
+        break;
+      }
 
       // La respuesta con llamadas de herramienta y sus resultados viven solo en
       // el contexto del turno (no se persisten): así la ventana rehidratada no
@@ -268,6 +301,12 @@ export class SendMessageUseCase {
             );
           }
         }
+        traza.push({
+          herramienta: call.name,
+          argumentos: call.arguments,
+          resultado:
+            (result as { ok?: unknown })?.ok === false ? 'error' : 'ok',
+        });
         messages.push({
           role: 'tool',
           content: JSON.stringify(result),
@@ -306,6 +345,55 @@ export class SendMessageUseCase {
       reply,
       ...(presentaciones.length > 0 ? { presentaciones } : {}),
     };
+  }
+
+  /**
+   * ¿Este turno va a alguna parte? (plan 04, T6.)
+   *
+   * Se pregunta por la **relación** entre las llamadas y la petición, nunca por
+   * cuántas son: el modelo cuenta mal, y peor cuanto más largo el estado. El
+   * tope por conteo ya existe y se llama `MAX_TOOL_ITERATIONS`.
+   *
+   * **Fail-open aquí significa seguir**: sin colocación, sin veredicto o con el
+   * proveedor caído devuelve `true` y el turno continúa. En modo sombra
+   * pregunta, registra y devuelve `true` igual.
+   */
+  private async turnoAvanza(
+    peticion: string,
+    traza: LlamadaDeLaTraza[],
+    pedidas: LlmToolCall[],
+  ): Promise<boolean> {
+    const modo = this.ajustes?.bucle ?? 'off';
+    if (!this.judge || modo === 'off') return true;
+
+    const juicio = construirProgreso({
+      peticion,
+      traza: [
+        ...traza,
+        ...pedidas.map((c) => ({
+          herramienta: c.name,
+          argumentos: c.arguments,
+          resultado: 'pendiente' as const,
+        })),
+      ],
+    });
+    if (!juicio) return true;
+
+    const respuesta = await this.judge.ask({
+      state: juicio.state,
+      questions: juicio.questions,
+    });
+    if (respuesta.ok === false) return true;
+
+    const { avanza, prob } = leerProgreso(respuesta.answers, juicio.asked);
+    if (prob !== null) {
+      this.logger.log(
+        `Juicio de progreso del turno: ${prob} (${modo}, ${respuesta.ms} ms)` +
+          `${avanza ? '' : ' — habría cortado el bucle'}`,
+      );
+    }
+    // En sombra se pregunta, se anota y NO se actúa.
+    return modo === 'shadow' ? true : avanza;
   }
 
   /**

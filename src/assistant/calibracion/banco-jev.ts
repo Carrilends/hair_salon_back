@@ -23,10 +23,13 @@ import { join, dirname } from 'node:path';
 import {
   MensajeReciente,
   PeticionDeJuicio,
+  LlamadaDeLaTraza,
   UMBRAL_CORRESPONDENCIA,
   UMBRAL_PERTINENCIA,
+  UMBRAL_PROGRESO,
   construirCorrespondencia,
   construirPertinencia,
+  construirProgreso,
   probabilidadNoul,
 } from '../application/screening/turn-screen';
 
@@ -52,6 +55,9 @@ interface Caso {
   servicios?: string[];
   fecha?: string;
   hora?: string;
+  /** Progreso. */
+  peticion?: string;
+  traza?: LlamadaDeLaTraza[];
 }
 
 interface Banco {
@@ -97,6 +103,16 @@ const JUICIOS: Record<
     umbral: UMBRAL_CORRESPONDENCIA,
     si: 'corresponde',
     no: 'desviada',
+  },
+  progreso: {
+    construir: (caso) =>
+      construirProgreso({
+        peticion: caso.peticion ?? '',
+        traza: caso.traza ?? [],
+      }),
+    umbral: UMBRAL_PROGRESO,
+    si: 'avanza',
+    no: 'atascado',
   },
 };
 

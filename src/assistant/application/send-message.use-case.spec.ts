@@ -16,6 +16,7 @@ import {
 } from '../domain/ports/conversation-repository.port';
 import { ClockPort } from '../domain/ports/clock.port';
 import { SYSTEM_PROMPT } from './system-prompt';
+import { JudgmentSettings } from './judgment-settings';
 
 class FakeTool implements AssistantTool {
   calls = 0;
@@ -146,6 +147,26 @@ class FakeSummarizer implements ConversationSummarizer {
   }
 }
 
+/**
+ * Proveedor de juicios de pruebas: devuelve siempre la misma probabilidad y
+ * apunta cuántas veces se le preguntó, que es lo que importa —una colocación
+ * que pregunta cuando no debe le cobra a todos los turnos—.
+ */
+class JuezDoble {
+  peticiones: { state: Record<string, unknown> }[] = [];
+  constructor(private readonly noul: number) {}
+  async ask(request: { state: Record<string, unknown> }) {
+    this.peticiones.push(request);
+    return {
+      ok: true as const,
+      answers: { progreso: { type: 'noul', noul: this.noul } },
+      model: 'jev-1.13.0',
+      inputTokens: 300,
+      ms: 240,
+    };
+  }
+}
+
 const clock: ClockPort = { now: () => new Date('2026-08-19T14:00:00Z') };
 /** Reserva pequeña en pruebas: así los números del techo se leen a simple vista. */
 const RESERVA_POR_TURNO_EN_PRUEBAS = 1;
@@ -164,6 +185,8 @@ function makeUseCase(opts: {
   summarizer?: ConversationSummarizer;
   ledger?: DailyTokenLedger;
   clock?: ClockPort;
+  judge?: JuezDoble;
+  ajustes?: JudgmentSettings;
 }): SendMessageUseCase {
   return new SendMessageUseCase(
     opts.llm,
@@ -174,8 +197,34 @@ function makeUseCase(opts: {
     opts.summarizer ?? new FakeSummarizer(),
     // Libro nuevo por caso de uso: el estado del día no se filtra entre pruebas.
     opts.ledger ?? new DailyTokenLedger(RESERVA_POR_TURNO_EN_PRUEBAS),
+    opts.judge as never,
+    opts.ajustes,
   );
 }
+
+/** Guion de N vueltas que piden la misma herramienta con argumentos DISTINTOS. */
+const vueltasConArgumentosDistintos = (n: number): LlmCompletion[] =>
+  Array.from({ length: n }, (_, i) => ({
+    message: {
+      role: 'assistant' as const,
+      content: '',
+      toolCalls: [
+        {
+          id: `t${i}`,
+          name: 'listarServicios',
+          arguments: { busqueda: `q${i}` },
+        },
+      ],
+    },
+    usage: TokenUsage.of(100, 10),
+  }));
+
+const AJUSTES_APAGADOS: JudgmentSettings = {
+  reserva: 'off',
+  bucle: 'off',
+  orden: 'off',
+  diferido: false,
+};
 
 describe('SendMessageUseCase', () => {
   it('encadena herramienta y respuesta final, acumulando el consumo', async () => {
@@ -859,6 +908,135 @@ describe('SendMessageUseCase', () => {
       { rol: 'clienta', texto: 'quiero un corte' },
       { rol: 'asistente', texto: 'Tenemos el jueves y el viernes.' },
       { rol: 'clienta', texto: 'el viernes a las 3' },
+    ]);
+  });
+
+  it('corta en la vuelta 3 cuando las llamadas no avanzan, aunque los argumentos cambien', async () => {
+    // Lo que T1 no puede ver: mismos fines, argumentos distintos, sin
+    // acercarse. El tope por conteo habría cobrado dos vueltas más para acabar
+    // igualmente en cortesía.
+    const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const juez = new JuezDoble(0.1);
+    const llm = new FakeLlmAdapter(vueltasConArgumentosDistintos(5));
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [tool],
+      judge: juez,
+      ajustes: { ...AJUSTES_APAGADOS, bucle: 'on' },
+    });
+
+    const res = await useCase.execute({
+      message: 'dame vueltas',
+      userId: 'u1',
+    });
+
+    expect(llm.calls).toHaveLength(3);
+    expect(tool.calls).toBe(2);
+    expect(res.reply).toContain('no logré completar');
+  });
+
+  it('antes de la vuelta 3 no se pregunta: encadenar dos herramientas es normal', async () => {
+    // `listarServicios` → `consultarDisponibilidad` es el turno más común que
+    // existe. Preguntar por él le cobraría el juicio a casi todos los turnos.
+    const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const juez = new JuezDoble(0.1);
+    const llm = new FakeLlmAdapter([
+      ...vueltasConArgumentosDistintos(2),
+      {
+        message: { role: 'assistant' as const, content: 'Tenemos Corte.' },
+        usage: TokenUsage.of(100, 10),
+      },
+    ]);
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [tool],
+      judge: juez,
+      ajustes: { ...AJUSTES_APAGADOS, bucle: 'on' },
+    });
+
+    const res = await useCase.execute({ message: 'un corte', userId: 'u1' });
+
+    expect(res.reply).toBe('Tenemos Corte.');
+    expect(juez.peticiones).toHaveLength(0);
+  });
+
+  it('si el juicio dice que avanza, el bucle sigue hasta el tope de siempre', async () => {
+    const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const llm = new FakeLlmAdapter(vueltasConArgumentosDistintos(5));
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [tool],
+      judge: new JuezDoble(0.9),
+      ajustes: { ...AJUSTES_APAGADOS, bucle: 'on' },
+    });
+
+    await useCase.execute({ message: 'dame vueltas', userId: 'u1' });
+
+    expect(llm.calls).toHaveLength(5);
+  });
+
+  it('en sombra pregunta y anota, pero no corta', async () => {
+    const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const juez = new JuezDoble(0.1);
+    const llm = new FakeLlmAdapter(vueltasConArgumentosDistintos(5));
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [tool],
+      judge: juez,
+      ajustes: { ...AJUSTES_APAGADOS, bucle: 'shadow' },
+    });
+
+    await useCase.execute({ message: 'dame vueltas', userId: 'u1' });
+
+    expect(llm.calls).toHaveLength(5);
+    expect(juez.peticiones.length).toBeGreaterThan(0);
+  });
+
+  it('en off no se pregunta nada', async () => {
+    const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const juez = new JuezDoble(0.1);
+    const llm = new FakeLlmAdapter(vueltasConArgumentosDistintos(5));
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [tool],
+      judge: juez,
+      ajustes: AJUSTES_APAGADOS,
+    });
+
+    await useCase.execute({ message: 'dame vueltas', userId: 'u1' });
+
+    expect(llm.calls).toHaveLength(5);
+    expect(juez.peticiones).toHaveLength(0);
+  });
+
+  it('la traza que viaja lleva la petición y las llamadas, con la nueva pendiente', async () => {
+    const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const juez = new JuezDoble(0.9);
+    const llm = new FakeLlmAdapter(vueltasConArgumentosDistintos(5));
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [tool],
+      judge: juez,
+      ajustes: { ...AJUSTES_APAGADOS, bucle: 'on' },
+    });
+
+    await useCase.execute({ message: 'quiero un corte', userId: 'u1' });
+
+    const estado = juez.peticiones[0].state as {
+      request: string;
+      calls: { tool: string; result: string }[];
+    };
+    expect(estado.request).toBe('quiero un corte');
+    expect(estado.calls.map((c) => c.result)).toEqual([
+      'ok',
+      'ok',
+      'pendiente',
     ]);
   });
 

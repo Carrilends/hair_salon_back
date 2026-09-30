@@ -2,10 +2,13 @@ import {
   RECIENTES_EN_EL_ESTADO,
   UMBRAL_CORRESPONDENCIA,
   UMBRAL_PERTINENCIA,
+  UMBRAL_PROGRESO,
   construirCorrespondencia,
   construirPertinencia,
+  construirProgreso,
   leerCorrespondencia,
   leerPertinencia,
+  leerProgreso,
 } from './turn-screen';
 
 describe('construirPertinencia', () => {
@@ -206,5 +209,80 @@ describe('leerCorrespondencia', () => {
       corresponde: true,
       prob: null,
     });
+  });
+});
+
+describe('construirProgreso', () => {
+  const traza = [
+    {
+      herramienta: 'listarServicios',
+      argumentos: { busqueda: 'corte' },
+      resultado: 'ok' as const,
+    },
+    {
+      herramienta: 'listarServicios',
+      argumentos: { busqueda: 'cortes' },
+      resultado: 'ok' as const,
+    },
+    {
+      herramienta: 'listarServicios',
+      argumentos: { busqueda: 'corte dama' },
+      resultado: 'pendiente' as const,
+    },
+  ];
+
+  it('arma UN noul sobre la traza del turno y la petición de la clienta', () => {
+    const req = construirProgreso({
+      peticion: '¿cuánto vale un corte?',
+      traza,
+    });
+
+    expect(req!.asked).toEqual(['progreso']);
+    expect(req!.questions.progreso.type).toBe('noul');
+    expect(req!.state.request).toBe('¿cuánto vale un corte?');
+    expect(req!.state.calls).toHaveLength(3);
+  });
+
+  it('pregunta por la RELACIÓN, nunca por el número de llamadas', () => {
+    // Jev cuenta mal, y peor cuanto más largo el estado. El tope por conteo ya
+    // existe y se llama `MAX_TOOL_ITERATIONS`.
+    const texto = JSON.stringify(
+      construirProgreso({ peticion: 'x', traza })!.questions,
+    );
+
+    expect(texto.toLowerCase()).toContain('do not count');
+    expect(texto).not.toMatch(/how many/i);
+  });
+
+  it('sin traza o sin petición no se pregunta', () => {
+    expect(construirProgreso({ peticion: 'x', traza: [] })).toBeNull();
+    expect(construirProgreso({ peticion: '  ', traza })).toBeNull();
+  });
+});
+
+describe('leerProgreso', () => {
+  const asked = ['progreso'];
+
+  it('el umbral deja margen: cortar un turno que iba a converger es el fallo caro', () => {
+    // En la duda, que siga. Para eso está `MAX_TOOL_ITERATIONS` como red final.
+    // Medido en dos tandas: la cadena legítima más floja sale a 0,67, así que
+    // el listón se queda en 0,5 y no se acerca a ella.
+    expect(UMBRAL_PROGRESO).toBeLessThanOrEqual(0.5);
+  });
+
+  it('con progreso, el bucle sigue', () => {
+    expect(
+      leerProgreso({ progreso: { type: 'noul', noul: 0.9 } }, asked).avanza,
+    ).toBe(true);
+  });
+
+  it('sin progreso, el bucle se corta', () => {
+    expect(
+      leerProgreso({ progreso: { type: 'noul', noul: 0.02 } }, asked).avanza,
+    ).toBe(false);
+  });
+
+  it('sin veredicto el bucle SIGUE: fail-open aquí significa seguir', () => {
+    expect(leerProgreso({}, asked)).toEqual({ avanza: true, prob: null });
   });
 });
