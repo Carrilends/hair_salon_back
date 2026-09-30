@@ -260,6 +260,17 @@ const CRITERIOS_RESUELTA = Object.freeze({
 const INSTRUCCIONES_RESUELTA =
   'The client wrote `request` and the assistant answered `reply`, using the tool calls in `calls`. Decide whether `reply` actually resolved what she asked for.';
 
+/**
+ * Criterios de relevancia. Los mismos para los ocho candidatos: la decisión es
+ * siempre la misma y tenerlos por candidato solo daría ocho calibraciones que
+ * mantener.
+ */
+const CRITERIOS_RELEVANCIA = Object.freeze({
+  true: 'that service is what the client was asking about in `query`: it is the thing she named, or the same thing under another name.',
+  false:
+    'that service is something else. It may belong to the same family -another part of the body, another technique, another occasion- and still not be what she asked about.',
+});
+
 /** Probabilidad de un `Noul`, o `null` si la respuesta no es un noul. */
 export function probabilidadNoul(respuesta: unknown): number | null {
   if (
@@ -421,6 +432,84 @@ export function leerBalance(answers?: Record<string, unknown> | null): {
       : null,
     resuelta: probabilidadNoul(answers?.resuelta),
   };
+}
+
+/**
+ * Las preguntas de relevancia de una lista de candidatos (plan 04, T7): una por
+ * candidato, **batidas en una sola petición**, porque son independientes entre
+ * sí y corren en paralelo sobre el mismo estado. Un juicio por candidato suelto
+ * sería absurdo aquí.
+ *
+ * `null` cuando no hay nada que ordenar: sin consulta no hay con qué medir la
+ * relevancia, y un solo candidato ya está ordenado.
+ *
+ * Solo viajan **nombres de servicios y el texto que escribió la clienta**: ni
+ * precios, ni duraciones, ni identificadores. Lo que se ordena es la relevancia;
+ * las cantidades las ordena el código, que es lo que sabe hacerlo.
+ */
+export function construirRelevancia({
+  consulta,
+  candidatos,
+}: {
+  consulta: string;
+  candidatos: string[];
+}): PeticionDeJuicio | null {
+  if (!esTexto(consulta) || !candidatos || candidatos.length < 2) return null;
+  const questions: Record<string, PreguntaNoul> = {};
+  const asked: string[] = [];
+  candidatos.forEach((_nombre, i) => {
+    const id = `r${i}`;
+    asked.push(id);
+    questions[id] = {
+      type: 'noul',
+      instructions: `The client asked \`query\`. Is the service named in \`services[${i}]\` what she was asking about? Judge what the service is, not how it is written.`,
+      criteria: CRITERIOS_RELEVANCIA,
+    };
+  });
+  return {
+    state: { query: consulta.trim(), services: candidatos },
+    questions,
+    asked,
+  };
+}
+
+/**
+ * Las probabilidades de relevancia, en el orden de los candidatos, o `null` si
+ * **falta alguna**: media ordenación es peor que ninguna, y el fail-open de esta
+ * colocación es conservar el orden de hoy.
+ */
+export function leerRelevancia(
+  answers: Record<string, unknown> | null | undefined,
+  asked: string[],
+): number[] | null {
+  const probs: number[] = [];
+  for (const id of asked) {
+    const prob = probabilidadNoul(answers?.[id]);
+    if (prob === null) return null;
+    probs.push(prob);
+  }
+  return probs.length ? probs : null;
+}
+
+/**
+ * Reordena por relevancia descendente, **estable** entre iguales. Si no hay
+ * probabilidades, o no hay una por elemento, devuelve **el mismo arreglo**: sin
+ * información no se toca el orden, porque cambiarlo por el capricho de un
+ * comparador sería peor que dejarlo.
+ *
+ * Nunca ordena por precio ni por duración: ordenar cantidades es exactamente lo
+ * que el modelo hace mal, y cuando la clienta pide «lo más barato» eso ya lo
+ * ordena el catálogo.
+ */
+export function ordenarPorRelevancia<T>(
+  items: T[],
+  probs: number[] | null,
+): T[] {
+  if (!probs || probs.length !== items.length) return items;
+  return items
+    .map((item, i) => ({ item, prob: probs[i], i }))
+    .sort((a, b) => b.prob - a.prob || a.i - b.i)
+    .map(({ item }) => item);
 }
 
 /**

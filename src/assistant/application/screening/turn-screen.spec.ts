@@ -6,10 +6,13 @@ import {
   INTENCIONES,
   construirBalance,
   construirCorrespondencia,
+  construirRelevancia,
   construirPertinencia,
   construirProgreso,
   leerBalance,
   leerCorrespondencia,
+  leerRelevancia,
+  ordenarPorRelevancia,
   leerPertinencia,
   leerProgreso,
 } from './turn-screen';
@@ -367,5 +370,98 @@ describe('leerBalance', () => {
   it('sin respuestas devuelve nulos: la telemetría nunca inventa', () => {
     expect(leerBalance({})).toEqual({ intencion: null, resuelta: null });
     expect(leerBalance(undefined)).toEqual({ intencion: null, resuelta: null });
+  });
+});
+
+describe('construirRelevancia', () => {
+  const candidatos = ['Corte de dama', 'Corte de caballero', 'Manicure'];
+
+  it('bate una pregunta por candidato en UNA sola petición', () => {
+    // Un juicio por candidato suelto sería absurdo aquí: las preguntas
+    // independientes sobre el mismo estado van juntas y salen mucho más baratas.
+    const req = construirRelevancia({
+      consulta: 'corte para mujer',
+      candidatos,
+    });
+
+    expect(req!.asked).toEqual(['r0', 'r1', 'r2']);
+    expect(Object.keys(req!.questions)).toHaveLength(3);
+    expect(req!.state).toEqual({
+      query: 'corte para mujer',
+      services: candidatos,
+    });
+  });
+
+  it('cada pregunta señala a su candidato por posición', () => {
+    const req = construirRelevancia({ consulta: 'corte', candidatos });
+
+    expect(req!.questions.r1.instructions).toContain('`services[1]`');
+  });
+
+  it('no se pregunta cuando no hay nada que ordenar', () => {
+    // Un solo candidato ya está ordenado, y sin consulta no hay con qué medir
+    // la relevancia. Acertar no cuesta ni una llamada.
+    expect(
+      construirRelevancia({ consulta: 'corte', candidatos: ['Corte'] }),
+    ).toBeNull();
+    expect(construirRelevancia({ consulta: ' ', candidatos })).toBeNull();
+  });
+});
+
+describe('leerRelevancia', () => {
+  it('devuelve una probabilidad por candidato, en orden', () => {
+    expect(
+      leerRelevancia(
+        {
+          r0: { type: 'noul', noul: 0.9 },
+          r1: { type: 'noul', noul: 0.4 },
+        },
+        ['r0', 'r1'],
+      ),
+    ).toEqual([0.9, 0.4]);
+  });
+
+  it('si falta un veredicto devuelve null: se conserva el orden de hoy', () => {
+    // Fail-open al orden actual, sin que la respuesta cambie de forma. Media
+    // ordenación es peor que ninguna.
+    expect(
+      leerRelevancia({ r0: { type: 'noul', noul: 0.9 } }, ['r0', 'r1']),
+    ).toBeNull();
+    expect(leerRelevancia({}, ['r0'])).toBeNull();
+  });
+});
+
+describe('ordenarPorRelevancia', () => {
+  it('pone delante lo más relevante y mantiene el orden entre iguales', () => {
+    const items = ['a', 'b', 'c', 'd'];
+
+    expect(ordenarPorRelevancia(items, [0.2, 0.9, 0.2, 0.95])).toEqual([
+      'd',
+      'b',
+      'a',
+      'c',
+    ]);
+  });
+
+  it('sin probabilidades devuelve el mismo arreglo', () => {
+    const items = ['a', 'b'];
+
+    expect(ordenarPorRelevancia(items, null)).toBe(items);
+  });
+
+  it('con tantas probabilidades como no toca, devuelve el mismo arreglo', () => {
+    const items = ['a', 'b'];
+
+    expect(ordenarPorRelevancia(items, [0.9])).toBe(items);
+  });
+
+  it('no cambia nada cuando todas las probabilidades son iguales', () => {
+    // Sin información no hay reordenación: cambiar el orden porque el
+    // comparador es inestable sería peor que dejarlo.
+    expect(ordenarPorRelevancia(['a', 'b', 'c'], [0.5, 0.5, 0.5])).toEqual([
+      'a',
+      'b',
+      'c',
+    ]);
   });
 });

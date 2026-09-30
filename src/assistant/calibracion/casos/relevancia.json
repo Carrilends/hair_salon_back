@@ -1,0 +1,87 @@
+{
+  "juicio": "relevancia",
+  "nota": "Consultas del catálogo con sus candidatos tal como los devuelve `listarServicios` —por orden alfabético— y cuál debería salir primero (plan 04, T7). Aquí no se mide una probabilidad sino una POSICIÓN: el servicio evidente tiene que encabezar. En todos los casos el evidente NO es el primero por alfabeto, que es justo el defecto que la reordenación viene a corregir. Nombres inventados con el estilo del catálogo real.",
+  "caroSiSePasa": false,
+  "casos": [
+    {
+      "clase": "relevancia",
+      "por": "el público lo decide",
+      "esperado": "primero",
+      "consulta": "corte para mujer",
+      "candidatos": ["Corte de caballero", "Corte de dama", "Corte infantil", "Manicure tradicional"],
+      "primero": "Corte de dama"
+    },
+    {
+      "clase": "relevancia",
+      "por": "manos y pies no son lo mismo",
+      "esperado": "primero",
+      "consulta": "algo para las uñas de los pies",
+      "candidatos": ["Manicure semipermanente", "Manicure tradicional", "Pedicure spa", "Uñas acrílicas"],
+      "primero": "Pedicure spa"
+    },
+    {
+      "clase": "relevancia",
+      "por": "el verbo señala la técnica",
+      "esperado": "primero",
+      "consulta": "quiero alisar el pelo",
+      "candidatos": ["Alisado con keratina", "Cepillado y brushing", "Mechas californianas", "Tinte completo"],
+      "primero": "Alisado con keratina"
+    },
+    {
+      "clase": "relevancia",
+      "por": "la ocasión decide entre maquillajes",
+      "esperado": "primero",
+      "consulta": "maquillaje para mi boda",
+      "candidatos": ["Maquillaje de día", "Maquillaje de novia", "Maquillaje social", "Peinado de novia"],
+      "primero": "Maquillaje de novia"
+    },
+    {
+      "clase": "relevancia",
+      "por": "la ocasión decide entre peinados",
+      "esperado": "primero",
+      "consulta": "peinado para unos quince",
+      "candidatos": ["Peinado de novia", "Recogido de quinceañera", "Semirecogido", "Trenzas africanas"],
+      "primero": "Recogido de quinceañera"
+    },
+    {
+      "clase": "relevancia",
+      "por": "un color que no es natural",
+      "esperado": "primero",
+      "consulta": "me quiero pintar el pelo de rojo fuego",
+      "candidatos": ["Balayage", "Color fantasía", "Mechas californianas", "Tinte de raíz"],
+      "primero": "Color fantasía"
+    },
+    {
+      "clase": "relevancia",
+      "por": "cejas, no pestañas",
+      "esperado": "primero",
+      "consulta": "quiero arreglarme las cejas",
+      "candidatos": ["Diseño de cejas", "Lifting de pestañas", "Manicure tradicional", "Tinte de pestañas"],
+      "primero": "Diseño de cejas"
+    },
+    {
+      "clase": "relevancia",
+      "por": "la edad decide",
+      "esperado": "primero",
+      "consulta": "corte para mi hijo de seis años",
+      "candidatos": ["Cepillado y brushing", "Corte de caballero", "Corte de dama", "Corte infantil"],
+      "primero": "Corte infantil"
+    },
+    {
+      "clase": "relevancia",
+      "por": "«rápido y para esta noche» no es un tratamiento",
+      "esperado": "primero",
+      "consulta": "algo rápido para el cabello antes de una fiesta esta noche",
+      "candidatos": ["Alisado con keratina", "Cepillado y brushing", "Corte de dama", "Tinte completo"],
+      "primero": "Cepillado y brushing"
+    },
+    {
+      "clase": "relevancia",
+      "por": "la duración del servicio la dice el nombre",
+      "esperado": "primero",
+      "consulta": "manicure que me dure varias semanas",
+      "candidatos": ["Manicure semipermanente", "Manicure tradicional", "Pedicure spa", "Uñas acrílicas"],
+      "primero": "Manicure semipermanente"
+    }
+  ]
+}

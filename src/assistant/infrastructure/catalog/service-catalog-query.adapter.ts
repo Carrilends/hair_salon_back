@@ -11,6 +11,7 @@ import {
   groupCandidatesByTag,
   TaggedServiceRow,
 } from './group-candidates-by-tag';
+import { ADJETIVOS_DE_PRECIO } from '../../domain/price-intent';
 
 /**
  * Pliega los diacríticos del español. Se aplica a **los dos lados** de la
@@ -106,22 +107,10 @@ const PALABRAS_VACIAS = new Set([
   'ver',
 ]);
 
-/**
- * Adjetivos de precio: no son palabras del catálogo, pero tampoco son ruido.
- * Descartarlos sin más hacía que «algo barato para las uñas» encabezara con las
- * acrílicas de 78.000 (defecto 2); ahora fijan la ordenación por precio. Son
- * exactamente las formas que antes vivían en `PALABRAS_VACIAS`, reclasificadas.
- */
-const ADJETIVOS_DE_PRECIO = new Set([
-  'barata',
-  'baratas',
-  'barato',
-  'baratos',
-  'economica',
-  'economicas',
-  'economico',
-  'economicos',
-]);
+// Los adjetivos de precio (las formas que antes vivían en `PALABRAS_VACIAS`,
+// reclasificadas) se movieron al dominio: desde el plan 04 los necesita también
+// la capa de aplicación, para no reordenar por relevancia cuando la clienta ya
+// dijo cómo quería el orden. Dos listas que se desincronicen sería peor.
 
 /**
  * Palabras que unas veces son artículo y otras son el servicio. Solo «unas»:

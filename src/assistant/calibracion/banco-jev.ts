@@ -29,8 +29,11 @@ import {
   UMBRAL_PROGRESO,
   construirBalance,
   construirCorrespondencia,
+  construirRelevancia,
   construirPertinencia,
   construirProgreso,
+  leerRelevancia,
+  ordenarPorRelevancia,
   probabilidadNoul,
 } from '../application/screening/turn-screen';
 
@@ -62,6 +65,10 @@ interface Caso {
   /** Balance: la respuesta del asistente y la intención que se espera. */
   respuesta?: string;
   intencion?: string;
+  /** Relevancia: la consulta, los candidatos y cuál debería salir primero. */
+  consulta?: string;
+  candidatos?: string[];
+  primero?: string;
 }
 
 interface Banco {
@@ -152,6 +159,30 @@ const JUICIOS: Record<
         : elegida?.choice === esperada
           ? 1
           : 0;
+    },
+  },
+  /**
+   * La reordenación por relevancia. Tampoco tiene umbral que calibrar: lo que
+   * importa no es una probabilidad sino una POSICIÓN —«ante una pregunta
+   * concreta, el servicio evidente debe salir primero»—, así que se mide 1 o 0
+   * según si la reordenación lo pone en cabeza. La media por clase es entonces
+   * la tasa de acierto.
+   */
+  relevancia: {
+    construir: (caso) =>
+      construirRelevancia({
+        consulta: caso.consulta ?? '',
+        candidatos: caso.candidatos ?? [],
+      }),
+    umbral: 0.5,
+    si: 'primero',
+    no: 'falla',
+    leer: (answers, caso) => {
+      const candidatos = caso.candidatos ?? [];
+      const asked = candidatos.map((_c, i) => `r${i}`);
+      const probs = leerRelevancia(answers, asked);
+      const ordenados = ordenarPorRelevancia(candidatos, probs);
+      return ordenados[0] === caso.primero ? 1 : 0;
     },
   },
 };

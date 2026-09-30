@@ -205,3 +205,155 @@ describe('ListServicesTool', () => {
     });
   });
 });
+
+describe('ListServicesTool con reordenación por relevancia (plan 04, T7)', () => {
+  const CATALOGO: AssistantServiceSummary[] = [
+    { id: 'a', name: 'Corte de caballero', price: 25000, durationMinutes: 30 },
+    { id: 'b', name: 'Corte de dama', price: 35000, durationMinutes: 45 },
+    { id: 'c', name: 'Corte infantil', price: 20000, durationMinutes: 30 },
+  ];
+
+  /** Juez que devuelve las probabilidades que se le den, en orden. */
+  class JuezDoble {
+    peticiones: { state: Record<string, unknown> }[] = [];
+    constructor(private readonly probs: (number | null)[]) {}
+    async ask(request: { state: Record<string, unknown> }) {
+      this.peticiones.push(request);
+      const answers: Record<string, unknown> = {};
+      this.probs.forEach((p, i) => {
+        if (p !== null) answers[`r${i}`] = { type: 'noul', noul: p };
+      });
+      return {
+        ok: true as const,
+        answers,
+        model: 'jev-1.13.0',
+        inputTokens: 500,
+        ms: 240,
+      };
+    }
+  }
+
+  const nombres = (res: unknown) =>
+    (res as { servicios: { nombre: string }[] }).servicios.map((s) => s.nombre);
+
+  it('pone delante el servicio que la clienta pedía, no el primero del alfabeto', async () => {
+    // Hoy sale donde lo deje el alfabeto: «Corte de caballero» encabeza una
+    // búsqueda de corte para mujer.
+    const juez = new JuezDoble([0.1, 0.97, 0.2]);
+    const tool = new ListServicesTool(new FakeCatalog(CATALOGO), {
+      judge: juez as never,
+      modo: 'on',
+    });
+
+    const res = await tool.execute({ busqueda: 'corte para mujer' });
+
+    expect(nombres(res)[0]).toBe('Corte de dama');
+    expect(juez.peticiones).toHaveLength(1);
+  });
+
+  it('al proveedor le llegan nombres y la consulta, nunca precios ni ids', async () => {
+    // Ordenar cantidades es lo que el modelo hace mal; ni se le enseñan.
+    const juez = new JuezDoble([0.9, 0.8, 0.7]);
+    const tool = new ListServicesTool(new FakeCatalog(CATALOGO), {
+      judge: juez as never,
+      modo: 'on',
+    });
+
+    await tool.execute({ busqueda: 'corte' });
+
+    expect(juez.peticiones[0].state).toEqual({
+      query: 'corte',
+      services: ['Corte de caballero', 'Corte de dama', 'Corte infantil'],
+    });
+  });
+
+  it('NO reordena cuando la clienta pidió lo más barato: eso lo ordena el código', async () => {
+    const juez = new JuezDoble([0.1, 0.97, 0.2]);
+    const tool = new ListServicesTool(new FakeCatalog(CATALOGO), {
+      judge: juez as never,
+      modo: 'on',
+    });
+
+    const res = await tool.execute({ busqueda: 'algo barato para el pelo' });
+
+    expect(nombres(res)[0]).toBe('Corte de caballero');
+    expect(juez.peticiones).toHaveLength(0);
+  });
+
+  it('en sombra pregunta pero deja el orden de hoy', async () => {
+    const juez = new JuezDoble([0.1, 0.97, 0.2]);
+    const tool = new ListServicesTool(new FakeCatalog(CATALOGO), {
+      judge: juez as never,
+      modo: 'shadow',
+    });
+
+    const res = await tool.execute({ busqueda: 'corte para mujer' });
+
+    expect(nombres(res)[0]).toBe('Corte de caballero');
+    expect(juez.peticiones).toHaveLength(1);
+  });
+
+  it('en off no pregunta nada', async () => {
+    const juez = new JuezDoble([0.1, 0.97, 0.2]);
+    const tool = new ListServicesTool(new FakeCatalog(CATALOGO), {
+      judge: juez as never,
+      modo: 'off',
+    });
+
+    await tool.execute({ busqueda: 'corte para mujer' });
+
+    expect(juez.peticiones).toHaveLength(0);
+  });
+
+  it('si falta un veredicto, el orden es el de hoy', async () => {
+    // Fail-open al orden actual, sin que la respuesta cambie de forma.
+    const tool = new ListServicesTool(new FakeCatalog(CATALOGO), {
+      judge: new JuezDoble([0.1, null, 0.2]) as never,
+      modo: 'on',
+    });
+
+    const res = await tool.execute({ busqueda: 'corte para mujer' });
+
+    expect(nombres(res)[0]).toBe('Corte de caballero');
+  });
+
+  it('si el proveedor se cae, el orden es el de hoy y el turno sigue', async () => {
+    const juezRoto = {
+      ask: async () => {
+        throw new Error('el proveedor de juicios se cayó');
+      },
+    };
+    const tool = new ListServicesTool(new FakeCatalog(CATALOGO), {
+      judge: juezRoto as never,
+      modo: 'on',
+    });
+
+    const res = await tool.execute({ busqueda: 'corte para mujer' });
+
+    expect(nombres(res)[0]).toBe('Corte de caballero');
+  });
+
+  it('con un solo resultado no se pregunta: ya está ordenado', async () => {
+    const juez = new JuezDoble([0.9]);
+    const tool = new ListServicesTool(new FakeCatalog([CATALOGO[0]]), {
+      judge: juez as never,
+      modo: 'on',
+    });
+
+    await tool.execute({ busqueda: 'corte' });
+
+    expect(juez.peticiones).toHaveLength(0);
+  });
+
+  it('sin texto de búsqueda no se pregunta: no hay con qué medir la relevancia', async () => {
+    const juez = new JuezDoble([0.1, 0.97, 0.2]);
+    const tool = new ListServicesTool(new FakeCatalog(CATALOGO), {
+      judge: juez as never,
+      modo: 'on',
+    });
+
+    await tool.execute({});
+
+    expect(juez.peticiones).toHaveLength(0);
+  });
+});

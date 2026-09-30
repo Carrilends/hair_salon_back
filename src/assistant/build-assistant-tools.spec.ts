@@ -114,4 +114,49 @@ describe('buildAssistantTools', () => {
     expect(res).toMatchObject({ motivo: 'confirmacion_requerida' });
     expect(creada).toBe(0);
   });
+
+  it('con modo on, listarServicios reordena por relevancia', async () => {
+    const catalog = {
+      search: async () => [
+        {
+          id: 'a',
+          name: 'Corte de caballero',
+          price: 25000,
+          durationMinutes: 30,
+        },
+        { id: 'b', name: 'Corte de dama', price: 35000, durationMinutes: 45 },
+      ],
+      findPrincipalImages: async () => new Map(),
+    };
+    const judge = {
+      ask: async () => ({
+        ok: true as const,
+        answers: {
+          r0: { type: 'noul', noul: 0.1 },
+          r1: { type: 'noul', noul: 0.95 },
+        },
+        model: 'jev-1.13.0',
+        inputTokens: 500,
+        ms: 240,
+      }),
+    };
+    const tools = buildAssistantTools(
+      catalog as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      judge,
+      { reserva: 'off', bucle: 'off', orden: 'on', diferido: false },
+    );
+    const listar = tools.find((t) => t.name === 'listarServicios')!;
+
+    const res = (await listar.execute(
+      { busqueda: 'corte para mujer' },
+      {} as never,
+    )) as { servicios: { nombre: string }[] };
+
+    expect(res.servicios[0].nombre).toBe('Corte de dama');
+  });
 });

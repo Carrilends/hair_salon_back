@@ -39,12 +39,15 @@ export function buildAssistantTools(
   judge?: JudgmentPort,
   settings?: JudgmentSettings,
 ): AssistantTool[] {
-  // Verificación de correspondencia previa a crear (T5). Se monta solo si hay
-  // proveedor; que esté encendida o apagada lo decide el propio modo.
+  // Verificación de correspondencia previa a crear (T5) y reordenación por
+  // relevancia del listado (T7). Se montan solo si hay proveedor; que estén
+  // encendidas o apagadas lo decide el modo de cada una.
   const verificacion =
     judge && settings ? { judge, modo: settings.reserva, catalog } : undefined;
+  const reorden =
+    judge && settings ? { judge, modo: settings.orden } : undefined;
   return [
-    new ListServicesTool(catalog),
+    new ListServicesTool(catalog, reorden),
     new CheckAvailabilityTool(availability),
     new CreateReservationTool(createReservation, verificacion),
     new MyReservationsTool(getMyReservations),
