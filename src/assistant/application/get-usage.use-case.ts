@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import {
   AssistantUsage,
   ConversationRepositoryPort,
@@ -48,6 +48,7 @@ export class GetAssistantUsageUseCase {
     private readonly repository: ConversationRepositoryPort,
     @Inject(ASSISTANT_CLOCK) private readonly clock: ClockPort,
     @Inject(ASSISTANT_BUDGET) private readonly budget: AssistantBudget,
+    @Optional()
     @Inject(ASSISTANT_JUDGMENT_TELEMETRY)
     private readonly telemetria?: TelemetriaDeJuicios,
   ) {}

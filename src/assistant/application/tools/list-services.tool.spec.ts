@@ -236,6 +236,20 @@ describe('ListServicesTool con reordenación por relevancia (plan 04, T7)', () =
   const nombres = (res: unknown) =>
     (res as { servicios: { nombre: string }[] }).servicios.map((s) => s.nombre);
 
+  /** El contexto que arma el bucle del asistente, y solo él. */
+  const DEL_CHAT = {
+    userId: 'u1',
+    now: new Date('2026-09-30T14:00:00Z'),
+    isAdmin: false,
+    canalConversacional: true,
+  };
+  /** Lo que arma el servidor MCP: mismo arreglo de herramientas, otro canal. */
+  const DE_MCP = {
+    userId: 'u1',
+    now: new Date('2026-09-30T14:00:00Z'),
+    isAdmin: false,
+  };
+
   it('pone delante el servicio que la clienta pedía, no el primero del alfabeto', async () => {
     // Hoy sale donde lo deje el alfabeto: «Corte de caballero» encabeza una
     // búsqueda de corte para mujer.
@@ -245,7 +259,7 @@ describe('ListServicesTool con reordenación por relevancia (plan 04, T7)', () =
       modo: 'on',
     });
 
-    const res = await tool.execute({ busqueda: 'corte para mujer' });
+    const res = await tool.execute({ busqueda: 'corte para mujer' }, DEL_CHAT);
 
     expect(nombres(res)[0]).toBe('Corte de dama');
     expect(juez.peticiones).toHaveLength(1);
@@ -259,7 +273,7 @@ describe('ListServicesTool con reordenación por relevancia (plan 04, T7)', () =
       modo: 'on',
     });
 
-    await tool.execute({ busqueda: 'corte' });
+    await tool.execute({ busqueda: 'corte' }, DEL_CHAT);
 
     expect(juez.peticiones[0].state).toEqual({
       query: 'corte',
@@ -274,7 +288,10 @@ describe('ListServicesTool con reordenación por relevancia (plan 04, T7)', () =
       modo: 'on',
     });
 
-    const res = await tool.execute({ busqueda: 'algo barato para el pelo' });
+    const res = await tool.execute(
+      { busqueda: 'algo barato para el pelo' },
+      DEL_CHAT,
+    );
 
     expect(nombres(res)[0]).toBe('Corte de caballero');
     expect(juez.peticiones).toHaveLength(0);
@@ -287,7 +304,7 @@ describe('ListServicesTool con reordenación por relevancia (plan 04, T7)', () =
       modo: 'shadow',
     });
 
-    const res = await tool.execute({ busqueda: 'corte para mujer' });
+    const res = await tool.execute({ busqueda: 'corte para mujer' }, DEL_CHAT);
 
     expect(nombres(res)[0]).toBe('Corte de caballero');
     expect(juez.peticiones).toHaveLength(1);
@@ -300,7 +317,7 @@ describe('ListServicesTool con reordenación por relevancia (plan 04, T7)', () =
       modo: 'off',
     });
 
-    await tool.execute({ busqueda: 'corte para mujer' });
+    await tool.execute({ busqueda: 'corte para mujer' }, DEL_CHAT);
 
     expect(juez.peticiones).toHaveLength(0);
   });
@@ -312,7 +329,7 @@ describe('ListServicesTool con reordenación por relevancia (plan 04, T7)', () =
       modo: 'on',
     });
 
-    const res = await tool.execute({ busqueda: 'corte para mujer' });
+    const res = await tool.execute({ busqueda: 'corte para mujer' }, DEL_CHAT);
 
     expect(nombres(res)[0]).toBe('Corte de caballero');
   });
@@ -328,7 +345,7 @@ describe('ListServicesTool con reordenación por relevancia (plan 04, T7)', () =
       modo: 'on',
     });
 
-    const res = await tool.execute({ busqueda: 'corte para mujer' });
+    const res = await tool.execute({ busqueda: 'corte para mujer' }, DEL_CHAT);
 
     expect(nombres(res)[0]).toBe('Corte de caballero');
   });
@@ -340,7 +357,7 @@ describe('ListServicesTool con reordenación por relevancia (plan 04, T7)', () =
       modo: 'on',
     });
 
-    await tool.execute({ busqueda: 'corte' });
+    await tool.execute({ busqueda: 'corte' }, DEL_CHAT);
 
     expect(juez.peticiones).toHaveLength(0);
   });
@@ -352,8 +369,26 @@ describe('ListServicesTool con reordenación por relevancia (plan 04, T7)', () =
       modo: 'on',
     });
 
-    await tool.execute({});
+    await tool.execute({}, DEL_CHAT);
 
+    expect(juez.peticiones).toHaveLength(0);
+  });
+
+  it('NO reordena en el canal de MCP, aunque el modo esté en on', async () => {
+    // `ASSISTANT_TOOLS` es UN arreglo que consumen el asistente y el servidor
+    // MCP. Sin esta comprobación, encender la reordenación le cobraba un juicio
+    // de ocho preguntas a cada cliente MCP y le mandaba su texto de búsqueda al
+    // proveedor, sin que nada avisara. La salvaguarda es del canal
+    // conversacional; a los demás adaptadores no se les impone.
+    const juez = new JuezDoble([0.1, 0.97, 0.2]);
+    const tool = new ListServicesTool(new FakeCatalog(CATALOGO), {
+      judge: juez as never,
+      modo: 'on',
+    });
+
+    const res = await tool.execute({ busqueda: 'corte para mujer' }, DE_MCP);
+
+    expect(nombres(res)[0]).toBe('Corte de caballero');
     expect(juez.peticiones).toHaveLength(0);
   });
 });

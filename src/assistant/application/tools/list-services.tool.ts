@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import { AssistantTool } from './assistant-tool';
+import { AssistantContext, AssistantTool } from './assistant-tool';
 import {
   AssistantPresentation,
   PresentedService,
@@ -14,6 +14,7 @@ import {
   leerRelevancia,
   ordenarPorRelevancia,
 } from '../screening/turn-screen';
+import { preguntarConSeguridad } from '../screening/preguntar-con-seguridad';
 import { coerceOptionalNumber } from './coerce';
 
 const MAX_RESULTS = 8;
@@ -93,7 +94,10 @@ export class ListServicesTool implements AssistantTool {
     private readonly reorden?: ReordenPorRelevancia,
   ) {}
 
-  async execute(args: Record<string, unknown>): Promise<unknown> {
+  async execute(
+    args: Record<string, unknown>,
+    context?: AssistantContext,
+  ): Promise<unknown> {
     const busqueda =
       typeof args.busqueda === 'string' ? args.busqueda : undefined;
     const genero = typeof args.genero === 'string' ? args.genero : undefined;
@@ -113,6 +117,7 @@ export class ListServicesTool implements AssistantTool {
         minutos: s.durationMinutes,
       })),
       busqueda,
+      context,
     );
     // Las sugerencias solo aparecen en el vacío: añadirlas siempre sería pagar
     // contexto en cada llamada acertada (§6.2).
@@ -127,11 +132,14 @@ export class ListServicesTool implements AssistantTool {
    * alfabético o de precio, así que una búsqueda de «corte para mujer» la
    * encabeza «Corte de caballero».
    *
-   * No se pregunta —y por tanto no se paga— en cuatro casos que el código
-   * resuelve solo: con la colocación apagada, sin texto que comparar, con un
-   * solo resultado (ya está ordenado) y, sobre todo, **cuando la clienta pidió
-   * lo más barato**: ordenar cantidades es exactamente lo que el modelo hace
-   * mal, y ese orden ya lo fija el catálogo.
+   * No se pregunta —y por tanto no se paga— en cinco casos que el código
+   * resuelve solo: con la colocación apagada, **fuera del canal
+   * conversacional** —este mismo arreglo de herramientas lo publica el servidor
+   * MCP, y encender esto le cobraría ocho preguntas a cada cliente externo y
+   * mandaría su texto de búsqueda al proveedor sin que nada avisara—, sin texto
+   * que comparar, con un solo resultado (ya está ordenado) y, sobre todo,
+   * **cuando la clienta pidió lo más barato**: ordenar cantidades es exactamente
+   * lo que el modelo hace mal, y ese orden ya lo fija el catálogo.
    *
    * **Fail-open al orden de hoy**, sin que la respuesta cambie de forma: si
    * falta un veredicto o el proveedor no contesta, el listado sale como salía.
@@ -139,11 +147,13 @@ export class ListServicesTool implements AssistantTool {
   private async reordenados<T extends { nombre: string }>(
     servicios: T[],
     busqueda: string | undefined,
+    context: AssistantContext | undefined,
   ): Promise<T[]> {
     const reorden = this.reorden;
     if (
       !reorden ||
       reorden.modo === 'off' ||
+      context?.canalConversacional !== true ||
       servicios.length < 2 ||
       !busqueda ||
       pidePrecioAscendente(busqueda)
@@ -157,31 +167,19 @@ export class ListServicesTool implements AssistantTool {
     });
     if (!juicio) return servicios;
 
-    try {
-      const respuesta = await reorden.judge.ask({
-        state: juicio.state,
-        questions: juicio.questions,
-      });
-      if (respuesta.ok === false) return servicios;
+    const respuesta = await preguntarConSeguridad(reorden.judge, juicio);
+    if (respuesta.ok === false) return servicios;
 
-      const probs = leerRelevancia(respuesta.answers, juicio.asked);
-      const ordenados = ordenarPorRelevancia(servicios, probs);
-      if (probs) {
-        this.logger.log(
-          `Juicio de relevancia (${reorden.modo}, ${respuesta.ms} ms): ` +
-            `${ordenados.map((s) => s.nombre).join(' | ')}`,
-        );
-      }
-      // En sombra se pregunta, se anota y NO se actúa.
-      return reorden.modo === 'shadow' ? servicios : ordenados;
-    } catch (error) {
-      this.logger.warn(
-        `No se pudo reordenar por relevancia: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+    const probs = leerRelevancia(respuesta.answers, juicio.asked);
+    const ordenados = ordenarPorRelevancia(servicios, probs);
+    if (probs) {
+      this.logger.log(
+        `Juicio de relevancia (${reorden.modo}, ${respuesta.ms} ms): ` +
+          `${ordenados.map((s) => s.nombre).join(' | ')}`,
       );
-      return servicios;
     }
+    // En sombra se pregunta, se anota y NO se actúa.
+    return reorden.modo === 'shadow' ? servicios : ordenados;
   }
 
   /**

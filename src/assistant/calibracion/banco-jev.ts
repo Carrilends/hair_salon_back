@@ -8,8 +8,8 @@
  *   npx ts-node src/assistant/calibracion/banco-jev.ts
  *   npx ts-node src/assistant/calibracion/banco-jev.ts pertinencia --modelo jev-latest
  *
- * La clave sale de `TYPESAFE_KEY` o de `~/.config/typesafe/key` (una línea) y
- * **nunca se imprime**. Coste: ~300 tokens de entrada por caso a
+ * La clave sale de `TYPESAFE_API_KEY`, de `TYPESAFE_KEY` o de
+ * `~/.config/typesafe/key` (una línea), por ese orden, y **nunca se imprime**. Coste: ~300 tokens de entrada por caso a
  * $0,042 por millón (la salida es gratis), o sea céntimos por tanda entera.
  *
  * Método copiado de `scripts/jev-eval-idioma.mjs` de `lenguage_especialized`:
@@ -187,13 +187,33 @@ const JUICIOS: Record<
   },
 };
 
+/**
+ * La clave, por este orden: `TYPESAFE_API_KEY` —el nombre que usa producción, y
+ * el que el SDK del proveedor lee por defecto—, `TYPESAFE_KEY` —el de la
+ * extensión donde nacieron estas convenciones— y el fichero
+ * `~/.config/typesafe/key`.
+ *
+ * El fichero se lee dentro de un `try`: sin él, la excepción de `readFileSync`
+ * salía cruda («ENOENT …») en vez del mensaje que explica qué falta.
+ */
 function leerClave(): string {
-  const clave = (
-    process.env.TYPESAFE_KEY ??
-    readFileSync(join(homedir(), '.config/typesafe/key'), 'utf8')
-  ).trim();
-  if (!clave)
-    throw new Error('sin clave: ni TYPESAFE_KEY ni ~/.config/typesafe/key');
+  const delEntorno = process.env.TYPESAFE_API_KEY ?? process.env.TYPESAFE_KEY;
+  let clave = (delEntorno ?? '').trim();
+  if (!clave) {
+    try {
+      clave = readFileSync(
+        join(homedir(), '.config/typesafe/key'),
+        'utf8',
+      ).trim();
+    } catch {
+      clave = '';
+    }
+  }
+  if (!clave) {
+    throw new Error(
+      'sin clave: define TYPESAFE_API_KEY (o TYPESAFE_KEY) o crea ~/.config/typesafe/key',
+    );
+  }
   return clave;
 }
 
@@ -234,16 +254,25 @@ async function preguntar(
   };
 }
 
-/** Percentil sobre una muestra ya ordenada de menor a mayor. */
-const percentil = (ordenada: number[], p: number): number =>
-  ordenada.length
-    ? ordenada[
-        Math.min(
-          ordenada.length - 1,
-          Math.ceil((p / 100) * ordenada.length) - 1,
-        )
-      ]
-    : 0;
+/**
+ * Percentil **interpolado** sobre una muestra ya ordenada de menor a mayor.
+ *
+ * Interpola a propósito. La versión anterior tomaba `ceil(p/100 · n) - 1`, que
+ * para cualquier `n <= 20` apunta al último elemento: el «p95» de dieciocho
+ * medidas era «la peor de dieciocho». Con muestras de diez a treinta casos
+ * —las de este banco— eso exageraba la cifra justo en un número que acaba
+ * citado en la tesis.
+ */
+export const percentil = (ordenada: number[], p: number): number => {
+  if (!ordenada.length) return 0;
+  if (ordenada.length === 1) return ordenada[0];
+  const exacta = (p / 100) * (ordenada.length - 1);
+  const indice = Math.min(ordenada.length - 2, Math.max(0, Math.floor(exacta)));
+  const fraccion = exacta - indice;
+  return (
+    ordenada[indice] + fraccion * (ordenada[indice + 1] - ordenada[indice])
+  );
+};
 
 const dosDecimales = (n: number) => n.toFixed(2).padStart(5);
 
@@ -439,7 +468,12 @@ async function main(): Promise<void> {
   console.log(`informe: ${ruta}\n`);
 }
 
-main().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
-  process.exit(1);
-});
+// Solo se ejecuta cuando este fichero ES el programa. Sin la guarda,
+// importarlo —una prueba que quiera comprobar el cálculo del percentil, o el
+// `dist/` que `nest build` produce— lanzaba la tanda entera contra la API.
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(error instanceof Error ? error.message : error);
+    process.exit(1);
+  });
+}

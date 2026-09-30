@@ -16,6 +16,8 @@ import {
  * al proveedor de juicios en ninguna parte**.
  */
 export class NoopJudgeAdapter implements JudgmentPort {
+  readonly disponible = false;
+
   // Sin parámetros a propósito: no mira la petición porque no la manda a
   // ninguna parte. Cumple el puerto igual (TypeScript admite implementarlo con
   // menos argumentos de los que declara).

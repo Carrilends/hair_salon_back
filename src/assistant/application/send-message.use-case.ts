@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { LlmMessage, LlmPort, LlmToolCall } from '../domain/ports/llm.port';
 import { ConversationRepositoryPort } from '../domain/ports/conversation-repository.port';
 import { ClockPort } from '../domain/ports/clock.port';
@@ -13,7 +13,6 @@ import {
 import { AssistantContext, AssistantTool } from './tools/assistant-tool';
 import { AssistantPresentation } from './tools/assistant-presentation';
 import { SYSTEM_PROMPT } from './system-prompt';
-import { RECIENTES_EN_EL_ESTADO } from './screening/turn-screen';
 import { fechaDelSalon, inicioDelDiaDelSalon } from './salon-day';
 import { AssistantBudget } from './assistant-budget';
 import { ConversationSummarizer } from './summarize-conversation.use-case';
@@ -34,11 +33,13 @@ import { JudgmentPort } from '../domain/ports/judgment.port';
 import { JudgmentSettings } from './judgment-settings';
 import {
   LlamadaDeLaTraza,
+  RECIENTES_EN_EL_ESTADO,
   construirBalance,
   construirProgreso,
   leerBalance,
   leerProgreso,
 } from './screening/turn-screen';
+import { preguntarConSeguridad } from './screening/preguntar-con-seguridad';
 import { TelemetriaDeJuicios } from './judgment-telemetry';
 
 const WINDOW_SIZE = 8;
@@ -59,6 +60,13 @@ const MAX_VUELTAS_SIN_NOVEDAD = 2;
  * y preguntar ahí le cobraría el juicio a casi todos los turnos.
  */
 const PRIMERA_VUELTA_QUE_SE_JUZGA = 3;
+/**
+ * Tope de espera del juicio diferido. Generoso a propósito: cuando corre, el
+ * turno ya está entregado y **nadie lo espera**. Es lo que el plan admitía para
+ * esta colocación, y se consigue con un tope por petición en vez de montando un
+ * segundo proveedor solo para ella.
+ */
+const TIMEOUT_DIFERIDO_MS = 5_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const COURTESY_REPLY =
   'Disculpa, no logré completar la solicitud. ¿Quieres intentarlo de otra forma o reservar por el flujo web de siempre?';
@@ -115,8 +123,14 @@ export class SendMessageUseCase {
     private readonly ledger: DailyTokenLedger,
     // Proveedor de juicios y qué colocaciones están encendidas (plan 04).
     // Opcionales de verdad: sin ellos el bucle es exactamente el de antes.
-    @Inject(JUDGMENT) private readonly judge?: JudgmentPort,
-    @Inject(JUDGMENT_SETTINGS) private readonly ajustes?: JudgmentSettings,
+    // `@Optional()` de verdad y no solo el `?` de TypeScript: sin él, Nest los
+    // trata como obligatorios y el arranque fallaría si alguien quitara un
+    // proveedor, que es lo contrario de lo que promete la firma.
+    @Optional() @Inject(JUDGMENT) private readonly judge?: JudgmentPort,
+    @Optional()
+    @Inject(JUDGMENT_SETTINGS)
+    private readonly ajustes?: JudgmentSettings,
+    @Optional()
     @Inject(ASSISTANT_JUDGMENT_TELEMETRY)
     private readonly telemetria?: TelemetriaDeJuicios,
   ) {
@@ -179,6 +193,10 @@ export class SendMessageUseCase {
       // El rol admin viaja desde el borde HTTP (JWT), nunca desde el chat. Ausente
       // ⇒ false: una omisión nunca concede privilegios.
       isAdmin: input.isAdmin ?? false,
+      // Este es el bucle del asistente, así que las salvaguardas del canal
+      // conversacional quedan autorizadas. Ningún otro adaptador primario lo
+      // marca.
+      canalConversacional: true,
       // Los últimos mensajes, el nuevo incluido y los viejos primero. Lo pide
       // la verificación previa a reservar (plan 04, T5): sin historial no hay
       // con qué comparar la reserva que se va a crear. Se manda un mensaje más
@@ -329,8 +347,17 @@ export class SendMessageUseCase {
     // Al agotar las vueltas sin respuesta final, se responde con cortesía en vez
     // de seguir facturando. En ese caso NO se surfacea nada: una tarjeta junto a
     // un texto de fracaso sería contradictoria.
+    //
+    // Salvo que alguna herramienta del turno haya dejado una `pregunta`: eso
+    // significa que necesita algo de la clienta para seguir, y decírselo es
+    // siempre mejor que disculparse. Sin esta regla, la verificación previa a
+    // reservar (plan 04, T5) tenía un camino para convertirse en el peor fallo
+    // del plan: frena la reserva, pide confirmación, el modelo vuelve a llamar
+    // en el mismo turno en vez de esperar, la caché le devuelve lo mismo, el
+    // bucle se corta por falta de novedad y la clienta lee una disculpa en vez
+    // de la pregunta. Ni reserva, ni pregunta, ni explicación.
     if (!reply) {
-      reply = COURTESY_REPLY;
+      reply = preguntaPendiente(resultadosDelTurno) ?? COURTESY_REPLY;
       presentaciones = [];
     }
 
@@ -399,10 +426,7 @@ export class SendMessageUseCase {
     });
     if (!juicio) return true;
 
-    const respuesta = await this.judge.ask({
-      state: juicio.state,
-      questions: juicio.questions,
-    });
+    const respuesta = await preguntarConSeguridad(this.judge, juicio);
     if (respuesta.ok === false) return true;
 
     const { avanza, prob } = leerProgreso(respuesta.answers, juicio.asked);
@@ -425,10 +449,9 @@ export class SendMessageUseCase {
    * respuesta. Los fallos se comen aquí; una telemetría perdida no es un
    * problema, y una excepción suelta en un `Promise` sí lo sería.
    *
-   * Reutiliza el mismo adaptador que las colocaciones en banda, con su timeout
-   * corto. El plan admitía uno más generoso aquí por estar fuera de banda, pero
-   * con un p95 medido de 420 ms el segundo de margen sobra, y un segundo
-   * proveedor solo para esto sería una pieza más que mantener.
+   * Reutiliza el mismo adaptador que las colocaciones en banda, pero le pide un
+   * **tope de espera propio y generoso**: aquí no espera nadie. Un segundo
+   * proveedor montado solo para esto habría sido una pieza más que mantener.
    */
   private dispararJuicioDiferido(
     peticion: string,
@@ -442,9 +465,8 @@ export class SendMessageUseCase {
 
     void (async () => {
       try {
-        const r = await judge.ask({
-          state: juicio.state,
-          questions: juicio.questions,
+        const r = await preguntarConSeguridad(judge, juicio, {
+          timeoutMs: TIMEOUT_DIFERIDO_MS,
         });
         if (r.ok === false) {
           this.telemetria?.anotarJuicio({
@@ -570,6 +592,24 @@ export class SendMessageUseCase {
 function toLlmRole(role: string): 'system' | 'user' | 'assistant' | 'tool' {
   if (role === 'assistant' || role === 'system' || role === 'tool') return role;
   return 'user';
+}
+
+/**
+ * La primera `pregunta` que alguna herramienta del turno haya dejado en su
+ * resultado, o `null` si ninguna dejó ninguna.
+ *
+ * Es un contrato pequeño y deliberado: una herramienta que necesita algo de la
+ * clienta para poder continuar deja la frase que hay que decirle, y el bucle la
+ * usa **solo** cuando el turno se quedaría sin respuesta. La frase la escribe
+ * la herramienta porque es la única que conoce el dato; el bucle solo decide
+ * cuándo hace falta.
+ */
+function preguntaPendiente(resultados: Map<string, unknown>): string | null {
+  for (const resultado of resultados.values()) {
+    const pregunta = (resultado as { pregunta?: unknown })?.pregunta;
+    if (typeof pregunta === 'string' && pregunta.trim() !== '') return pregunta;
+  }
+  return null;
 }
 
 /**

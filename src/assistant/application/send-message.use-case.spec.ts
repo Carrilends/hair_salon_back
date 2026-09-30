@@ -939,11 +939,72 @@ describe('SendMessageUseCase', () => {
       userId: 'u1',
     });
 
+    // Y marca el canal: es lo que autoriza las salvaguardas del chat, en vez
+    // de dejarlas colgando de que `recientes` venga vacío en los demás.
+    expect(tool.lastContext!.canalConversacional).toBe(true);
     expect(tool.lastContext!.recientes).toEqual([
       { rol: 'clienta', texto: 'quiero un corte' },
       { rol: 'asistente', texto: 'Tenemos el jueves y el viernes.' },
       { rol: 'clienta', texto: 'el viernes a las 3' },
     ]);
+  });
+
+  it('si una herramienta pidió algo a la clienta, el turno NO acaba en disculpa', async () => {
+    // El peor fallo posible del plan 04, entrando por la puerta de atrás: la
+    // verificación previa a reservar frena la reserva y pide confirmación, el
+    // modelo vuelve a llamar en el mismo turno en vez de esperar, la caché de
+    // T1 le devuelve lo mismo, el bucle se corta por falta de novedad… y la
+    // clienta que quería reservar lee «Disculpa, no logré completar la
+    // solicitud». Ni reserva, ni pregunta, ni explicación.
+    //
+    // Regla: si alguna herramienta del turno dejó una `pregunta`, esa es la
+    // respuesta. Decirle lo que hace falta es siempre mejor que disculparse.
+    const PREGUNTA =
+      'Antes de reservar, confírmame: ¿te agendo Corte de dama el viernes 2 de octubre de 2026 a las 15:00?';
+    const tool = new FakeTool('crearReserva', {
+      ok: false,
+      motivo: 'confirmacion_requerida',
+      pregunta: PREGUNTA,
+    });
+    const vuelta = {
+      message: {
+        role: 'assistant' as const,
+        content: '',
+        toolCalls: [{ id: 't1', name: 'crearReserva', arguments: { a: 1 } }],
+      },
+      usage: TokenUsage.of(100, 10),
+    };
+    const llm = new FakeLlmAdapter([vuelta, vuelta, vuelta, vuelta, vuelta]);
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [tool],
+    });
+
+    const res = await useCase.execute({
+      message: 'resérvame el viernes',
+      userId: 'u1',
+    });
+
+    expect(res.reply).toBe(PREGUNTA);
+    expect(res.reply).not.toContain('no logré completar');
+  });
+
+  it('sin pregunta pendiente, agotar el bucle sigue acabando en disculpa', async () => {
+    const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const llm = new FakeLlmAdapter(vueltasConArgumentosDistintos(5));
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [tool],
+    });
+
+    const res = await useCase.execute({
+      message: 'dame vueltas',
+      userId: 'u1',
+    });
+
+    expect(res.reply).toContain('no logré completar');
   });
 
   it('anota cada turno y cuáles llegaron a la vuelta 3, sin proveedor ninguno', async () => {
@@ -1017,6 +1078,30 @@ describe('SendMessageUseCase', () => {
     });
   });
 
+  it('el juicio diferido pide un tope de espera generoso: nadie lo espera', async () => {
+    const telemetria = new TelemetriaEspia();
+    const juez = new JuezDelBalance();
+    const llm = new FakeLlmAdapter([
+      {
+        message: { role: 'assistant', content: 'Hola.' },
+        usage: TokenUsage.of(50, 10),
+      },
+    ]);
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      judge: juez,
+      ajustes: { ...AJUSTES_APAGADOS, diferido: true },
+      telemetria,
+    });
+
+    await useCase.execute({ message: 'hola', userId: 'u1' });
+    await telemetria.anotado;
+
+    const peticion = juez.peticiones[0] as { timeoutMs?: number };
+    expect(peticion.timeoutMs).toBeGreaterThan(2000);
+  });
+
   it('si el juicio diferido revienta, el turno ya estaba entregado', async () => {
     // Fuera de banda significa fuera de banda: si falla, nadie se entera.
     const juezRoto = {
@@ -1085,6 +1170,32 @@ describe('SendMessageUseCase', () => {
     expect(llm.calls).toHaveLength(3);
     expect(tool.calls).toBe(2);
     expect(res.reply).toContain('no logré completar');
+  });
+
+  it('si el juez del bucle LANZA, el turno sigue su camino', async () => {
+    const juezQueLanza = {
+      ask: async () => {
+        throw new Error('el adaptador reventó');
+      },
+    };
+    const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const llm = new FakeLlmAdapter(vueltasConArgumentosDistintos(5));
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [tool],
+      judge: juezQueLanza as never,
+      ajustes: { ...AJUSTES_APAGADOS, bucle: 'on' },
+    });
+
+    const res = await useCase.execute({
+      message: 'dame vueltas',
+      userId: 'u1',
+    });
+
+    // Sigue hasta el tope por conteo, como si el juicio no existiera.
+    expect(llm.calls).toHaveLength(5);
+    expect(res.reply.length).toBeGreaterThan(0);
   });
 
   it('antes de la vuelta 3 no se pregunta: encadenar dos herramientas es normal', async () => {

@@ -16,6 +16,7 @@ import { SystemClock } from './infrastructure/time/system-clock.adapter';
 import { ServiceCatalogQueryAdapter } from './infrastructure/catalog/service-catalog-query.adapter';
 import { AvailabilityQueryAdapter } from './infrastructure/availability/availability-query.adapter';
 import { GeminiLlmAdapter } from './infrastructure/llm/gemini-llm.adapter';
+import { JudgmentPort } from './domain/ports/judgment.port';
 import { TypeSafeJudgeAdapter } from './infrastructure/judgment/typesafe-judge.adapter';
 import { NoopJudgeAdapter } from './infrastructure/judgment/noop-judge.adapter';
 import { AssistantController } from './infrastructure/http/assistant.controller';
@@ -73,10 +74,21 @@ const RESERVA_POR_TURNO = 2_000;
 // del banco de calibración se midieron contra esta, y un modelo que cambia sin
 // avisar mueve los umbrales sin que nadie lo sepa.
 const DEFAULT_JUDGMENT_MODEL = 'jev-1.13.0';
-// Un segundo. Medido contra la API con estado pequeño: mediana 250 ms, p95
-// 420 ms. Aquí hay una clienta esperando su turno, así que el tope es corto y
-// no hay reintento en banda; si no llega, el turno sigue por el camino de hoy.
-const DEFAULT_JUDGMENT_TIMEOUT_MS = 1_000;
+// Tope de espera en banda. Medido contra la API con estado pequeño, 82 juicios
+// del 2026-09-30: mediana 245 ms, p95 entre 330 y 400 ms según el juicio, y un
+// máximo de 846 ms. Con 1.200 ms queda un 40 % de margen sobre el peor caso
+// observado, que es lo que pedía el plan (800–1.200 ms). Aquí hay una clienta
+// esperando su turno, así que no hay reintento: si no llega, el turno sigue por
+// el camino de hoy. El juicio diferido pide su propio tope, más generoso,
+// porque cuando corre ya nadie lo espera.
+const DEFAULT_JUDGMENT_TIMEOUT_MS = 1_200;
+/**
+ * Suelo del tope de espera. `enteroDeEntorno` acepta un `0` explícito —es como
+ * se desactiva el techo diario—, pero aquí un cero abortaría **todas** las
+ * llamadas en el tick siguiente y apagaría las cuatro colocaciones en silencio,
+ * que es justo el fallo que nadie relacionaría con haber escrito un cero.
+ */
+const MIN_JUDGMENT_TIMEOUT_MS = 200;
 
 @Module({
   imports: [
@@ -128,9 +140,12 @@ const DEFAULT_JUDGMENT_TIMEOUT_MS = 1_000;
           ? new TypeSafeJudgeAdapter({
               apiKey: process.env.TYPESAFE_API_KEY,
               model: process.env.TYPESAFE_MODEL ?? DEFAULT_JUDGMENT_MODEL,
-              timeoutMs: enteroDeEntorno(
-                'TYPESAFE_TIMEOUT_MS',
-                DEFAULT_JUDGMENT_TIMEOUT_MS,
+              timeoutMs: Math.max(
+                MIN_JUDGMENT_TIMEOUT_MS,
+                enteroDeEntorno(
+                  'TYPESAFE_TIMEOUT_MS',
+                  DEFAULT_JUDGMENT_TIMEOUT_MS,
+                ),
               ),
             })
           : new NoopJudgeAdapter(),
@@ -139,8 +154,12 @@ const DEFAULT_JUDGMENT_TIMEOUT_MS = 1_000;
       // Qué colocaciones del juicio están encendidas. Todas en `off` por
       // defecto: una colocación que actúa entra primero en sombra, y eso se
       // decide en el entorno, no en el código.
+      // Las colocaciones se leen del entorno, pero solo se encienden si hay
+      // proveedor de verdad: por eso este proveedor depende de aquel.
       provide: JUDGMENT_SETTINGS,
-      useFactory: ajustesDeJuicioDeEntorno,
+      useFactory: (judge: JudgmentPort) =>
+        ajustesDeJuicioDeEntorno(judge.disponible),
+      inject: [JUDGMENT],
     },
     {
       // Telemetría del juicio diferido y del bucle. Una sola instancia para

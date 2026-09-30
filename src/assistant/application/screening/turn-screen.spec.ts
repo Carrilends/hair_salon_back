@@ -218,6 +218,85 @@ describe('leerCorrespondencia', () => {
   });
 });
 
+const UUID = '9f1c2b3a-4d5e-4f60-8a71-b2c3d4e5f6a7';
+const OTRO_UUID = '11111111-2222-4333-8444-555555555555';
+
+describe('identificadores en la traza', () => {
+  // La cabecera de este módulo promete que por aquí no pasa ningún id de
+  // reserva, y el plan lo prohíbe con esas palabras. Los argumentos de las
+  // herramientas SÍ viajan —T6 necesita ver si cambian— y entre ellos hay
+  // UUID: `reservaId` y `serviciosIds`. Se sustituyen por un alias estable,
+  // que conserva la única señal que el juicio necesita (si dos valores son el
+  // mismo o no) sin mandar el identificador.
+  const trazaConIds = [
+    {
+      herramienta: 'misReservas',
+      argumentos: {},
+      resultado: 'ok' as const,
+    },
+    {
+      herramienta: 'cancelarReserva',
+      argumentos: { reservaId: UUID },
+      resultado: 'error' as const,
+    },
+    {
+      herramienta: 'crearReserva',
+      argumentos: {
+        serviciosIds: [UUID, OTRO_UUID],
+        fechaHoraIso: '2026-10-02T20:00:00.000Z',
+      },
+      resultado: 'pendiente' as const,
+    },
+  ];
+
+  it.each([
+    [
+      'construirProgreso',
+      () =>
+        construirProgreso({ peticion: 'cancela mi cita', traza: trazaConIds }),
+    ],
+    [
+      'construirBalance',
+      () =>
+        construirBalance({
+          peticion: 'cancela mi cita',
+          respuesta: 'Listo, cancelada.',
+          traza: trazaConIds,
+        }),
+    ],
+  ])('%s no manda ningún identificador', (_nombre, construir) => {
+    const serializado = JSON.stringify(construir()!.state);
+
+    expect(serializado).not.toContain(UUID);
+    expect(serializado).not.toContain(OTRO_UUID);
+    expect(serializado).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/i);
+  });
+
+  it('el mismo identificador recibe el mismo alias, y otro distinto otro alias', () => {
+    // Es lo que permite juzgar «reintenta lo mismo» frente a «pide algo nuevo».
+    const estado = construirProgreso({
+      peticion: 'cancela mi cita',
+      traza: trazaConIds,
+    })!.state as { calls: { arguments: Record<string, unknown> }[] };
+
+    expect(estado.calls[1].arguments.reservaId).toBe('id_1');
+    expect(estado.calls[2].arguments.serviciosIds).toEqual(['id_1', 'id_2']);
+  });
+
+  it('lo que no es un identificador viaja tal cual', () => {
+    // La fecha se queda: no identifica a nadie, y sin ella el caso «el mismo
+    // día preguntado con otro formato» deja de ser detectable.
+    const estado = construirProgreso({
+      peticion: 'cancela mi cita',
+      traza: trazaConIds,
+    })!.state as { calls: { arguments: Record<string, unknown> }[] };
+
+    expect(estado.calls[2].arguments.fechaHoraIso).toBe(
+      '2026-10-02T20:00:00.000Z',
+    );
+  });
+});
+
 describe('construirProgreso', () => {
   const traza = [
     {

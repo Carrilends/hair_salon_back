@@ -1,30 +1,30 @@
 {
   "juicio": "correspondencia",
-  "fecha": "2026-09-30T03:01:54.675Z",
+  "fecha": "2026-09-30T04:09:26.754Z",
   "modeloPedido": "jev-1.13.0",
   "modeloQueRespondio": "jev-1.13.0",
   "umbralEnElCodigo": 0.5,
   "caroSiSePasa": true,
   "nota": "Pares «lo que pidió» → «lo que se va a reservar» (plan 04, T5 paso 0). La reserva es la única operación irreversible del asistente, así que aquí el fallo caro es el contrario al de la pertinencia: dejar pasar una reserva desviada. Los dos últimos casos de la clase «desviada» son los peligros de verdad: reservar cuando nadie pidió reservar. Conversaciones inventadas para el banco.",
-  "entradaTotal": 11418,
-  "costeUsd": 0.00047956,
+  "entradaTotal": 11419,
+  "costeUsd": 0.0004796,
   "latencia": {
-    "min": 220,
-    "p50": 243,
-    "p95": 453,
-    "max": 453,
+    "min": 218,
+    "p50": 244,
+    "p95": 329.9499999999998,
+    "max": 443,
     "n": 18
   },
   "porClase": {
     "correcta": {
-      "min": 0.7,
+      "min": 0.73,
       "mediana": 0.95,
       "max": 0.97,
       "n": 9
     },
     "desviada": {
       "min": 0.02,
-      "mediana": 0.08,
+      "mediana": 0.1,
       "max": 0.16,
       "n": 9
     }
@@ -62,8 +62,10 @@
       "umbral": 0.1,
       "falsosRechazos": [],
       "falsosPases": [
+        "el servicio que no era",
         "el día que no era",
         "la hora que no era",
+        "un servicio DE MÁS",
         "un servicio DE MENOS"
       ]
     },
@@ -113,10 +115,10 @@
       "servicios": [
         "Corte de dama"
       ],
-      "fecha": "viernes 3 de octubre de 2026",
+      "fecha": "viernes 2 de octubre de 2026",
       "hora": "15:00",
-      "prob": 0.7,
-      "ms": 453
+      "prob": 0.73,
+      "ms": 443
     },
     {
       "clase": "correcta",
@@ -140,10 +142,10 @@
         "Keratina",
         "Corte de dama"
       ],
-      "fecha": "sábado 4 de octubre de 2026",
+      "fecha": "sábado 3 de octubre de 2026",
       "hora": "09:00",
       "prob": 0.92,
-      "ms": 231
+      "ms": 251
     },
     {
       "clase": "correcta",
@@ -166,10 +168,10 @@
       "servicios": [
         "Tinte"
       ],
-      "fecha": "jueves 2 de octubre de 2026",
+      "fecha": "jueves 1 de octubre de 2026",
       "hora": "10:00",
       "prob": 0.97,
-      "ms": 253
+      "ms": 225
     },
     {
       "clase": "correcta",
@@ -192,10 +194,10 @@
       "servicios": [
         "Manicure"
       ],
-      "fecha": "martes 30 de septiembre de 2026",
+      "fecha": "miércoles 30 de septiembre de 2026",
       "hora": "17:00",
-      "prob": 0.94,
-      "ms": 258
+      "prob": 0.95,
+      "ms": 296
     },
     {
       "clase": "correcta",
@@ -218,10 +220,10 @@
       "servicios": [
         "Tinte"
       ],
-      "fecha": "martes 30 de septiembre de 2026",
+      "fecha": "martes 6 de octubre de 2026",
       "hora": "11:00",
-      "prob": 0.97,
-      "ms": 246
+      "prob": 0.96,
+      "ms": 254
     },
     {
       "clase": "correcta",
@@ -244,10 +246,10 @@
       "servicios": [
         "Manicure tradicional"
       ],
-      "fecha": "miércoles 1 de octubre de 2026",
+      "fecha": "miércoles 30 de septiembre de 2026",
       "hora": "14:00",
       "prob": 0.97,
-      "ms": 242
+      "ms": 243
     },
     {
       "clase": "correcta",
@@ -260,7 +262,7 @@
         },
         {
           "rol": "asistente",
-          "texto": "Mañana miércoles 1 de octubre a las 8:00, ¿te va bien?"
+          "texto": "Mañana jueves 1 de octubre a las 8:00, ¿te va bien?"
         },
         {
           "rol": "clienta",
@@ -270,10 +272,10 @@
       "servicios": [
         "Alisado"
       ],
-      "fecha": "miércoles 1 de octubre de 2026",
+      "fecha": "jueves 1 de octubre de 2026",
       "hora": "08:00",
       "prob": 0.97,
-      "ms": 416
+      "ms": 252
     },
     {
       "clase": "correcta",
@@ -293,10 +295,10 @@
         "Pedicure",
         "Manicure"
       ],
-      "fecha": "domingo 5 de octubre de 2026",
+      "fecha": "domingo 4 de octubre de 2026",
       "hora": "10:00",
       "prob": 0.95,
-      "ms": 306
+      "ms": 269
     },
     {
       "clase": "correcta",
@@ -321,10 +323,10 @@
         "Maquillaje",
         "Manicure"
       ],
-      "fecha": "viernes 3 de octubre de 2026",
+      "fecha": "viernes 2 de octubre de 2026",
       "hora": "16:00",
       "prob": 0.95,
-      "ms": 232
+      "ms": 268
     },
     {
       "clase": "desviada",
@@ -343,10 +345,10 @@
       "servicios": [
         "Tinte"
       ],
-      "fecha": "viernes 3 de octubre de 2026",
+      "fecha": "viernes 2 de octubre de 2026",
       "hora": "15:00",
-      "prob": 0.09,
-      "ms": 241
+      "prob": 0.1,
+      "ms": 230
     },
     {
       "clase": "desviada",
@@ -365,10 +367,10 @@
       "servicios": [
         "Corte de dama"
       ],
-      "fecha": "sábado 4 de octubre de 2026",
+      "fecha": "sábado 3 de octubre de 2026",
       "hora": "15:00",
-      "prob": 0.11,
-      "ms": 243
+      "prob": 0.16,
+      "ms": 231
     },
     {
       "clase": "desviada",
@@ -387,10 +389,10 @@
       "servicios": [
         "Corte de dama"
       ],
-      "fecha": "viernes 3 de octubre de 2026",
+      "fecha": "viernes 2 de octubre de 2026",
       "hora": "17:00",
-      "prob": 0.1,
-      "ms": 225
+      "prob": 0.12,
+      "ms": 239
     },
     {
       "clase": "desviada",
@@ -410,10 +412,10 @@
         "Corte de dama",
         "Keratina"
       ],
-      "fecha": "viernes 3 de octubre de 2026",
+      "fecha": "viernes 2 de octubre de 2026",
       "hora": "15:00",
-      "prob": 0.08,
-      "ms": 302
+      "prob": 0.11,
+      "ms": 240
     },
     {
       "clase": "desviada",
@@ -432,10 +434,10 @@
       "servicios": [
         "Corte de dama"
       ],
-      "fecha": "viernes 3 de octubre de 2026",
+      "fecha": "viernes 2 de octubre de 2026",
       "hora": "15:00",
       "prob": 0.16,
-      "ms": 220
+      "ms": 245
     },
     {
       "clase": "desviada",
@@ -458,10 +460,10 @@
       "servicios": [
         "Manicure"
       ],
-      "fecha": "viernes 3 de octubre de 2026",
+      "fecha": "viernes 2 de octubre de 2026",
       "hora": "14:00",
-      "prob": 0.05,
-      "ms": 277
+      "prob": 0.06,
+      "ms": 310
     },
     {
       "clase": "desviada",
@@ -480,10 +482,10 @@
       "servicios": [
         "Pedicure"
       ],
-      "fecha": "jueves 2 de octubre de 2026",
+      "fecha": "jueves 1 de octubre de 2026",
       "hora": "16:00",
       "prob": 0.03,
-      "ms": 232
+      "ms": 225
     },
     {
       "clase": "desviada",
@@ -502,10 +504,10 @@
       "servicios": [
         "Keratina"
       ],
-      "fecha": "viernes 3 de octubre de 2026",
+      "fecha": "viernes 2 de octubre de 2026",
       "hora": "15:00",
       "prob": 0.06,
-      "ms": 238
+      "ms": 218
     },
     {
       "clase": "desviada",
@@ -528,10 +530,10 @@
       "servicios": [
         "Corte de dama"
       ],
-      "fecha": "jueves 2 de octubre de 2026",
+      "fecha": "jueves 1 de octubre de 2026",
       "hora": "16:00",
       "prob": 0.02,
-      "ms": 247
+      "ms": 220
     }
   ]
 }

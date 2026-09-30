@@ -44,6 +44,15 @@ export interface JudgmentRequest {
   state: Record<string, unknown>;
   /** Preguntas por id. Las de una misma petición corren en paralelo. */
   questions: Record<string, unknown>;
+  /**
+   * Tope de espera de ESTA pregunta, si difiere del que traiga configurado el
+   * adaptador. Existe porque las colocaciones no esperan igual: en el camino
+   * crítico hay una clienta mirando la pantalla y el tope es corto, mientras
+   * que el juicio diferido corre cuando el turno ya se entregó y puede
+   * permitirse esperar. Un solo adaptador con un tope por petición evita tener
+   * dos proveedores montados para lo mismo.
+   */
+  timeoutMs?: number;
 }
 
 export type JudgmentResult =
@@ -58,5 +67,17 @@ export type JudgmentResult =
   | { ok: false; error: JudgmentError; ms: number };
 
 export interface JudgmentPort {
+  /**
+   * ¿Hay proveedor de verdad detrás? El adaptador nulo dice `false`, y el real
+   * dice `false` si no tiene credencial.
+   *
+   * Lo necesita quien decide si una colocación se enciende. Sin esto, un
+   * interruptor en `on` con la clave sin aprovisionar preparaba la pregunta
+   * —una consulta a la base por turno que reservara—, la mandaba a un
+   * adaptador que siempre falla y no dejaba ni una línea en el log: el fallo
+   * que nadie relacionaría con la causa.
+   */
+  readonly disponible: boolean;
+
   ask(request: JudgmentRequest): Promise<JudgmentResult>;
 }

@@ -51,6 +51,7 @@ describe('buildAssistantTools', () => {
       userId: 'u1',
       now: new Date('2026-09-30T14:00:00Z'),
       isAdmin: false,
+      canalConversacional: true,
       recientes: [{ rol: 'clienta', texto: 'quiero un corte' }],
     };
     const res = await crearReserva.execute(
@@ -78,6 +79,7 @@ describe('buildAssistantTools', () => {
         new Map([['11111111-1111-4111-8111-111111111111', 'Tinte']]),
     };
     const judge = {
+      disponible: true,
       ask: async () => ({
         ok: true as const,
         answers: { correspondencia: { type: 'noul', noul: 0.04 } },
@@ -107,6 +109,7 @@ describe('buildAssistantTools', () => {
         userId: 'u1',
         now: new Date('2026-09-30T14:00:00Z'),
         isAdmin: false,
+        canalConversacional: true,
         recientes: [{ rol: 'clienta', texto: 'quiero un corte el viernes' }],
       },
     );
@@ -129,6 +132,7 @@ describe('buildAssistantTools', () => {
       findPrincipalImages: async () => new Map(),
     };
     const judge = {
+      disponible: true,
       ask: async () => ({
         ok: true as const,
         answers: {
@@ -152,10 +156,12 @@ describe('buildAssistantTools', () => {
     );
     const listar = tools.find((t) => t.name === 'listarServicios')!;
 
-    const res = (await listar.execute(
-      { busqueda: 'corte para mujer' },
-      {} as never,
-    )) as { servicios: { nombre: string }[] };
+    const res = (await listar.execute({ busqueda: 'corte para mujer' }, {
+      userId: 'u1',
+      now: new Date('2026-09-30T14:00:00Z'),
+      isAdmin: false,
+      canalConversacional: true,
+    } as AssistantContext)) as { servicios: { nombre: string }[] };
 
     expect(res.servicios[0].nombre).toBe('Corte de dama');
   });

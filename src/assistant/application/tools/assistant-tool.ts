@@ -14,6 +14,18 @@ export interface AssistantContext {
    */
   isAdmin: boolean;
   /**
+   * `true` **solo** cuando quien ejecuta la herramienta es el bucle del
+   * asistente. Los otros adaptadores primarios —servidor MCP, webhook de
+   * WhatsApp, tarea programada— lo dejan sin poner.
+   *
+   * Es lo que autoriza las salvaguardas del canal conversacional (plan 04:
+   * verificación previa a reservar y reordenación por relevancia). Se marca
+   * explícitamente y no se deduce de que `recientes` venga vacío: el día que
+   * otro adaptador rellene ese campo, la salvaguarda del chat se le impondría
+   * también a él, y el caso de uso de Reservas lo comparten cinco adaptadores.
+   */
+  canalConversacional?: boolean;
+  /**
    * Últimos mensajes de la conversación, los más viejos primero. Lo rellena
    * **solo** el bucle del asistente; los otros adaptadores primarios —MCP,
    * webhook de WhatsApp, cron— no tienen conversación y lo dejan sin poner.

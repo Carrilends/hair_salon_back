@@ -12,10 +12,14 @@ export interface TypeSafeJudgeConfig {
   apiKey?: string;
   model: string;
   /**
-   * Tope de espera. **Corto**: aquí hay una clienta esperando su turno. La
-   * extensión de escritorio usa 10 s porque allí no espera nadie; medido contra
-   * la API con estado pequeño, la mediana es de 250 ms y el p95 de 420 ms, así
-   * que un segundo son más de dos veces el p95.
+   * Tope de espera por defecto, que cada petición puede sobreescribir
+   * (`JudgmentRequest.timeoutMs`). **Corto**: aquí hay una clienta esperando su
+   * turno; la extensión de escritorio usa 10 s porque allí no espera nadie.
+   *
+   * Medido contra la API con estado pequeño, 82 juicios del 2026-09-30:
+   * mediana **245 ms**, p95 entre **330 y 400 ms** según el juicio, y un
+   * **máximo de 846 ms** —el peor de los 82—. Los juicios bateados (una
+   * pregunta por candidato) son los más lentos, como cabía esperar.
    */
   timeoutMs: number;
 }
@@ -35,10 +39,15 @@ export interface TypeSafeJudgeConfig {
 export class TypeSafeJudgeAdapter implements JudgmentPort {
   private readonly logger = new Logger(TypeSafeJudgeAdapter.name);
 
+  /** Sin credencial no hay proveedor, aunque la clase esté construida. */
+  readonly disponible: boolean;
+
   constructor(
     private readonly config: TypeSafeJudgeConfig,
     private readonly fetchImpl: typeof fetch = fetch,
-  ) {}
+  ) {
+    this.disponible = Boolean(config.apiKey);
+  }
 
   async ask(request: JudgmentRequest): Promise<JudgmentResult> {
     // Sin clave no se sale a la red: la aplicación arranca igual y nadie se
@@ -47,7 +56,10 @@ export class TypeSafeJudgeAdapter implements JudgmentPort {
 
     const empezo = Date.now();
     const abortador = new AbortController();
-    const reloj = setTimeout(() => abortador.abort(), this.config.timeoutMs);
+    const reloj = setTimeout(
+      () => abortador.abort(),
+      request.timeoutMs ?? this.config.timeoutMs,
+    );
     try {
       const res = await this.fetchImpl(ENDPOINT, {
         method: 'POST',
@@ -62,7 +74,12 @@ export class TypeSafeJudgeAdapter implements JudgmentPort {
         }),
         signal: abortador.signal,
       });
-      if (!res.ok) return fallo(errorDeEstado(res.status), Date.now() - empezo);
+      if (!res.ok) {
+        // El cuerpo no se va a leer: se descarta explícitamente para no dejar
+        // flujos abiertos en una ráfaga de 429 o de 5xx.
+        void res.body?.cancel().catch(() => undefined);
+        return fallo(errorDeEstado(res.status), Date.now() - empezo);
+      }
 
       const json = (await res.json()) as {
         answers?: Record<string, unknown>;
@@ -97,9 +114,17 @@ export class TypeSafeJudgeAdapter implements JudgmentPort {
   }
 }
 
+/**
+ * El estado HTTP traducido a uno de los cinco fallos del puerto. Los 4xx que no
+ * son de credencial ni de tasa son `invalid` y no `network`: una petición mal
+ * formada no es un problema de red, y llamarla así manda a quien depure por el
+ * camino equivocado —el mensaje del log diría «no contestó» cuando sí
+ * contestó—. El comportamiento no cambia: los cinco fallan abierto.
+ */
 const errorDeEstado = (status: number): string => {
   if (status === 401 || status === 403) return 'auth';
   if (status === 429) return 'rate';
+  if (status >= 400 && status < 500) return 'invalid';
   return 'network';
 };
 

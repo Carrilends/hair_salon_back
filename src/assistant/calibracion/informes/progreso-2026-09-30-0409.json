@@ -1,29 +1,35 @@
 {
   "juicio": "progreso",
-  "fecha": "2026-09-30T03:22:44.390Z",
+  "fecha": "2026-09-30T04:09:31.430Z",
   "modeloPedido": "jev-1.13.0",
   "modeloQueRespondio": "jev-1.13.0",
-  "umbralEnElCodigo": 0.2,
+  "umbralEnElCodigo": 0.5,
   "caroSiSePasa": false,
-  "nota": "Trazas de llamadas a herramienta de un mismo turno (plan 04, T6). La repetición LITERAL ya la corta el código gratis (T1); aquí solo se juzga lo que el código no ve: los mismos fines con argumentos distintos. El fallo caro es cortar un turno que iba a converger, así que el listón es bajo. La frontera fina son los casos «otra búsqueda distinta» y «otro día tras un no hay cupo»: misma herramienta, argumentos distintos, y SÍ avanzan.",
+  "nota": "Trazas de llamadas a herramienta de un mismo turno (plan 04, T6). La repetición LITERAL ya la corta el código gratis (T1); aquí solo se juzga lo que el código no ve: los mismos fines con argumentos distintos. El fallo caro es cortar un turno que iba a converger, así que el listón es bajo. La frontera fina son los casos «otra búsqueda distinta» y «otro día tras un no hay cupo»: misma herramienta, argumentos distintos, y SÍ avanzan. Dos casos van marcados como clase `frontera` porque su etiqueta es discutible, y uno de ellos —insistir en un servicio que el catálogo no tiene— se etiquetó mal en la primera versión: «atascado» ahí no se deduce de la traza, solo de saber qué hay en el catálogo, que es información que el juicio no recibe. Se corrigió a `avanza` en vez de dejar una etiqueta que el estado no sostiene.",
   "entradaTotal": 8078,
   "costeUsd": 0.00033928,
   "latencia": {
-    "min": 225,
-    "p50": 263,
-    "p95": 453,
-    "max": 453,
+    "min": 223,
+    "p50": 242,
+    "p95": 376.24999999999994,
+    "max": 464,
     "n": 14
   },
   "porClase": {
     "atascado": {
-      "min": 0.2,
-      "mediana": 0.45,
-      "max": 0.59,
-      "n": 6
+      "min": 0.21,
+      "mediana": 0.33,
+      "max": 0.45,
+      "n": 4
+    },
+    "frontera": {
+      "min": 0.57,
+      "mediana": 0.6,
+      "max": 0.6,
+      "n": 2
     },
     "avanza": {
-      "min": 0.67,
+      "min": 0.68,
       "mediana": 0.86,
       "max": 0.9,
       "n": 8
@@ -37,8 +43,7 @@
         "la misma búsqueda reescrita tres veces",
         "el mismo día preguntado con otro formato",
         "el mismo paquete con otro nombre del evento",
-        "insiste en un servicio que el catálogo no tiene",
-        "da vueltas entre dos herramientas sin pedir nada nuevo",
+        "FRONTERA: da vueltas entre dos herramientas sobre el mismo tema, pero la última llamada estrena término",
         "reintenta una reserva que ya falló, igual"
       ]
     },
@@ -49,8 +54,7 @@
         "la misma búsqueda reescrita tres veces",
         "el mismo día preguntado con otro formato",
         "el mismo paquete con otro nombre del evento",
-        "insiste en un servicio que el catálogo no tiene",
-        "da vueltas entre dos herramientas sin pedir nada nuevo",
+        "FRONTERA: da vueltas entre dos herramientas sobre el mismo tema, pero la última llamada estrena término",
         "reintenta una reserva que ya falló, igual"
       ]
     },
@@ -61,8 +65,7 @@
         "la misma búsqueda reescrita tres veces",
         "el mismo día preguntado con otro formato",
         "el mismo paquete con otro nombre del evento",
-        "insiste en un servicio que el catálogo no tiene",
-        "da vueltas entre dos herramientas sin pedir nada nuevo",
+        "FRONTERA: da vueltas entre dos herramientas sobre el mismo tema, pero la última llamada estrena término",
         "reintenta una reserva que ya falló, igual"
       ]
     },
@@ -73,8 +76,7 @@
         "la misma búsqueda reescrita tres veces",
         "el mismo día preguntado con otro formato",
         "el mismo paquete con otro nombre del evento",
-        "insiste en un servicio que el catálogo no tiene",
-        "da vueltas entre dos herramientas sin pedir nada nuevo",
+        "FRONTERA: da vueltas entre dos herramientas sobre el mismo tema, pero la última llamada estrena término",
         "reintenta una reserva que ya falló, igual"
       ]
     },
@@ -84,21 +86,20 @@
       "falsosPases": [
         "la misma búsqueda reescrita tres veces",
         "el mismo día preguntado con otro formato",
-        "insiste en un servicio que el catálogo no tiene",
-        "da vueltas entre dos herramientas sin pedir nada nuevo"
+        "FRONTERA: da vueltas entre dos herramientas sobre el mismo tema, pero la última llamada estrena término"
       ]
     },
     {
       "umbral": 0.5,
       "falsosRechazos": [],
       "falsosPases": [
-        "insiste en un servicio que el catálogo no tiene",
-        "da vueltas entre dos herramientas sin pedir nada nuevo"
+        "FRONTERA: da vueltas entre dos herramientas sobre el mismo tema, pero la última llamada estrena término"
       ]
     },
     {
       "umbral": 0.7,
       "falsosRechazos": [
+        "FRONTERA: insiste en un servicio que el catálogo no tiene, pero cambia de herramienta — «atascado» no se deduce del estado, solo de conocer el catálogo",
         "la cadena completa hasta reservar"
       ],
       "falsosPases": []
@@ -106,13 +107,13 @@
     {
       "umbral": 0.9,
       "falsosRechazos": [
+        "FRONTERA: insiste en un servicio que el catálogo no tiene, pero cambia de herramienta — «atascado» no se deduce del estado, solo de conocer el catálogo",
         "la cadena normal: listar y luego consultar disponibilidad",
         "la cadena completa hasta reservar",
         "componer y reservar el paquete",
         "FRONTERA: otro día después de un «no hay cupo»",
         "consultar sus reservas y luego cancelar la que era",
-        "listar y luego recomendar, porque pidió consejo",
-        "tres días distintos porque preguntó por la semana"
+        "listar y luego recomendar, porque pidió consejo"
       ],
       "falsosPases": []
     }
@@ -147,7 +148,7 @@
         }
       ],
       "prob": 0.45,
-      "ms": 453
+      "ms": 464
     },
     {
       "clase": "atascado",
@@ -177,8 +178,8 @@
           "resultado": "pendiente"
         }
       ],
-      "prob": 0.35,
-      "ms": 238
+      "prob": 0.33,
+      "ms": 243
     },
     {
       "clase": "atascado",
@@ -209,12 +210,12 @@
         }
       ],
       "prob": 0.25,
-      "ms": 263
+      "ms": 240
     },
     {
-      "clase": "atascado",
-      "por": "insiste en un servicio que el catálogo no tiene",
-      "esperado": "atascado",
+      "clase": "frontera",
+      "por": "FRONTERA: insiste en un servicio que el catálogo no tiene, pero cambia de herramienta — «atascado» no se deduce del estado, solo de conocer el catálogo",
+      "esperado": "avanza",
       "peticion": "quiero micropigmentación de labios",
       "traza": [
         {
@@ -241,12 +242,12 @@
           "resultado": "pendiente"
         }
       ],
-      "prob": 0.59,
-      "ms": 314
+      "prob": 0.6,
+      "ms": 239
     },
     {
-      "clase": "atascado",
-      "por": "da vueltas entre dos herramientas sin pedir nada nuevo",
+      "clase": "frontera",
+      "por": "FRONTERA: da vueltas entre dos herramientas sobre el mismo tema, pero la última llamada estrena término",
       "esperado": "atascado",
       "peticion": "¿me recomiendas algo para las uñas?",
       "traza": [
@@ -284,8 +285,8 @@
           "resultado": "pendiente"
         }
       ],
-      "prob": 0.58,
-      "ms": 238
+      "prob": 0.57,
+      "ms": 329
     },
     {
       "clase": "atascado",
@@ -315,8 +316,8 @@
           "resultado": "pendiente"
         }
       ],
-      "prob": 0.2,
-      "ms": 287
+      "prob": 0.21,
+      "ms": 228
     },
     {
       "clase": "avanza",
@@ -340,7 +341,7 @@
         }
       ],
       "prob": 0.86,
-      "ms": 225
+      "ms": 223
     },
     {
       "clase": "avanza",
@@ -370,8 +371,8 @@
           "resultado": "pendiente"
         }
       ],
-      "prob": 0.67,
-      "ms": 236
+      "prob": 0.68,
+      "ms": 247
     },
     {
       "clase": "avanza",
@@ -394,8 +395,8 @@
           "resultado": "pendiente"
         }
       ],
-      "prob": 0.84,
-      "ms": 253
+      "prob": 0.86,
+      "ms": 241
     },
     {
       "clase": "avanza",
@@ -419,7 +420,7 @@
         }
       ],
       "prob": 0.9,
-      "ms": 227
+      "ms": 237
     },
     {
       "clase": "avanza",
@@ -442,8 +443,8 @@
           "resultado": "pendiente"
         }
       ],
-      "prob": 0.82,
-      "ms": 312
+      "prob": 0.8,
+      "ms": 274
     },
     {
       "clase": "avanza",
@@ -464,8 +465,8 @@
           "resultado": "pendiente"
         }
       ],
-      "prob": 0.87,
-      "ms": 295
+      "prob": 0.86,
+      "ms": 293
     },
     {
       "clase": "avanza",
@@ -491,7 +492,7 @@
         }
       ],
       "prob": 0.84,
-      "ms": 274
+      "ms": 231
     },
     {
       "clase": "avanza",
@@ -521,8 +522,8 @@
           "resultado": "pendiente"
         }
       ],
-      "prob": 0.89,
-      "ms": 296
+      "prob": 0.9,
+      "ms": 261
     }
   ]
 }

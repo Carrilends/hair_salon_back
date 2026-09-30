@@ -111,12 +111,15 @@ export class CreateReservationTool implements AssistantTool {
     // rechazos que el código resuelve solo: no se paga un juicio —ni la
     // consulta de nombres que lo prepara— por una petición ya rechazada.
     const verificacion = this.verificacion;
-    // Las tres condiciones se comprueban ANTES de preparar la pregunta, porque
-    // prepararla cuesta una consulta a la base: que la colocación exista, que
-    // no esté apagada, y que haya conversación con la que comparar.
+    // Las cuatro condiciones se comprueban ANTES de preparar la pregunta,
+    // porque prepararla cuesta una consulta a la base: que la colocación
+    // exista, que no esté apagada, que quien ejecuta sea el canal
+    // conversacional —esta salvaguarda es suya y no se le impone al servidor
+    // MCP ni al webhook— y que haya conversación con la que comparar.
     if (
       verificacion &&
       verificacion.modo !== 'off' &&
+      context.canalConversacional === true &&
       (context.recientes?.length ?? 0) > 0
     ) {
       const propuesta = await this.propuestaEnPalabras(
@@ -144,12 +147,19 @@ export class CreateReservationTool implements AssistantTool {
         // viaja para que el modelo la lea tal cual en vez de inventarla, y la
         // instrucción va en el resultado —y no en el prefijo de sistema—
         // porque así la pagan solo los turnos que la necesitan.
+        //
+        // La instrucción PROHÍBE expresamente reintentar en el mismo turno: si
+        // el modelo vuelve a llamar, la caché del bucle le devuelve esto mismo,
+        // la vuelta no trae novedad y el turno se cortaría. Y `pregunta` es la
+        // red para cuando lo haga de todos modos: el bucle la usa como
+        // respuesta antes que disculparse (ver `preguntaPendiente`).
         return {
           ok: false,
           motivo: 'confirmacion_requerida',
           propuesta,
+          pregunta: preguntaDeConfirmacion(propuesta),
           instruccion:
-            'Lee la propuesta a la clienta y pídele que confirme; si confirma, vuelve a llamar crearReserva con los mismos argumentos.',
+            'Lee la propuesta a la clienta y espera su respuesta. NO vuelvas a llamar crearReserva en este mismo turno; hazlo solo cuando ella confirme en su próximo mensaje.',
         };
       }
     }
@@ -201,6 +211,29 @@ export class CreateReservationTool implements AssistantTool {
     }
     return { servicios, fecha, hora };
   }
+}
+
+/**
+ * La frase que hay que decirle a la clienta cuando la verificación duda. La
+ * escribe la herramienta porque es la única que conoce el dato; el bucle solo
+ * decide cuándo hace falta.
+ */
+function preguntaDeConfirmacion({
+  servicios,
+  fecha,
+  hora,
+}: {
+  servicios: string[];
+  fecha: string;
+  hora: string;
+}): string {
+  const lista = servicios.length ? servicios.join(' y ') : 'el servicio';
+  const cuando = [fecha && `el ${fecha}`, hora && `a las ${hora}`]
+    .filter(Boolean)
+    .join(' ');
+  return `Antes de reservar, confírmame: ¿te agendo ${lista}${
+    cuando ? ` ${cuando}` : ''
+  }?`;
 }
 
 /** Traduce los errores de dominio de Reservas a motivos cortos y legibles. */

@@ -153,6 +153,53 @@ describe('TypeSafeJudgeAdapter', () => {
     expect(fetchDoble).toHaveBeenCalledTimes(1);
   });
 
+  it('la petición puede pedir su propio tope de espera', async () => {
+    // El juicio diferido va fuera de banda: allí nadie espera, así que puede
+    // permitirse un tope generoso sin que otro proveedor tenga que existir.
+    const fetchDoble = jest.fn(
+      (_url: string, init: { signal: AbortSignal }) =>
+        new Promise<Response>((_resolver, rechazar) => {
+          init.signal.addEventListener('abort', () =>
+            rechazar(
+              Object.assign(new Error('abortada'), { name: 'AbortError' }),
+            ),
+          );
+        }),
+    );
+    const adapter = new TypeSafeJudgeAdapter(
+      { apiKey: 'k', model: 'm', timeoutMs: 20 },
+      fetchDoble as unknown as typeof fetch,
+    );
+
+    const empezo = Date.now();
+    const res = await adapter.ask({ ...PETICION, timeoutMs: 200 });
+
+    expect(res).toMatchObject({ ok: false, error: 'timeout' });
+    // Esperó el tope de la petición, no el de la configuración.
+    expect(Date.now() - empezo).toBeGreaterThanOrEqual(150);
+  });
+
+  it('descarta el cuerpo de una respuesta que no se va a leer', async () => {
+    // Sin esto, una ráfaga de 429 o de 5xx deja cuerpos sin consumir a la
+    // espera del recolector.
+    const cancel = jest.fn().mockResolvedValue(undefined);
+    const fetchDoble = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      body: { cancel },
+      json: async () => ({}),
+      text: async () => '',
+    } as unknown as Response);
+    const adapter = new TypeSafeJudgeAdapter(
+      { apiKey: 'k', model: 'm', timeoutMs: 1000 },
+      fetchDoble,
+    );
+
+    await adapter.ask(PETICION);
+
+    expect(cancel).toHaveBeenCalled();
+  });
+
   it('un fallo de red cualquiera se normaliza a network', async () => {
     const fetchDoble = jest.fn().mockRejectedValue(new Error('ECONNRESET'));
     const adapter = new TypeSafeJudgeAdapter(

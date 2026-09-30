@@ -1,6 +1,6 @@
 {
   "juicio": "progreso",
-  "nota": "Trazas de llamadas a herramienta de un mismo turno (plan 04, T6). La repetición LITERAL ya la corta el código gratis (T1); aquí solo se juzga lo que el código no ve: los mismos fines con argumentos distintos. El fallo caro es cortar un turno que iba a converger, así que el listón es bajo. La frontera fina son los casos «otra búsqueda distinta» y «otro día tras un no hay cupo»: misma herramienta, argumentos distintos, y SÍ avanzan.",
+  "nota": "Trazas de llamadas a herramienta de un mismo turno (plan 04, T6). La repetición LITERAL ya la corta el código gratis (T1); aquí solo se juzga lo que el código no ve: los mismos fines con argumentos distintos. El fallo caro es cortar un turno que iba a converger, así que el listón es bajo. La frontera fina son los casos «otra búsqueda distinta» y «otro día tras un no hay cupo»: misma herramienta, argumentos distintos, y SÍ avanzan. Dos casos van marcados como clase `frontera` porque su etiqueta es discutible, y uno de ellos —insistir en un servicio que el catálogo no tiene— se etiquetó mal en la primera versión: «atascado» ahí no se deduce de la traza, solo de saber qué hay en el catálogo, que es información que el juicio no recibe. Se corrigió a `avanza` en vez de dejar una etiqueta que el estado no sostiene.",
   "caroSiSePasa": false,
   "casos": [
     {
@@ -37,9 +37,9 @@
       ]
     },
     {
-      "clase": "atascado",
-      "por": "insiste en un servicio que el catálogo no tiene",
-      "esperado": "atascado",
+      "clase": "frontera",
+      "por": "FRONTERA: insiste en un servicio que el catálogo no tiene, pero cambia de herramienta — «atascado» no se deduce del estado, solo de conocer el catálogo",
+      "esperado": "avanza",
       "peticion": "quiero micropigmentación de labios",
       "traza": [
         { "herramienta": "listarServicios", "argumentos": { "busqueda": "micropigmentacion" }, "resultado": "ok" },
@@ -48,8 +48,8 @@
       ]
     },
     {
-      "clase": "atascado",
-      "por": "da vueltas entre dos herramientas sin pedir nada nuevo",
+      "clase": "frontera",
+      "por": "FRONTERA: da vueltas entre dos herramientas sobre el mismo tema, pero la última llamada estrena término",
       "esperado": "atascado",
       "peticion": "¿me recomiendas algo para las uñas?",
       "traza": [

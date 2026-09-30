@@ -1,4 +1,8 @@
-import { MODOS, modoDeEntorno } from './judgment-settings';
+import {
+  MODOS,
+  ajustesDeJuicioDeEntorno,
+  modoDeEntorno,
+} from './judgment-settings';
 
 describe('modoDeEntorno', () => {
   const guardado = process.env.X_MODO;
@@ -38,4 +42,55 @@ describe('modoDeEntorno', () => {
       expect(avisos[0]).toContain('X_MODO');
     },
   );
+});
+
+describe('ajustesDeJuicioDeEntorno', () => {
+  const guardadas = { ...process.env };
+  afterEach(() => {
+    for (const k of Object.keys(process.env)) {
+      if (k.startsWith('ASSISTANT_JUDGE_')) delete process.env[k];
+    }
+    Object.assign(process.env, guardadas);
+  });
+
+  it('con proveedor disponible, respeta lo que diga el entorno', () => {
+    process.env.ASSISTANT_JUDGE_RESERVATION = 'on';
+    process.env.ASSISTANT_JUDGE_LOOP = 'shadow';
+
+    expect(ajustesDeJuicioDeEntorno(true, () => {})).toEqual({
+      reserva: 'on',
+      bucle: 'shadow',
+      orden: 'off',
+      diferido: false,
+    });
+  });
+
+  it('sin proveedor, TODO queda apagado y se avisa de lo que se ignoró', () => {
+    // El fallo que nadie relacionaría con la causa: el interruptor encendido y
+    // la clave sin aprovisionar. Antes costaba una consulta a la base por turno
+    // que reservara y no producía ni una línea de log.
+    process.env.ASSISTANT_JUDGE_RESERVATION = 'on';
+    process.env.ASSISTANT_JUDGE_DEFERRED = 'on';
+    const avisos: string[] = [];
+
+    const ajustes = ajustesDeJuicioDeEntorno(false, (m) => avisos.push(m));
+
+    expect(ajustes).toEqual({
+      reserva: 'off',
+      bucle: 'off',
+      orden: 'off',
+      diferido: false,
+    });
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]).toContain('ASSISTANT_JUDGE_RESERVATION');
+    expect(avisos[0]).toContain('ASSISTANT_JUDGE_DEFERRED');
+  });
+
+  it('sin proveedor y con todo apagado, no avisa de nada', () => {
+    const avisos: string[] = [];
+
+    ajustesDeJuicioDeEntorno(false, (m) => avisos.push(m));
+
+    expect(avisos).toHaveLength(0);
+  });
 });

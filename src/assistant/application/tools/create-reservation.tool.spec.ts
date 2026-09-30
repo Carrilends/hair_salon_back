@@ -100,12 +100,15 @@ describe('CreateReservationTool con verificación previa (plan 04, T5)', () => {
     findNamesByIds: async () => new Map([[UUID, 'Corte de dama']]),
   };
 
+  const RECIENTES: AssistantContext['recientes'] = [
+    { rol: 'clienta', texto: 'quiero un corte el viernes a las 3' },
+    { rol: 'asistente', texto: 'Perfecto, tengo ese espacio.' },
+  ];
+
   const conHistorial = (userId: string | null = 'u1'): AssistantContext => ({
     ...ctx(userId),
-    recientes: [
-      { rol: 'clienta', texto: 'quiero un corte el viernes a las 3' },
-      { rol: 'asistente', texto: 'Perfecto, tengo ese espacio.' },
-    ],
+    canalConversacional: true,
+    recientes: RECIENTES,
   });
 
   it('frena la reserva desviada y pide confirmación, sin crearla', async () => {
@@ -131,6 +134,50 @@ describe('CreateReservationTool con verificación previa (plan 04, T5)', () => {
     expect(res.motivo).toBe('confirmacion_requerida');
     expect(res.propuesta).toMatchObject({ servicios: ['Corte de dama'] });
     expect(create.calls).toBe(0);
+  });
+
+  it('deja escrita la pregunta que hay que hacerle a la clienta', async () => {
+    // El bucle la usa si el turno se quedaría sin respuesta, para que la
+    // clienta nunca lea una disculpa cuando lo que hacía falta era confirmar.
+    // La escribe la herramienta porque es la única que conoce el dato.
+    const tool = new CreateReservationTool(
+      new FakeCreateReservation(() => ({
+        id: 'r1',
+        status: 'pendiente',
+      })) as never,
+      { judge: new JuezDoble(0.08) as never, modo: 'on', catalog: catalogo },
+    );
+
+    const res = (await tool.execute(
+      { fechaHoraIso: ISO_VIERNES_15, serviciosIds: [UUID] },
+      conHistorial(),
+    )) as { pregunta: string; instruccion: string };
+
+    expect(res.pregunta).toContain('Corte de dama');
+    expect(res.pregunta).toContain('15:00');
+    expect(res.pregunta).toContain('viernes');
+    expect(res.pregunta).toMatch(/\?$/);
+  });
+
+  it('la instrucción PROHÍBE volver a llamar en el mismo turno', async () => {
+    // Si el modelo reintenta en el mismo turno, la caché de T1 le devuelve lo
+    // mismo y el bucle se corta por falta de novedad. La instrucción tiene que
+    // decirle que espere, no invitarle a reintentar.
+    const tool = new CreateReservationTool(
+      new FakeCreateReservation(() => ({
+        id: 'r1',
+        status: 'pendiente',
+      })) as never,
+      { judge: new JuezDoble(0.08) as never, modo: 'on', catalog: catalogo },
+    );
+
+    const res = (await tool.execute(
+      { fechaHoraIso: ISO_VIERNES_15, serviciosIds: [UUID] },
+      conHistorial(),
+    )) as { instruccion: string };
+
+    expect(res.instruccion).toMatch(/no vuelvas a llamar/i);
+    expect(res.instruccion).toMatch(/mismo turno/i);
   });
 
   it('deja crear la reserva que se corresponde con lo que pidió', async () => {
@@ -325,5 +372,30 @@ describe('CreateReservationTool con verificación previa (plan 04, T5)', () => {
 
     expect(res).toMatchObject({ ok: true });
     expect(create.calls).toBe(1);
+  });
+
+  it('no verifica fuera del canal conversacional, aunque llegue historial', async () => {
+    // La contención no puede depender de que `recientes` venga vacío por
+    // casualidad: el día que otro adaptador primario rellene ese campo, la
+    // salvaguarda del chat se le impondría también a él, contra la regla de que
+    // el caso de uso de Reservas lo comparten cinco adaptadores.
+    const juez = new JuezDoble(0.01);
+    const create = new FakeCreateReservation(() => ({
+      id: 'r1',
+      status: 'pendiente',
+    }));
+    const tool = new CreateReservationTool(create as never, {
+      judge: juez as never,
+      modo: 'on',
+      catalog: catalogo,
+    });
+
+    const res = await tool.execute(
+      { fechaHoraIso: ISO_VIERNES_15, serviciosIds: [UUID] },
+      { ...ctx('u1'), recientes: RECIENTES },
+    );
+
+    expect(res).toMatchObject({ ok: true });
+    expect(juez.peticiones).toHaveLength(0);
   });
 });

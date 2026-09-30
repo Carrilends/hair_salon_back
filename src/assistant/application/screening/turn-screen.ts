@@ -16,10 +16,18 @@
  *    invertidas en las instrucciones.
  * 4. Nunca se pregunta lo que el código puede decidir solo: acertar no cuesta
  *    ni una llamada.
- * 5. **Minimización**: por aquí solo pasan textos de conversación y su rol.
- *    Nunca `userId`, ni nombre, ni id de reserva, ni teléfono. El estado puede
+ * 5. **Minimización**: por aquí solo pasan textos de conversación, su rol y
+ *    —en la traza del turno— los argumentos de las herramientas **con los
+ *    identificadores sustituidos por un alias** (`sinIdentificadores`). Nunca
+ *    `userId`, ni nombre, ni id de reserva, ni teléfono. El estado puede
  *    contener datos personales escritos por la clienta, así que se manda lo
  *    mínimo para decidir y nada más.
+ *
+ *    La pertinencia (`construirPertinencia`, `UMBRAL_PERTINENCIA`) vive aquí
+ *    porque es el artefacto calibrado del banco, pero **no tiene ningún
+ *    consumidor en producción**: el filtro de entrada del plan 04 —su T9— no
+ *    está implementado y el propio plan recomienda no hacerlo. Quien lea este
+ *    módulo no debe concluir que el asistente filtra lo que le escriben.
  * 6. **Fail-open**: sin veredicto, el turno sigue por el camino de hoy.
  */
 
@@ -41,12 +49,13 @@ export const UMBRAL_PERTINENCIA = 0.1;
  * una reserva que no era toca la única operación **irreversible** del
  * asistente; un veredicto negativo, en cambio, no cancela nada: pide
  * confirmación explícita, y convertir una duda en una pregunta es barato. Su
- * valor sale del banco (T5, paso 0), no de un cookbook: en dos tandas de 18
- * casos etiquetados, las reservas correctas salieron entre 0,71 y 0,97 y las
- * desviadas entre 0,02 y 0,18. `0,7` —el «estricto» que se suponía— habría
- * dejado la reserva legítima más floja EXACTAMENTE en la línea, así que el
- * listón se pone en el punto de mayor margen por los dos lados, ligeramente
- * escorado hacia coger la desviación.
+ * valor sale del banco (T5, paso 0), no de un cookbook: sobre 18 pares
+ * etiquetados, las reservas correctas salieron entre **0,73 y 0,97** y las
+ * desviadas entre **0,02 y 0,16** (tanda del 2026-09-30; en tandas anteriores
+ * la correcta más floja bajó a 0,70). `0,7` —el «estricto» que se suponía—
+ * habría dejado esa reserva legítima EXACTAMENTE en la línea y habría empezado
+ * a pedir confirmación de reservas correctas. Con `0,5` quedan 0,23 de margen
+ * por debajo de la más floja y 0,34 por encima de la peor desviación.
  */
 export const UMBRAL_CORRESPONDENCIA = 0.5;
 
@@ -56,14 +65,20 @@ export const UMBRAL_CORRESPONDENCIA = 0.5;
  * uno atascado: cuesta las dos vueltas que faltaban hasta el tope por conteo,
  * unos $0,0004. Con esa asimetría, el listón se compra con margen.
  *
- * Y aquí el banco (T6) dio el peor resultado de los tres juicios, que también
- * es un hallazgo: en dos tandas de 14 trazas, las que avanzan salieron entre
- * 0,67 y 0,90 y las atascadas entre 0,20 y 0,59. **Solo 0,08 de separación.**
- * No hay listón que coja las seis atascadas sin acercarse peligrosamente a la
- * cadena legítima más floja —«listar, consultar, reservar», 0,67 en las dos
- * tandas—. Con 0,5 se cortan cuatro de las seis y quedan 0,17 de margen, ocho
- * veces la deriva observada; las otras dos caen en `MAX_TOOL_ITERATIONS`, que
- * sigue ahí como red final. Por esto T6 es opcional en la recomendación.
+ * El banco (T6) mide 14 trazas y las reparte en tres grupos, que es el
+ * resultado interesante: las **claramente atascadas** salen entre 0,21 y 0,45,
+ * las que **avanzan** entre 0,68 y 0,90, y dos casos de etiqueta discutible
+ * —marcados como clase `frontera` en el banco— se quedan justo en medio, entre
+ * 0,57 y 0,60. Con `0,5` se cortan las cuatro atascadas (0,05 de margen), no se
+ * corta ninguna cadena legítima (0,18 de margen) y las dos ambiguas siguen
+ * corriendo, que es el lado por el que conviene equivocarse.
+ *
+ * (Una versión anterior de este comentario hablaba de «0,08 de separación» y de
+ * que este era el peor de los juicios. Era un artefacto de una etiqueta mal
+ * puesta: un caso marcado «atascado» que solo lo era si se conocía el catálogo,
+ * información que el juicio no recibe. Corregida la etiqueta, la separación
+ * entre grupos claros es de 0,23. T6 sigue siendo opcional, pero por otra
+ * razón: T1 ya se lleva casi todo su valor gratis y sin probabilidades.)
  */
 export const UMBRAL_PROGRESO = 0.5;
 
@@ -186,6 +201,70 @@ const CRITERIOS_CORRESPONDENCIA = Object.freeze({
 
 const INSTRUCCIONES_CORRESPONDENCIA =
   'An appointment is about to be booked for the client: the services in `services`, on `date`, at `time`. `recent` holds the last messages of the conversation, oldest first. Decide whether that is the appointment she asked for. Do not judge whether `date` or `time` is a valid date or hour, whether the salon is open then, or whether the slot is free: that is already decided elsewhere. Judge only whether what is about to be booked matches what she asked for.';
+
+/**
+ * Forma de un identificador del sistema: los ids del catálogo y de las reservas
+ * son UUID (`@PrimaryGeneratedColumn('uuid')`, `@IsUUID`).
+ */
+const ES_IDENTIFICADOR =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Sustituye cada identificador por un **alias estable** dentro de la misma
+ * traza: el primero que aparece es `id_1`, el siguiente distinto `id_2`, y el
+ * que se repite recibe el alias que ya tenía.
+ *
+ * No se pueden quitar los argumentos sin más —T6 necesita justamente ver si
+ * cambian: «la misma búsqueda reescrita» frente a «otra búsqueda distinta»—,
+ * pero tampoco puede salir del país el id de la reserva de una clienta
+ * identificada. El alias conserva **la única señal que el juicio necesita**, que
+ * es si dos valores son el mismo o no, y no manda el identificador.
+ *
+ * Lo que no es un identificador viaja tal cual. Las fechas se quedan: no
+ * identifican a nadie y sin ellas el caso «el mismo día preguntado con otro
+ * formato» deja de ser detectable.
+ */
+function sinIdentificadores(
+  valor: unknown,
+  alias: Map<string, string>,
+): unknown {
+  if (typeof valor === 'string') {
+    if (!ES_IDENTIFICADOR.test(valor)) return valor;
+    const yaVisto = alias.get(valor);
+    if (yaVisto) return yaVisto;
+    const nuevo = `id_${alias.size + 1}`;
+    alias.set(valor, nuevo);
+    return nuevo;
+  }
+  if (Array.isArray(valor)) {
+    return valor.map((v) => sinIdentificadores(v, alias));
+  }
+  if (valor !== null && typeof valor === 'object') {
+    return Object.fromEntries(
+      Object.entries(valor as Record<string, unknown>).map(([k, v]) => [
+        k,
+        sinIdentificadores(v, alias),
+      ]),
+    );
+  }
+  return valor;
+}
+
+/**
+ * La traza tal como viaja en el estado: nombre de la herramienta, argumentos
+ * **sin identificadores** y cómo salió. El mapa de alias es uno por traza, de
+ * modo que dos llamadas al mismo id se ven iguales y a ids distintos, distintas.
+ */
+const llamadasDelEstado = (
+  traza: LlamadaDeLaTraza[],
+): { tool: string; arguments: unknown; result: string }[] => {
+  const alias = new Map<string, string>();
+  return traza.map((l) => ({
+    tool: l.herramienta,
+    arguments: sinIdentificadores(l.argumentos, alias),
+    result: l.resultado,
+  }));
+};
 
 /** Una llamada a herramienta ya hecha —o recién pedida— en el turno. */
 export interface LlamadaDeLaTraza {
@@ -345,11 +424,7 @@ export function construirProgreso({
   return {
     state: {
       request: peticion.trim(),
-      calls: traza.map((l) => ({
-        tool: l.herramienta,
-        arguments: l.argumentos,
-        result: l.resultado,
-      })),
+      calls: llamadasDelEstado(traza),
     },
     questions: {
       progreso: {
@@ -389,11 +464,7 @@ export function construirBalance({
   const state = {
     request: peticion.trim(),
     reply: respuesta.trim(),
-    calls: (traza ?? []).map((l) => ({
-      tool: l.herramienta,
-      arguments: l.argumentos,
-      result: l.resultado,
-    })),
+    calls: llamadasDelEstado(traza ?? []),
   };
   return {
     state,

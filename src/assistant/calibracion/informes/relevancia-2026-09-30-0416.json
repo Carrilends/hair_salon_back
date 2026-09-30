@@ -1,18 +1,18 @@
 {
   "juicio": "relevancia",
-  "fecha": "2026-09-30T03:37:58.148Z",
+  "fecha": "2026-09-30T04:16:28.286Z",
   "modeloPedido": "jev-1.13.0",
   "modeloQueRespondio": "jev-1.13.0",
   "umbralEnElCodigo": 0.5,
   "caroSiSePasa": false,
-  "nota": "Consultas del catálogo con sus candidatos tal como los devuelve `listarServicios` —por orden alfabético— y cuál debería salir primero (plan 04, T7). Aquí no se mide una probabilidad sino una POSICIÓN: el servicio evidente tiene que encabezar. En todos los casos el evidente NO es el primero por alfabeto, que es justo el defecto que la reordenación viene a corregir. Nombres inventados con el estilo del catálogo real.",
-  "entradaTotal": 7939,
-  "costeUsd": 0.00033344,
+  "nota": "Consultas del catálogo con sus candidatos tal como los devuelve `listarServicios` —por orden alfabético— y cuál debería salir primero (plan 04, T7). Aquí no se mide una probabilidad sino una POSICIÓN: el servicio evidente tiene que encabezar. En NINGÚN caso el evidente es el primero por alfabeto, que es justo el defecto que la reordenación viene a corregir; si lo fuera, ese caso puntuaría 1 incluso con el proveedor caído, porque la reordenación es estable. Lo comprueba `casos.spec.ts`. Nombres inventados con el estilo del catálogo real.",
+  "entradaTotal": 7940,
+  "costeUsd": 0.00033348,
   "latencia": {
-    "min": 219,
-    "p50": 241,
-    "p95": 622,
-    "max": 622,
+    "min": 229,
+    "p50": 258,
+    "p95": 422.0499999999997,
+    "max": 526,
     "n": 10
   },
   "porClase": {
@@ -79,7 +79,7 @@
       ],
       "primero": "Corte de dama",
       "prob": 1,
-      "ms": 438
+      "ms": 526
     },
     {
       "clase": "relevancia",
@@ -94,7 +94,7 @@
       ],
       "primero": "Pedicure spa",
       "prob": 1,
-      "ms": 266
+      "ms": 258
     },
     {
       "clase": "relevancia",
@@ -102,14 +102,14 @@
       "esperado": "primero",
       "consulta": "quiero alisar el pelo",
       "candidatos": [
-        "Alisado con keratina",
+        "Balayage",
         "Cepillado y brushing",
         "Mechas californianas",
-        "Tinte completo"
+        "Tratamiento de alisado"
       ],
-      "primero": "Alisado con keratina",
+      "primero": "Tratamiento de alisado",
       "prob": 1,
-      "ms": 230
+      "ms": 249
     },
     {
       "clase": "relevancia",
@@ -124,7 +124,7 @@
       ],
       "primero": "Maquillaje de novia",
       "prob": 1,
-      "ms": 296
+      "ms": 262
     },
     {
       "clase": "relevancia",
@@ -139,7 +139,7 @@
       ],
       "primero": "Recogido de quinceañera",
       "prob": 1,
-      "ms": 622
+      "ms": 257
     },
     {
       "clase": "relevancia",
@@ -154,7 +154,7 @@
       ],
       "primero": "Color fantasía",
       "prob": 1,
-      "ms": 230
+      "ms": 295
     },
     {
       "clase": "relevancia",
@@ -162,14 +162,14 @@
       "esperado": "primero",
       "consulta": "quiero arreglarme las cejas",
       "candidatos": [
-        "Diseño de cejas",
         "Lifting de pestañas",
         "Manicure tradicional",
+        "Perfilado de cejas",
         "Tinte de pestañas"
       ],
-      "primero": "Diseño de cejas",
+      "primero": "Perfilado de cejas",
       "prob": 1,
-      "ms": 241
+      "ms": 245
     },
     {
       "clase": "relevancia",
@@ -184,7 +184,7 @@
       ],
       "primero": "Corte infantil",
       "prob": 1,
-      "ms": 270
+      "ms": 229
     },
     {
       "clase": "relevancia",
@@ -199,7 +199,7 @@
       ],
       "primero": "Cepillado y brushing",
       "prob": 1,
-      "ms": 241
+      "ms": 258
     },
     {
       "clase": "relevancia",
@@ -207,14 +207,14 @@
       "esperado": "primero",
       "consulta": "manicure que me dure varias semanas",
       "candidatos": [
+        "Esmaltado tradicional",
+        "Manicure express",
         "Manicure semipermanente",
-        "Manicure tradicional",
-        "Pedicure spa",
-        "Uñas acrílicas"
+        "Pedicure spa"
       ],
       "primero": "Manicure semipermanente",
       "prob": 1,
-      "ms": 219
+      "ms": 274
     }
   ]
 }

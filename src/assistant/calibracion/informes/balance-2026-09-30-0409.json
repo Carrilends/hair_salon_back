@@ -1,6 +1,6 @@
 {
   "juicio": "balance",
-  "fecha": "2026-09-30T03:34:50.506Z",
+  "fecha": "2026-09-30T04:09:38.950Z",
   "modeloPedido": "jev-1.13.0",
   "modeloQueRespondio": "jev-1.13.0",
   "umbralEnElCodigo": 0.5,
@@ -9,10 +9,10 @@
   "entradaTotal": 7435,
   "costeUsd": 0.00031227,
   "latencia": {
-    "min": 239,
-    "p50": 283,
-    "p95": 753,
-    "max": 753,
+    "min": 240,
+    "p50": 271,
+    "p95": 402.3499999999999,
+    "max": 437,
     "n": 10
   },
   "porClase": {
@@ -85,7 +85,7 @@
         }
       ],
       "prob": 1,
-      "ms": 753
+      "ms": 437
     },
     {
       "clase": "intencion",
@@ -104,7 +104,7 @@
         }
       ],
       "prob": 1,
-      "ms": 289
+      "ms": 278
     },
     {
       "clase": "intencion",
@@ -123,7 +123,7 @@
         }
       ],
       "prob": 1,
-      "ms": 271
+      "ms": 360
     },
     {
       "clase": "intencion",
@@ -142,7 +142,7 @@
         }
       ],
       "prob": 1,
-      "ms": 278
+      "ms": 269
     },
     {
       "clase": "intencion",
@@ -163,7 +163,7 @@
         }
       ],
       "prob": 1,
-      "ms": 278
+      "ms": 249
     },
     {
       "clase": "intencion",
@@ -182,7 +182,7 @@
         }
       ],
       "prob": 0.84,
-      "ms": 313
+      "ms": 273
     },
     {
       "clase": "intencion",
@@ -193,7 +193,7 @@
       "respuesta": "Estamos en la Carrera 3 #1-18, en Sopó, y abrimos de lunes a viernes hasta las 8:00 p. m.",
       "traza": [],
       "prob": 1,
-      "ms": 283
+      "ms": 347
     },
     {
       "clase": "intencion",
@@ -204,7 +204,7 @@
       "respuesta": "Solo puedo ayudarte con los servicios del salón.",
       "traza": [],
       "prob": 1,
-      "ms": 363
+      "ms": 240
     },
     {
       "clase": "intencion",
@@ -215,7 +215,7 @@
       "respuesta": "¡Buenas tardes! ¿En qué te puedo ayudar?",
       "traza": [],
       "prob": 1,
-      "ms": 239
+      "ms": 252
     },
     {
       "clase": "intencion",
@@ -241,7 +241,7 @@
         }
       ],
       "prob": 1,
-      "ms": 305
+      "ms": 264
     }
   ]
 }

@@ -5,6 +5,7 @@ import {
   construirCorrespondencia,
   leerCorrespondencia,
 } from './turn-screen';
+import { preguntarConSeguridad } from './preguntar-con-seguridad';
 
 export interface VeredictoDeReserva {
   /** `false` solo cuando el modo es `on` y el juicio dijo que no se corresponde. */
@@ -75,10 +76,7 @@ export async function verificarReservaPropuesta({
   // salvaguarda es del canal conversacional y no se le impone a los demás.
   if (!peticion) return sinJuicio();
 
-  const respuesta = await judge.ask({
-    state: peticion.state,
-    questions: peticion.questions,
-  });
+  const respuesta = await preguntarConSeguridad(judge, peticion);
   if (respuesta.ok === false) {
     return { ...sinJuicio(), ms: respuesta.ms, error: respuesta.error };
   }

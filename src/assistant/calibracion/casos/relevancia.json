@@ -1,6 +1,6 @@
 {
   "juicio": "relevancia",
-  "nota": "Consultas del catálogo con sus candidatos tal como los devuelve `listarServicios` —por orden alfabético— y cuál debería salir primero (plan 04, T7). Aquí no se mide una probabilidad sino una POSICIÓN: el servicio evidente tiene que encabezar. En todos los casos el evidente NO es el primero por alfabeto, que es justo el defecto que la reordenación viene a corregir. Nombres inventados con el estilo del catálogo real.",
+  "nota": "Consultas del catálogo con sus candidatos tal como los devuelve `listarServicios` —por orden alfabético— y cuál debería salir primero (plan 04, T7). Aquí no se mide una probabilidad sino una POSICIÓN: el servicio evidente tiene que encabezar. En NINGÚN caso el evidente es el primero por alfabeto, que es justo el defecto que la reordenación viene a corregir; si lo fuera, ese caso puntuaría 1 incluso con el proveedor caído, porque la reordenación es estable. Lo comprueba `casos.spec.ts`. Nombres inventados con el estilo del catálogo real.",
   "caroSiSePasa": false,
   "casos": [
     {
@@ -24,8 +24,8 @@
       "por": "el verbo señala la técnica",
       "esperado": "primero",
       "consulta": "quiero alisar el pelo",
-      "candidatos": ["Alisado con keratina", "Cepillado y brushing", "Mechas californianas", "Tinte completo"],
-      "primero": "Alisado con keratina"
+      "candidatos": ["Balayage", "Cepillado y brushing", "Mechas californianas", "Tratamiento de alisado"],
+      "primero": "Tratamiento de alisado"
     },
     {
       "clase": "relevancia",
@@ -56,8 +56,8 @@
       "por": "cejas, no pestañas",
       "esperado": "primero",
       "consulta": "quiero arreglarme las cejas",
-      "candidatos": ["Diseño de cejas", "Lifting de pestañas", "Manicure tradicional", "Tinte de pestañas"],
-      "primero": "Diseño de cejas"
+      "candidatos": ["Lifting de pestañas", "Manicure tradicional", "Perfilado de cejas", "Tinte de pestañas"],
+      "primero": "Perfilado de cejas"
     },
     {
       "clase": "relevancia",
@@ -80,7 +80,7 @@
       "por": "la duración del servicio la dice el nombre",
       "esperado": "primero",
       "consulta": "manicure que me dure varias semanas",
-      "candidatos": ["Manicure semipermanente", "Manicure tradicional", "Pedicure spa", "Uñas acrílicas"],
+      "candidatos": ["Esmaltado tradicional", "Manicure express", "Manicure semipermanente", "Pedicure spa"],
       "primero": "Manicure semipermanente"
     }
   ]

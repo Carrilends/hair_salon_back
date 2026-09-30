@@ -7,6 +7,7 @@ import { NoopJudgeAdapter } from '../../infrastructure/judgment/noop-judge.adapt
 import { verificarReservaPropuesta } from './verify-reservation';
 
 class JuezDoble implements JudgmentPort {
+  readonly disponible = true;
   peticiones: JudgmentRequest[] = [];
   constructor(private readonly noul: number | null) {}
   async ask(request: JudgmentRequest): Promise<JudgmentResult> {
@@ -95,6 +96,27 @@ describe('verificarReservaPropuesta', () => {
     expect(veredicto.permitir).toBe(true);
     expect(veredicto.prob).toBeNull();
     expect(veredicto.error).toBe('timeout');
+  });
+
+  it('si el juez LANZA, la reserva se crea como hoy', async () => {
+    // El fail-open no puede depender de que el adaptador se porte bien. Un
+    // adaptador futuro, un envoltorio de métricas o un `AbortController` que no
+    // exista en algún runtime lanzarían, y la excepción subiría hasta el
+    // borde HTTP: 500, y la clienta pierde su mensaje y su fila de auditoría.
+    const juezQueLanza = {
+      ask: async () => {
+        throw new Error('el adaptador reventó');
+      },
+    };
+
+    const veredicto = await verificarReservaPropuesta({
+      judge: juezQueLanza as never,
+      modo: 'on',
+      ...PROPUESTA,
+    });
+
+    expect(veredicto.permitir).toBe(true);
+    expect(veredicto.prob).toBeNull();
   });
 
   it('con el adaptador nulo la reserva se crea como hoy', async () => {
