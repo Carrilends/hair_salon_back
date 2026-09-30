@@ -25,7 +25,8 @@
     "migration:revert": "yarn typeorm migration:revert",
     "migration:show": "yarn typeorm migration:show",
     "seed": "ts-node -r tsconfig-paths/register src/service/seed/seed.ts",
-    "seed:resolved": "ts-node -r tsconfig-paths/register src/service/seed/insert-resolved.ts"
+    "seed:resolved": "ts-node -r tsconfig-paths/register src/service/seed/insert-resolved.ts",
+    "banco:jev": "ts-node src/assistant/calibracion/banco-jev.ts"
   },
   "dependencies": {
     "@google/genai": "^2.21.0",
