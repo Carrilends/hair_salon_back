@@ -24,6 +24,7 @@ import {
   ASSISTANT_DAILY_LEDGER,
   ASSISTANT_SUMMARIZER,
   ASSISTANT_TOOLS,
+  ASSISTANT_JUDGMENT_TELEMETRY,
   CONVERSATION_REPOSITORY,
   JUDGMENT,
   JUDGMENT_SETTINGS,
@@ -33,9 +34,12 @@ import { JudgmentPort } from '../domain/ports/judgment.port';
 import { JudgmentSettings } from './judgment-settings';
 import {
   LlamadaDeLaTraza,
+  construirBalance,
   construirProgreso,
+  leerBalance,
   leerProgreso,
 } from './screening/turn-screen';
+import { TelemetriaDeJuicios } from './judgment-telemetry';
 
 const WINDOW_SIZE = 8;
 const SUMMARY_EVERY = 10;
@@ -113,6 +117,8 @@ export class SendMessageUseCase {
     // Opcionales de verdad: sin ellos el bucle es exactamente el de antes.
     @Inject(JUDGMENT) private readonly judge?: JudgmentPort,
     @Inject(JUDGMENT_SETTINGS) private readonly ajustes?: JudgmentSettings,
+    @Inject(ASSISTANT_JUDGMENT_TELEMETRY)
+    private readonly telemetria?: TelemetriaDeJuicios,
   ) {
     this.toolsByName = new Map(this.tools.map((t) => [t.name, t]));
   }
@@ -214,7 +220,12 @@ export class SendMessageUseCase {
     // Traza del turno para el corte semántico (T6): qué se pidió, con qué
     // argumentos y cómo salió, en orden.
     const traza: LlamadaDeLaTraza[] = [];
+    // Vueltas gastadas de verdad. Alimenta el contador de turnos que llegan a
+    // la tercera, que es la cifra que dirá si el corte semántico valió la pena
+    // y que hoy no sabe nadie. No cuesta nada: es aritmética.
+    let vueltas = 0;
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
+      vueltas = i + 1;
       const completion = await this.llm.complete({
         messages,
         tools: toolDefinitions,
@@ -340,6 +351,15 @@ export class SendMessageUseCase {
     }
 
     const saved = await this.repository.save(conversation);
+
+    this.telemetria?.anotarTurno({
+      llegoALaVuelta3: vueltas >= PRIMERA_VUELTA_QUE_SE_JUZGA,
+    });
+    // (T8) El juicio diferido va DESPUÉS de todo, sin esperarlo: si falla,
+    // nadie se entera; si tarda, nadie espera. Cero latencia en el camino
+    // crítico, que es su única razón de ser.
+    this.dispararJuicioDiferido(input.message, reply, traza);
+
     return {
       conversationId: saved.id,
       reply,
@@ -394,6 +414,56 @@ export class SendMessageUseCase {
     }
     // En sombra se pregunta, se anota y NO se actúa.
     return modo === 'shadow' ? true : avanza;
+  }
+
+  /**
+   * Juicio diferido del turno (plan 04, T8): qué le preguntaron y si la
+   * respuesta resolvió la petición, anotado en la telemetría que lee la
+   * consulta de administración.
+   *
+   * No devuelve promesa **a propósito**: quien lo llama ya entregó la
+   * respuesta. Los fallos se comen aquí; una telemetría perdida no es un
+   * problema, y una excepción suelta en un `Promise` sí lo sería.
+   *
+   * Reutiliza el mismo adaptador que las colocaciones en banda, con su timeout
+   * corto. El plan admitía uno más generoso aquí por estar fuera de banda, pero
+   * con un p95 medido de 420 ms el segundo de margen sobra, y un segundo
+   * proveedor solo para esto sería una pieza más que mantener.
+   */
+  private dispararJuicioDiferido(
+    peticion: string,
+    respuesta: string,
+    traza: LlamadaDeLaTraza[],
+  ): void {
+    const judge = this.judge;
+    if (!judge || !this.ajustes?.diferido) return;
+    const juicio = construirBalance({ peticion, respuesta, traza });
+    if (!juicio) return;
+
+    void (async () => {
+      try {
+        const r = await judge.ask({
+          state: juicio.state,
+          questions: juicio.questions,
+        });
+        if (r.ok === false) {
+          this.telemetria?.anotarJuicio({
+            intencion: null,
+            resuelta: null,
+            ms: r.ms,
+          });
+          return;
+        }
+        const { intencion, resuelta } = leerBalance(r.answers);
+        this.telemetria?.anotarJuicio({ intencion, resuelta, ms: r.ms });
+      } catch (error) {
+        this.logger.warn(
+          `El juicio diferido no llegó a anotarse: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      }
+    })();
   }
 
   /**

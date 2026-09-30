@@ -17,6 +17,7 @@ import {
 import { ClockPort } from '../domain/ports/clock.port';
 import { SYSTEM_PROMPT } from './system-prompt';
 import { JudgmentSettings } from './judgment-settings';
+import { TelemetriaDeJuicios } from './judgment-telemetry';
 
 class FakeTool implements AssistantTool {
   calls = 0;
@@ -167,6 +168,38 @@ class JuezDoble {
   }
 }
 
+/**
+ * Telemetría de pruebas que avisa cuando le anotan un juicio: el juicio
+ * diferido se dispara sin esperarlo, así que la prueba necesita una señal en
+ * vez de un `setTimeout`.
+ */
+class TelemetriaEspia extends TelemetriaDeJuicios {
+  private avisar?: () => void;
+  readonly anotado = new Promise<void>((resolver) => (this.avisar = resolver));
+  anotarJuicio(dato: Parameters<TelemetriaDeJuicios['anotarJuicio']>[0]): void {
+    super.anotarJuicio(dato);
+    this.avisar?.();
+  }
+}
+
+/** Juez que contesta el juicio diferido: un Choice y un Noul en una petición. */
+class JuezDelBalance {
+  peticiones: unknown[] = [];
+  async ask(request: unknown) {
+    this.peticiones.push(request);
+    return {
+      ok: true as const,
+      answers: {
+        intencion: { type: 'choice', choice: 'reservar', confidence: 0.9 },
+        resuelta: { type: 'noul', noul: 0.91 },
+      },
+      model: 'jev-1.13.0',
+      inputTokens: 420,
+      ms: 260,
+    };
+  }
+}
+
 const clock: ClockPort = { now: () => new Date('2026-08-19T14:00:00Z') };
 /** Reserva pequeña en pruebas: así los números del techo se leen a simple vista. */
 const RESERVA_POR_TURNO_EN_PRUEBAS = 1;
@@ -185,8 +218,9 @@ function makeUseCase(opts: {
   summarizer?: ConversationSummarizer;
   ledger?: DailyTokenLedger;
   clock?: ClockPort;
-  judge?: JuezDoble;
+  judge?: JuezDoble | JuezDelBalance;
   ajustes?: JudgmentSettings;
+  telemetria?: TelemetriaDeJuicios;
 }): SendMessageUseCase {
   return new SendMessageUseCase(
     opts.llm,
@@ -199,6 +233,7 @@ function makeUseCase(opts: {
     opts.ledger ?? new DailyTokenLedger(RESERVA_POR_TURNO_EN_PRUEBAS),
     opts.judge as never,
     opts.ajustes,
+    opts.telemetria,
   );
 }
 
@@ -909,6 +944,122 @@ describe('SendMessageUseCase', () => {
       { rol: 'asistente', texto: 'Tenemos el jueves y el viernes.' },
       { rol: 'clienta', texto: 'el viernes a las 3' },
     ]);
+  });
+
+  it('anota cada turno y cuáles llegaron a la vuelta 3, sin proveedor ninguno', async () => {
+    // La fracción de turnos que encadena tres vueltas es la cifra que dirá si
+    // el corte semántico valió la pena. Es un contador: no necesita juez.
+    const telemetria = new TelemetriaDeJuicios();
+    const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
+    const llm = new FakeLlmAdapter(vueltasConArgumentosDistintos(5));
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [tool],
+      telemetria,
+    });
+
+    await useCase.execute({ message: 'dame vueltas', userId: 'u1' });
+
+    expect(telemetria.informe()).toMatchObject({
+      turnos: 1,
+      turnosConTresVueltas: 1,
+    });
+  });
+
+  it('un turno de una sola vuelta no cuenta como turno de tres vueltas', async () => {
+    const telemetria = new TelemetriaDeJuicios();
+    const llm = new FakeLlmAdapter([
+      {
+        message: { role: 'assistant', content: 'Hola.' },
+        usage: TokenUsage.of(50, 10),
+      },
+    ]);
+    const useCase = makeUseCase({ llm, repo: new FakeRepo(null), telemetria });
+
+    await useCase.execute({ message: 'hola', userId: 'u1' });
+
+    expect(telemetria.informe()).toMatchObject({
+      turnos: 1,
+      turnosConTresVueltas: 0,
+    });
+  });
+
+  it('el juicio diferido anota la intención y si se resolvió, tras responder', async () => {
+    const telemetria = new TelemetriaEspia();
+    const juez = new JuezDelBalance();
+    const llm = new FakeLlmAdapter([
+      {
+        message: { role: 'assistant', content: 'Reservado el viernes.' },
+        usage: TokenUsage.of(50, 10),
+      },
+    ]);
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      judge: juez,
+      ajustes: { ...AJUSTES_APAGADOS, diferido: true },
+      telemetria,
+    });
+
+    const res = await useCase.execute({
+      message: 'resérvame el viernes',
+      userId: 'u1',
+    });
+
+    // La respuesta ya está: el juicio venía detrás, no delante.
+    expect(res.reply).toBe('Reservado el viernes.');
+    await telemetria.anotado;
+    expect(telemetria.informe()).toMatchObject({
+      juicios: 1,
+      sinVeredicto: 0,
+      intenciones: { reservar: 1 },
+    });
+  });
+
+  it('si el juicio diferido revienta, el turno ya estaba entregado', async () => {
+    // Fuera de banda significa fuera de banda: si falla, nadie se entera.
+    const juezRoto = {
+      ask: async () => {
+        throw new Error('el proveedor de juicios se cayó');
+      },
+    };
+    const llm = new FakeLlmAdapter([
+      {
+        message: { role: 'assistant', content: 'Hola.' },
+        usage: TokenUsage.of(50, 10),
+      },
+    ]);
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      judge: juezRoto as never,
+      ajustes: { ...AJUSTES_APAGADOS, diferido: true },
+    });
+
+    await expect(
+      useCase.execute({ message: 'hola', userId: 'u1' }),
+    ).resolves.toMatchObject({ reply: 'Hola.' });
+  });
+
+  it('con el juicio diferido apagado no se pregunta nada', async () => {
+    const juez = new JuezDelBalance();
+    const llm = new FakeLlmAdapter([
+      {
+        message: { role: 'assistant', content: 'Hola.' },
+        usage: TokenUsage.of(50, 10),
+      },
+    ]);
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      judge: juez,
+      ajustes: AJUSTES_APAGADOS,
+    });
+
+    await useCase.execute({ message: 'hola', userId: 'u1' });
+
+    expect(juez.peticiones).toHaveLength(0);
   });
 
   it('corta en la vuelta 3 cuando las llamadas no avanzan, aunque los argumentos cambien', async () => {

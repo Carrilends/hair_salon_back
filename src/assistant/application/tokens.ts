@@ -17,6 +17,14 @@ export const JUDGMENT = Symbol('JudgmentPort');
  * despliegue, no de código.
  */
 export const JUDGMENT_SETTINGS = Symbol('JudgmentSettings');
+/**
+ * Telemetría del juicio diferido y del bucle (`TelemetriaDeJuicios`). Como el
+ * libro del gasto diario, es un **singleton de proceso** y vive en memoria: son
+ * recuentos para calibrar y para la redacción, no contabilidad.
+ */
+export const ASSISTANT_JUDGMENT_TELEMETRY = Symbol(
+  'AssistantJudgmentTelemetry',
+);
 export const ASSISTANT_CLOCK = Symbol('AssistantClockPort');
 export const ASSISTANT_BUDGET = Symbol('AssistantBudget');
 export const ASSISTANT_SUMMARIZER = Symbol('ConversationSummarizer');

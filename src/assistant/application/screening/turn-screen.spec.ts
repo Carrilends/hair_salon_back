@@ -3,9 +3,12 @@ import {
   UMBRAL_CORRESPONDENCIA,
   UMBRAL_PERTINENCIA,
   UMBRAL_PROGRESO,
+  INTENCIONES,
+  construirBalance,
   construirCorrespondencia,
   construirPertinencia,
   construirProgreso,
+  leerBalance,
   leerCorrespondencia,
   leerPertinencia,
   leerProgreso,
@@ -284,5 +287,85 @@ describe('leerProgreso', () => {
 
   it('sin veredicto el bucle SIGUE: fail-open aquí significa seguir', () => {
     expect(leerProgreso({}, asked)).toEqual({ avanza: true, prob: null });
+  });
+});
+
+describe('construirBalance (juicio diferido)', () => {
+  const balance = {
+    peticion: '¿cuánto vale un corte?',
+    respuesta: 'El corte de dama cuesta $35.000 y dura 45 minutos.',
+    traza: [
+      {
+        herramienta: 'listarServicios',
+        argumentos: { busqueda: 'corte' },
+        resultado: 'ok' as const,
+      },
+    ],
+  };
+
+  it('bate las DOS preguntas en una sola petición', () => {
+    // Convención de la casa: las preguntas independientes sobre el mismo estado
+    // van juntas, corren en paralelo y salen mucho más baratas que sueltas.
+    const req = construirBalance(balance);
+
+    expect(req!.asked.sort()).toEqual(['intencion', 'resuelta']);
+  });
+
+  it('la intención es un Choice con una opción por caso y una de escape', () => {
+    // El Choice se reserva para telemetría, donde no decide nada: con un Choice
+    // que decidiera, una distribución plana podría dar la victoria por descarte.
+    const pregunta = construirBalance(balance)!.questions
+      .intencion as unknown as {
+      type: string;
+      criteria: Record<string, string>;
+    };
+
+    expect(pregunta.type).toBe('choice');
+    expect(Object.keys(pregunta.criteria).sort()).toEqual(
+      [...INTENCIONES].sort(),
+    );
+    expect(Object.keys(pregunta.criteria)).toContain('otro');
+  });
+
+  it('el estado no lleva la conversación entera: solo el turno', () => {
+    // Minimización: lo que se registra no es la conversación, son los
+    // veredictos, y lo que viaja para calcularlos es un turno.
+    expect(Object.keys(construirBalance(balance)!.state).sort()).toEqual([
+      'calls',
+      'reply',
+      'request',
+    ]);
+  });
+
+  it('sin petición o sin respuesta no se pregunta', () => {
+    expect(construirBalance({ ...balance, peticion: ' ' })).toBeNull();
+    expect(construirBalance({ ...balance, respuesta: '' })).toBeNull();
+  });
+});
+
+describe('leerBalance', () => {
+  it('devuelve la intención elegida y la probabilidad de resuelta', () => {
+    expect(
+      leerBalance({
+        intencion: { type: 'choice', choice: 'reservar', confidence: 0.9 },
+        resuelta: { type: 'noul', noul: 0.88 },
+      }),
+    ).toEqual({ intencion: 'reservar', resuelta: 0.88 });
+  });
+
+  it('una intención que no está en la lista se descarta', () => {
+    // Lo que vuelva tiene que ser una de las opciones que se ofrecieron; si no,
+    // contaría una categoría inventada en la telemetría.
+    expect(
+      leerBalance({
+        intencion: { type: 'choice', choice: 'pedir_un_prestamo' },
+        resuelta: { type: 'noul', noul: 0.5 },
+      }).intencion,
+    ).toBeNull();
+  });
+
+  it('sin respuestas devuelve nulos: la telemetría nunca inventa', () => {
+    expect(leerBalance({})).toEqual({ intencion: null, resuelta: null });
+    expect(leerBalance(undefined)).toEqual({ intencion: null, resuelta: null });
   });
 });

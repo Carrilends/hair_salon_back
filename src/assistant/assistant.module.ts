@@ -33,6 +33,7 @@ import {
   ASSISTANT_CLOCK,
   ASSISTANT_DAILY_LEDGER,
   ASSISTANT_IP_LIMITER,
+  ASSISTANT_JUDGMENT_TELEMETRY,
   ASSISTANT_SUMMARIZER,
   ASSISTANT_TOOLS,
   CONVERSATION_REPOSITORY,
@@ -41,6 +42,7 @@ import {
   LLM,
 } from './application/tokens';
 import { ajustesDeJuicioDeEntorno } from './application/judgment-settings';
+import { TelemetriaDeJuicios } from './application/judgment-telemetry';
 
 // Dos modelos, no uno: es lo que hace real el enrutamiento por coste de §6.2 (D4).
 // El `router` atiende la conversación normal y debe ser el barato; el `main` queda
@@ -139,6 +141,13 @@ const DEFAULT_JUDGMENT_TIMEOUT_MS = 1_000;
       // decide en el entorno, no en el código.
       provide: JUDGMENT_SETTINGS,
       useFactory: ajustesDeJuicioDeEntorno,
+    },
+    {
+      // Telemetría del juicio diferido y del bucle. Una sola instancia para
+      // toda la aplicación, como el libro del gasto: con más de una, cada copia
+      // contaría lo suyo y el informe no significaría nada.
+      provide: ASSISTANT_JUDGMENT_TELEMETRY,
+      useFactory: () => new TelemetriaDeJuicios(),
     },
     {
       provide: ASSISTANT_BUDGET,

@@ -82,12 +82,25 @@ export interface PreguntaNoul {
 }
 
 /**
+ * Una pregunta de una opción entre varias. **Solo para telemetría**: con un
+ * `Choice` que decidiera algo, una opción compite con las demás y una
+ * distribución plana puede darle la victoria por descarte. Lo que decide en
+ * este código son `Noul` con criterios explícitos.
+ */
+export interface PreguntaChoice {
+  type: 'choice';
+  instructions: string;
+  /** Una entrada por opción: la clave es el nombre y el valor su descripción. */
+  criteria: Record<string, string>;
+}
+
+/**
  * Lo que se le manda al proveedor de juicios, ya armado. `asked` son los ids
  * que hay que leer de vuelta: sin él, quien lee no sabe si falta alguno.
  */
 export interface PeticionDeJuicio {
   state: Record<string, unknown>;
-  questions: Record<string, PreguntaNoul>;
+  questions: Record<string, PreguntaNoul | PreguntaChoice>;
   asked: string[];
 }
 
@@ -198,6 +211,55 @@ const CRITERIOS_PROGRESO = Object.freeze({
 const INSTRUCCIONES_PROGRESO =
   'While trying to answer `request`, the assistant made the tool calls in `calls`, oldest first; the ones marked `pendiente` are the ones it is asking for now. Decide whether those calls are getting closer to answering `request`. Do not count the calls and do not judge how long the list is: judge whether they are going anywhere.';
 
+/**
+ * Las intenciones que se cuentan. Es una lista **corta y cerrada**, con una
+ * opción de escape: sin `otro`, una pregunta que no encaja se repartiría entre
+ * las demás y la telemetría contaría categorías que nadie preguntó.
+ *
+ * Son además la señal que haría real el `tier: 'router' | 'main'` que el puerto
+ * del modelo ya tiene y que hoy no se usa.
+ */
+export const INTENCIONES = [
+  'precio_o_catalogo',
+  'disponibilidad',
+  'reservar',
+  'gestionar_reserva',
+  'recomendacion',
+  'paquete_de_evento',
+  'informacion_del_salon',
+  'otro',
+] as const;
+
+export type Intencion = (typeof INTENCIONES)[number];
+
+const CRITERIOS_INTENCION: Record<string, string> = {
+  precio_o_catalogo:
+    'she asks what a service costs, how long it takes, or what the salon offers',
+  disponibilidad: 'she asks whether there is a free slot on some day or hour',
+  reservar: 'she asks to book an appointment',
+  gestionar_reserva:
+    'she asks about an appointment she already has: to see it, to cancel it or to move it',
+  recomendacion:
+    'she asks for advice about what service would suit her hair or her nails',
+  paquete_de_evento:
+    'she asks about a wedding, a graduation, a quinceanera or another event that takes several services',
+  informacion_del_salon:
+    'she asks about opening hours, the address, how to get there or how to pay',
+  otro: 'anything else, including greetings, thanks and requests the salon does not serve',
+};
+
+const INSTRUCCIONES_INTENCION =
+  'The client wrote `request` and the assistant answered `reply`, using the tool calls in `calls`. Pick what the client was after in `request`.';
+
+const CRITERIOS_RESUELTA = Object.freeze({
+  true: '`reply` gives the client what she asked for in `request`: the price, the slot, the confirmation or the advice she was after.',
+  false:
+    '`reply` apologises, says it could not do it, asks her to try another way, or answers something other than what `request` asked.',
+});
+
+const INSTRUCCIONES_RESUELTA =
+  'The client wrote `request` and the assistant answered `reply`, using the tool calls in `calls`. Decide whether `reply` actually resolved what she asked for.';
+
 /** Probabilidad de un `Noul`, o `null` si la respuesta no es un noul. */
 export function probabilidadNoul(respuesta: unknown): number | null {
   if (
@@ -286,6 +348,78 @@ export function construirProgreso({
       },
     },
     asked: ['progreso'],
+  };
+}
+
+/**
+ * El juicio **diferido** del turno (plan 04, T8): qué le preguntaron y si la
+ * respuesta resolvió la petición. Dos preguntas independientes sobre el mismo
+ * estado, batidas en **una sola petición**: corren en paralelo y salen mucho
+ * más baratas que sueltas.
+ *
+ * Se dispara **después** de responder, así que no cuesta latencia a nadie: si
+ * falla, nadie se entera; si tarda, nadie espera. Por eso aquí sí caben dos
+ * preguntas y un `Choice`, que en el camino crítico no se pagarían.
+ *
+ * **Minimización**: viaja el turno —la petición, la respuesta y las llamadas—,
+ * nunca la conversación entera, y lo que se guarda después no es el texto sino
+ * el veredicto.
+ */
+export function construirBalance({
+  peticion,
+  respuesta,
+  traza,
+}: {
+  peticion: string;
+  respuesta: string;
+  traza?: LlamadaDeLaTraza[];
+}): PeticionDeJuicio | null {
+  if (!esTexto(peticion) || !esTexto(respuesta)) return null;
+  const state = {
+    request: peticion.trim(),
+    reply: respuesta.trim(),
+    calls: (traza ?? []).map((l) => ({
+      tool: l.herramienta,
+      arguments: l.argumentos,
+      result: l.resultado,
+    })),
+  };
+  return {
+    state,
+    questions: {
+      intencion: {
+        type: 'choice',
+        instructions: INSTRUCCIONES_INTENCION,
+        criteria: CRITERIOS_INTENCION,
+      },
+      resuelta: {
+        type: 'noul',
+        instructions: INSTRUCCIONES_RESUELTA,
+        criteria: CRITERIOS_RESUELTA,
+      },
+    },
+    asked: ['intencion', 'resuelta'],
+  };
+}
+
+/**
+ * Los dos veredictos del juicio diferido. La telemetría **nunca inventa**: lo
+ * que no vuelve, o vuelve fuera de la lista de intenciones, cuenta como nulo.
+ */
+export function leerBalance(answers?: Record<string, unknown> | null): {
+  intencion: Intencion | null;
+  resuelta: number | null;
+} {
+  const elegida = answers?.intencion as { type?: unknown; choice?: unknown };
+  const nombre =
+    elegida?.type === 'choice' && typeof elegida.choice === 'string'
+      ? elegida.choice
+      : null;
+  return {
+    intencion: (INTENCIONES as readonly string[]).includes(nombre ?? '')
+      ? (nombre as Intencion)
+      : null,
+    resuelta: probabilidadNoul(answers?.resuelta),
   };
 }
 

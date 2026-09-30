@@ -5,6 +5,7 @@ import {
   ConversationRepositoryPort,
 } from '../domain/ports/conversation-repository.port';
 import { ClockPort } from '../domain/ports/clock.port';
+import { TelemetriaDeJuicios } from './judgment-telemetry';
 
 const GASTO: AssistantUsage = {
   promptTokens: 1200,
@@ -33,7 +34,13 @@ const PRESUPUESTO: AssistantBudget = {
   maxTokensPerDay: 2000,
 };
 
-function sut(opts: { repo?: FakeRepo; budget?: AssistantBudget } = {}) {
+function sut(
+  opts: {
+    repo?: FakeRepo;
+    budget?: AssistantBudget;
+    telemetria?: TelemetriaDeJuicios;
+  } = {},
+) {
   const repo = opts.repo ?? new FakeRepo();
   return {
     repo,
@@ -41,6 +48,7 @@ function sut(opts: { repo?: FakeRepo; budget?: AssistantBudget } = {}) {
       repo as never,
       clock,
       opts.budget ?? PRESUPUESTO,
+      opts.telemetria,
     ),
   };
 }
@@ -82,5 +90,29 @@ describe('GetAssistantUsageUseCase', () => {
 
     expect(informe.techoDiarioTokens).toBeNull();
     expect(informe.restanteTokens).toBeNull();
+  });
+
+  it('sin telemetría de juicios el informe no la inventa', async () => {
+    const { useCase } = sut();
+
+    expect((await useCase.execute()).juicios).toBeNull();
+  });
+
+  it('informa de los juicios y de los turnos que llegaron a la vuelta 3', async () => {
+    // Una telemetría sin lector es coste puro, así que sale por donde alguien
+    // ya mira: la consulta con la que se calibra el techo diario.
+    const telemetria = new TelemetriaDeJuicios();
+    telemetria.anotarTurno({ llegoALaVuelta3: true });
+    telemetria.anotarTurno({ llegoALaVuelta3: false });
+    telemetria.anotarJuicio({ intencion: 'reservar', resuelta: 0.9, ms: 250 });
+    const { useCase } = sut({ telemetria });
+
+    const informe = await useCase.execute();
+
+    expect(informe.juicios).toMatchObject({
+      turnos: 2,
+      turnosConTresVueltas: 1,
+      intenciones: { reservar: 1 },
+    });
   });
 });

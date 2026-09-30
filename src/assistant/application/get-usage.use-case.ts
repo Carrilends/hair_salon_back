@@ -9,8 +9,10 @@ import { inicioDelDiaDelSalon } from './salon-day';
 import {
   ASSISTANT_BUDGET,
   ASSISTANT_CLOCK,
+  ASSISTANT_JUDGMENT_TELEMETRY,
   CONVERSATION_REPOSITORY,
 } from './tokens';
+import { InformeDeJuicios, TelemetriaDeJuicios } from './judgment-telemetry';
 
 /** Lo que la peluquería necesita saber para responder «¿cuánto llevamos hoy?». */
 export interface AssistantUsageReport {
@@ -21,6 +23,14 @@ export interface AssistantUsageReport {
   techoDiarioTokens: number | null;
   /** `null` si no hay techo; nunca negativo. */
   restanteTokens: number | null;
+  /**
+   * Telemetría del juicio diferido y del bucle (plan 04, T8), o `null` si no
+   * hay ninguna montada. Sale por aquí y no por un sitio propio porque **una
+   * telemetría sin lector es coste puro**: este es el informe que la peluquería
+   * ya consulta para calibrar el techo. Se reinicia con cada despliegue, igual
+   * que el libro del gasto del día y por la misma razón.
+   */
+  juicios: InformeDeJuicios | null;
 }
 
 /**
@@ -38,6 +48,8 @@ export class GetAssistantUsageUseCase {
     private readonly repository: ConversationRepositoryPort,
     @Inject(ASSISTANT_CLOCK) private readonly clock: ClockPort,
     @Inject(ASSISTANT_BUDGET) private readonly budget: AssistantBudget,
+    @Inject(ASSISTANT_JUDGMENT_TELEMETRY)
+    private readonly telemetria?: TelemetriaDeJuicios,
   ) {}
 
   async execute(): Promise<AssistantUsageReport> {
@@ -52,6 +64,7 @@ export class GetAssistantUsageUseCase {
       techoDiarioTokens: techo,
       restanteTokens:
         techo === null ? null : Math.max(0, techo - hoy.totalTokens),
+      juicios: this.telemetria?.informe() ?? null,
     };
   }
 }

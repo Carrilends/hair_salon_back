@@ -1,0 +1,247 @@
+{
+  "juicio": "balance",
+  "fecha": "2026-09-30T03:34:50.506Z",
+  "modeloPedido": "jev-1.13.0",
+  "modeloQueRespondio": "jev-1.13.0",
+  "umbralEnElCodigo": 0.5,
+  "caroSiSePasa": false,
+  "nota": "Turnos completos (petición, respuesta y llamadas) para el juicio diferido (plan 04, T8). Aquí no hay umbral que calibrar: el Choice de intención solo cuenta y no decide nada. Lo que se mide es cuánta probabilidad recibe la intención CORRECTA, para saber si la telemetría va a decir algo o va a ser ruido.",
+  "entradaTotal": 7435,
+  "costeUsd": 0.00031227,
+  "latencia": {
+    "min": 239,
+    "p50": 283,
+    "p95": 753,
+    "max": 753,
+    "n": 10
+  },
+  "porClase": {
+    "intencion": {
+      "min": 0.84,
+      "mediana": 1,
+      "max": 1,
+      "n": 10
+    }
+  },
+  "barrido": [
+    {
+      "umbral": 0.02,
+      "falsosRechazos": [],
+      "falsosPases": []
+    },
+    {
+      "umbral": 0.05,
+      "falsosRechazos": [],
+      "falsosPases": []
+    },
+    {
+      "umbral": 0.1,
+      "falsosRechazos": [],
+      "falsosPases": []
+    },
+    {
+      "umbral": 0.2,
+      "falsosRechazos": [],
+      "falsosPases": []
+    },
+    {
+      "umbral": 0.3,
+      "falsosRechazos": [],
+      "falsosPases": []
+    },
+    {
+      "umbral": 0.5,
+      "falsosRechazos": [],
+      "falsosPases": []
+    },
+    {
+      "umbral": 0.7,
+      "falsosRechazos": [],
+      "falsosPases": []
+    },
+    {
+      "umbral": 0.9,
+      "falsosRechazos": [
+        "paquete de evento"
+      ],
+      "falsosPases": []
+    }
+  ],
+  "casos": [
+    {
+      "clase": "intencion",
+      "por": "precio",
+      "esperado": "acierta",
+      "intencion": "precio_o_catalogo",
+      "peticion": "¿cuánto vale un corte de dama?",
+      "respuesta": "El corte de dama cuesta $35.000 y dura 45 minutos.",
+      "traza": [
+        {
+          "herramienta": "listarServicios",
+          "argumentos": {
+            "busqueda": "corte"
+          },
+          "resultado": "ok"
+        }
+      ],
+      "prob": 1,
+      "ms": 753
+    },
+    {
+      "clase": "intencion",
+      "por": "disponibilidad",
+      "esperado": "acierta",
+      "intencion": "disponibilidad",
+      "peticion": "¿tienen cupo el viernes por la tarde?",
+      "respuesta": "El viernes hay espacio a las 3:00 y a las 5:00.",
+      "traza": [
+        {
+          "herramienta": "consultarDisponibilidad",
+          "argumentos": {
+            "fecha": "2026-10-02"
+          },
+          "resultado": "ok"
+        }
+      ],
+      "prob": 1,
+      "ms": 289
+    },
+    {
+      "clase": "intencion",
+      "por": "reservar",
+      "esperado": "acierta",
+      "intencion": "reservar",
+      "peticion": "resérvame el corte el viernes a las 3",
+      "respuesta": "Listo, quedó tu cita el viernes a las 3:00.",
+      "traza": [
+        {
+          "herramienta": "crearReserva",
+          "argumentos": {
+            "fechaHoraIso": "2026-10-02T20:00:00.000Z"
+          },
+          "resultado": "ok"
+        }
+      ],
+      "prob": 1,
+      "ms": 271
+    },
+    {
+      "clase": "intencion",
+      "por": "gestionar la reserva propia",
+      "esperado": "acierta",
+      "intencion": "gestionar_reserva",
+      "peticion": "necesito cancelar mi cita del jueves",
+      "respuesta": "Tu cita del jueves quedó cancelada.",
+      "traza": [
+        {
+          "herramienta": "cancelarReserva",
+          "argumentos": {
+            "reservaId": "r1"
+          },
+          "resultado": "ok"
+        }
+      ],
+      "prob": 1,
+      "ms": 278
+    },
+    {
+      "clase": "intencion",
+      "por": "recomendación",
+      "esperado": "acierta",
+      "intencion": "recomendacion",
+      "peticion": "tengo el pelo maltratado, ¿qué me recomiendan?",
+      "respuesta": "Para cabello maltratado suelo sugerir keratina o un tratamiento de hidratación.",
+      "traza": [
+        {
+          "herramienta": "recomendarServicios",
+          "argumentos": {
+            "categorias": [
+              "Alisados"
+            ]
+          },
+          "resultado": "ok"
+        }
+      ],
+      "prob": 1,
+      "ms": 278
+    },
+    {
+      "clase": "intencion",
+      "por": "paquete de evento",
+      "esperado": "acierta",
+      "intencion": "paquete_de_evento",
+      "peticion": "me caso en diciembre, ¿qué me ofrecen?",
+      "respuesta": "Para novia suelo armar peinado, maquillaje y manicure.",
+      "traza": [
+        {
+          "herramienta": "componerPaquete",
+          "argumentos": {
+            "evento": "boda"
+          },
+          "resultado": "ok"
+        }
+      ],
+      "prob": 0.84,
+      "ms": 313
+    },
+    {
+      "clase": "intencion",
+      "por": "información del salón",
+      "esperado": "acierta",
+      "intencion": "informacion_del_salon",
+      "peticion": "¿dónde quedan y hasta qué hora abren?",
+      "respuesta": "Estamos en la Carrera 3 #1-18, en Sopó, y abrimos de lunes a viernes hasta las 8:00 p. m.",
+      "traza": [],
+      "prob": 1,
+      "ms": 283
+    },
+    {
+      "clase": "intencion",
+      "por": "ajeno: cae en la opción de escape",
+      "esperado": "acierta",
+      "intencion": "otro",
+      "peticion": "¿cuál es la capital de Mongolia?",
+      "respuesta": "Solo puedo ayudarte con los servicios del salón.",
+      "traza": [],
+      "prob": 1,
+      "ms": 363
+    },
+    {
+      "clase": "intencion",
+      "por": "saludo: también es «otro»",
+      "esperado": "acierta",
+      "intencion": "otro",
+      "peticion": "buenas tardes",
+      "respuesta": "¡Buenas tardes! ¿En qué te puedo ayudar?",
+      "traza": [],
+      "prob": 1,
+      "ms": 239
+    },
+    {
+      "clase": "intencion",
+      "por": "un turno que acabó en la disculpa del bucle",
+      "esperado": "acierta",
+      "intencion": "disponibilidad",
+      "peticion": "¿qué días tienen cupo esta semana?",
+      "respuesta": "Disculpa, no logré completar la solicitud. ¿Quieres intentarlo de otra forma o reservar por el flujo web de siempre?",
+      "traza": [
+        {
+          "herramienta": "consultarDisponibilidad",
+          "argumentos": {
+            "fecha": "2026-10-01"
+          },
+          "resultado": "ok"
+        },
+        {
+          "herramienta": "consultarDisponibilidad",
+          "argumentos": {
+            "fecha": "2026-10-02"
+          },
+          "resultado": "ok"
+        }
+      ],
+      "prob": 1,
+      "ms": 305
+    }
+  ]
+}

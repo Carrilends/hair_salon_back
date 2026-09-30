@@ -27,6 +27,7 @@ import {
   UMBRAL_CORRESPONDENCIA,
   UMBRAL_PERTINENCIA,
   UMBRAL_PROGRESO,
+  construirBalance,
   construirCorrespondencia,
   construirPertinencia,
   construirProgreso,
@@ -55,9 +56,12 @@ interface Caso {
   servicios?: string[];
   fecha?: string;
   hora?: string;
-  /** Progreso. */
+  /** Progreso y balance. */
   peticion?: string;
   traza?: LlamadaDeLaTraza[];
+  /** Balance: la respuesta del asistente y la intención que se espera. */
+  respuesta?: string;
+  intencion?: string;
 }
 
 interface Banco {
@@ -80,6 +84,12 @@ const JUICIOS: Record<
     umbral: number;
     si: string;
     no: string;
+    /**
+     * Cómo se lee la probabilidad de un caso. Por defecto es el noul de la
+     * única pregunta; un juicio con varias preguntas —o con un `Choice`— dice
+     * aquí qué número es el que se mide.
+     */
+    leer?: (answers: Record<string, unknown>, caso: Caso) => number | null;
   }
 > = {
   pertinencia: {
@@ -113,6 +123,36 @@ const JUICIOS: Record<
     umbral: UMBRAL_PROGRESO,
     si: 'avanza',
     no: 'atascado',
+  },
+  /**
+   * El juicio diferido. No tiene umbral que calibrar —el `Choice` solo cuenta
+   * intenciones y no decide nada—, así que lo que se mide aquí es otra cosa:
+   * cuánta probabilidad le da el modelo a la intención CORRECTA. Sirve para
+   * saber si la telemetría va a decir algo o va a ser ruido.
+   */
+  balance: {
+    construir: (caso) =>
+      construirBalance({
+        peticion: caso.peticion ?? '',
+        respuesta: caso.respuesta ?? '',
+        traza: caso.traza ?? [],
+      }),
+    umbral: 0.5,
+    si: 'acierta',
+    no: 'falla',
+    leer: (answers, caso) => {
+      const elegida = answers.intencion as {
+        choice?: unknown;
+        probabilities?: Record<string, number>;
+      };
+      const esperada = caso.intencion ?? '';
+      const prob = Number(elegida?.probabilities?.[esperada] ?? NaN);
+      return Number.isFinite(prob)
+        ? prob
+        : elegida?.choice === esperada
+          ? 1
+          : 0;
+    },
   },
 };
 
@@ -236,7 +276,9 @@ async function main(): Promise<void> {
     }
     modeloReal = respuesta.modelo;
     entradaTotal += respuesta.entrada;
-    const prob = probabilidadNoul(respuesta.answers[peticion.asked[0]]);
+    const prob = definicion.leer
+      ? definicion.leer(respuesta.answers, caso)
+      : probabilidadNoul(respuesta.answers[peticion.asked[0]]);
     resultados.push({ ...caso, prob, ms: respuesta.ms });
 
     const conUmbral = prob === null ? null : prob >= umbral;
