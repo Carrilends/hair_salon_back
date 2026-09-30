@@ -364,4 +364,31 @@ export class ServiceCatalogQueryAdapter implements ServiceCatalogQueryPort {
 
     return groupCandidatesByTag(rows, tagNames, limitPerTag);
   }
+
+  async findPrincipalImages(ids: string[]): Promise<Map<string, string>> {
+    // Sin ids no hay nada que consultar (y `IN ()` sería SQL inválido).
+    if (ids.length === 0) return new Map();
+
+    // Se ordena por `isPrincipal` descendente y se queda la primera de cada
+    // servicio: hoy el catálogo sembrado tiene exactamente una imagen por
+    // servicio y todas marcadas como principal, pero el modelo de datos permite
+    // varias y ninguna, así que la consulta no puede dar por hecho ni una cosa
+    // ni la otra. Se descarta la URL por defecto de la columna ('/'), que
+    // significa «sin imagen» y rompería la miniatura.
+    const rows = await this.repo
+      .createQueryBuilder('s')
+      .innerJoin('s.images', 'i')
+      .where('s.id IN (:...ids)', { ids })
+      .andWhere("i.url <> '/' AND i.url <> ''")
+      .orderBy('i.isPrincipal', 'DESC')
+      .select('s.id', 'id')
+      .addSelect('i.url', 'url')
+      .getRawMany<{ id: string; url: string }>();
+
+    const porServicio = new Map<string, string>();
+    for (const row of rows) {
+      if (!porServicio.has(row.id)) porServicio.set(row.id, row.url);
+    }
+    return porServicio;
+  }
 }

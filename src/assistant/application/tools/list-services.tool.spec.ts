@@ -4,12 +4,16 @@ import {
   ServiceCatalogQueryPort,
   ServiceSearchCriteria,
 } from '../../domain/ports/service-catalog-query.port';
-import { AssistantContext } from './assistant-tool';
 
 class FakeCatalog implements ServiceCatalogQueryPort {
   lastCriteria?: ServiceSearchCriteria;
   lastLimit?: number;
-  constructor(private readonly items: AssistantServiceSummary[]) {}
+  /** Ids con los que se pidieron las imágenes, para comprobar que no sobran. */
+  idsDeImagenesPedidas?: string[];
+  constructor(
+    private readonly items: AssistantServiceSummary[],
+    private readonly imagenes: Record<string, string> = {},
+  ) {}
   async search(
     criteria: ServiceSearchCriteria,
     limit: number,
@@ -21,19 +25,19 @@ class FakeCatalog implements ServiceCatalogQueryPort {
   async findByTagNames(): Promise<Map<string, AssistantServiceSummary[]>> {
     return new Map();
   }
+  async findPrincipalImages(ids: string[]): Promise<Map<string, string>> {
+    this.idsDeImagenesPedidas = ids;
+    return new Map(
+      ids.flatMap((id) => (this.imagenes[id] ? [[id, this.imagenes[id]]] : [])),
+    );
+  }
 }
-
-const ctx: AssistantContext = {
-  userId: 'u1',
-  now: new Date('2026-08-19T14:00:00Z'),
-  isAdmin: false,
-};
 
 describe('ListServicesTool', () => {
   it('pide al catálogo un máximo de 8 resultados y propaga el texto', async () => {
     const catalog = new FakeCatalog([]);
     const tool = new ListServicesTool(catalog);
-    await tool.execute({ busqueda: 'corte' }, ctx);
+    await tool.execute({ busqueda: 'corte' });
     expect(catalog.lastLimit).toBe(8);
     expect(catalog.lastCriteria?.texto).toBe('corte');
   });
@@ -43,7 +47,7 @@ describe('ListServicesTool', () => {
       { id: 's1', name: 'Corte', price: 20000, durationMinutes: 30 },
     ]);
     const tool = new ListServicesTool(catalog);
-    const result = (await tool.execute({}, ctx)) as {
+    const result = (await tool.execute({})) as {
       servicios: Array<Record<string, unknown>>;
     };
     expect(result.servicios).toEqual([
@@ -56,10 +60,11 @@ describe('ListServicesTool', () => {
   it('traslada género y presupuesto al puerto como criterios', async () => {
     const catalog = new FakeCatalog([]);
     const tool = new ListServicesTool(catalog);
-    await tool.execute(
-      { busqueda: 'corte', genero: 'Hombre', precioMaximo: 50000 },
-      ctx,
-    );
+    await tool.execute({
+      busqueda: 'corte',
+      genero: 'Hombre',
+      precioMaximo: 50000,
+    });
     expect(catalog.lastCriteria).toEqual({
       texto: 'corte',
       genero: 'Hombre',
@@ -69,7 +74,7 @@ describe('ListServicesTool', () => {
   it('sin resultados ofrece las categorías reales del catálogo como alternativa', async () => {
     const catalog = new FakeCatalog([]);
     const tool = new ListServicesTool(catalog);
-    const result = (await tool.execute({ busqueda: 'kitesurf' }, ctx)) as {
+    const result = (await tool.execute({ busqueda: 'kitesurf' })) as {
       servicios: unknown[];
       sugerencias?: string[];
     };
@@ -88,7 +93,7 @@ describe('ListServicesTool', () => {
       { id: 's1', name: 'Corte', price: 20000, durationMinutes: 30 },
     ]);
     const tool = new ListServicesTool(catalog);
-    const result = (await tool.execute({}, ctx)) as Record<string, unknown>;
+    const result = (await tool.execute({})) as Record<string, unknown>;
     expect(result).not.toHaveProperty('sugerencias');
   });
   it('declara género como enumerado del catálogo y ambos filtros opcionales', async () => {
@@ -110,14 +115,14 @@ describe('ListServicesTool', () => {
   it('coacciona el presupuesto cuando el modelo lo emite como cadena', async () => {
     const catalog = new FakeCatalog([]);
     const tool = new ListServicesTool(catalog);
-    await tool.execute({ busqueda: 'uñas', precioMaximo: '40000' }, ctx);
+    await tool.execute({ busqueda: 'uñas', precioMaximo: '40000' });
     expect(catalog.lastCriteria?.precioMaximo).toBe(40000);
   });
 
   it('no interpreta el texto: la frase llega íntegra al puerto', async () => {
     const catalog = new FakeCatalog([]);
     const tool = new ListServicesTool(catalog);
-    await tool.execute({ busqueda: 'algo barato para las uñas' }, ctx);
+    await tool.execute({ busqueda: 'algo barato para las uñas' });
     // Trocear la frase, deducir el público o reconocer el «barato» es trabajo
     // del adaptador, el único que conoce el catálogo. Si la herramienta
     // empezara a preprocesar, la misma regla viviría en dos sitios y una de las
@@ -132,13 +137,63 @@ describe('ListServicesTool', () => {
   it('con el público en la búsqueda y además en genero, viajan los dos', async () => {
     const catalog = new FakeCatalog([]);
     const tool = new ListServicesTool(catalog);
-    await tool.execute({ busqueda: 'corte para hombre', genero: 'Mujer' }, ctx);
+    await tool.execute({ busqueda: 'corte para hombre', genero: 'Mujer' });
     // La precedencia —gana el parámetro explícito— se resuelve en el adaptador:
     // la herramienta no puede decidirla sin conocer las etiquetas del catálogo.
     expect(catalog.lastCriteria).toEqual({
       texto: 'corte para hombre',
       genero: 'Mujer',
       precioMaximo: undefined,
+    });
+  });
+
+  describe('presentar', () => {
+    // El corazón del plan 03: la imagen viaja SOLO por el canal presentado. Lo
+    // que vuelve al modelo sigue siendo la proyección pobre de RF56 c.9, porque
+    // cada campo de más se paga en tokens en la siguiente llamada.
+    it('adjunta la URL de la imagen a la tarjeta, sin tocar lo que ve el modelo', async () => {
+      const catalog = new FakeCatalog(
+        [
+          { id: 's1', name: 'Corte', price: 20000, durationMinutes: 30 },
+          { id: 's2', name: 'Manicure', price: 43000, durationMinutes: 45 },
+        ],
+        { s1: 'https://res.cloudinary.com/x/image/upload/v1/corte.jpg' },
+      );
+      const tool = new ListServicesTool(catalog);
+
+      const result = await tool.execute({ busqueda: 'corte' });
+      const presentacion = await tool.presentar(result);
+
+      expect(presentacion).toEqual({
+        tipo: 'servicios',
+        servicios: [
+          {
+            id: 's1',
+            nombre: 'Corte',
+            precio: 20000,
+            minutos: 30,
+            imagen: 'https://res.cloudinary.com/x/image/upload/v1/corte.jpg',
+          },
+          { id: 's2', nombre: 'Manicure', precio: 43000, minutos: 45 },
+        ],
+      });
+      // Lo que se le devolvió al modelo no cambió ni un campo.
+      expect((result as { servicios: unknown[] }).servicios).toEqual([
+        { id: 's1', nombre: 'Corte', precio: 20000, minutos: 30 },
+        { id: 's2', nombre: 'Manicure', precio: 43000, minutos: 45 },
+      ]);
+      expect(catalog.idsDeImagenesPedidas).toEqual(['s1', 's2']);
+    });
+
+    it('no presenta nada cuando la búsqueda vino vacía', async () => {
+      const catalog = new FakeCatalog([]);
+      const tool = new ListServicesTool(catalog);
+
+      const result = await tool.execute({ busqueda: 'unicornio' });
+
+      expect(await tool.presentar(result)).toBeNull();
+      // Y ni siquiera se molesta en consultar imágenes.
+      expect(catalog.idsDeImagenesPedidas).toBeUndefined();
     });
   });
 });

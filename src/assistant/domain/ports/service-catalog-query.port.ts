@@ -44,4 +44,16 @@ export interface ServiceCatalogQueryPort {
     tagNames: string[],
     limitPerTag: number,
   ): Promise<Map<string, AssistantServiceSummary[]>>;
+
+  /**
+   * URL de la imagen principal de cada servicio pedido, indexada por id; los que
+   * no tengan imagen sencillamente no aparecen en el mapa.
+   *
+   * Vive **aparte** de `search` a propósito, y no como un campo más de
+   * `AssistantServiceSummary`: lo que devuelve `search` se le entrega al modelo
+   * como contexto de la siguiente llamada, y una URL de Cloudinary es un campo
+   * caro que no le sirve para conversar. Las imágenes solo se consultan al
+   * construir la tarjeta, que no pasa por el LLM.
+   */
+  findPrincipalImages(ids: string[]): Promise<Map<string, string>>;
 }

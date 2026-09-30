@@ -1,4 +1,8 @@
-import { AssistantContext, AssistantTool } from './assistant-tool';
+import { AssistantTool } from './assistant-tool';
+import {
+  AssistantPresentation,
+  PresentedService,
+} from './assistant-presentation';
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
 import { ServiceCatalogQueryPort } from '../../domain/ports/service-catalog-query.port';
 import { coerceOptionalNumber } from './coerce';
@@ -65,10 +69,7 @@ export class ListServicesTool implements AssistantTool {
 
   constructor(private readonly catalog: ServiceCatalogQueryPort) {}
 
-  async execute(
-    args: Record<string, unknown>,
-    _context?: AssistantContext,
-  ): Promise<unknown> {
+  async execute(args: Record<string, unknown>): Promise<unknown> {
     const busqueda =
       typeof args.busqueda === 'string' ? args.busqueda : undefined;
     const genero = typeof args.genero === 'string' ? args.genero : undefined;
@@ -91,5 +92,34 @@ export class ListServicesTool implements AssistantTool {
     return servicios.length > 0
       ? { servicios }
       : { servicios, sugerencias: CATEGORIAS_SUGERIDAS };
+  }
+
+  /**
+   * La tarjeta del chat: los mismos servicios que vio el modelo, más la imagen.
+   *
+   * La imagen se consulta **aquí** y no en `execute` a propósito. Lo que
+   * `execute` devuelve vuelve como contexto de la siguiente llamada y se paga en
+   * tokens, así que la proyección que ve el modelo sigue siendo exactamente
+   * `{id, nombre, precio, minutos}` (RF56 c.9); la tarjeta, en cambio, va del
+   * caso de uso al navegador sin pasar por el LLM, y por eso puede permitirse
+   * una URL de Cloudinary. Esa separación es el corazón del plan 03: en cuanto
+   * una presentación se le entregue al modelo, deja de ser gratis.
+   *
+   * Cuesta una consulta más, y solo cuando hubo resultados.
+   */
+  async presentar(result: unknown): Promise<AssistantPresentation | null> {
+    const servicios = (result as { servicios?: PresentedService[] })?.servicios;
+    if (!Array.isArray(servicios) || servicios.length === 0) return null;
+
+    const imagenes = await this.catalog.findPrincipalImages(
+      servicios.map((s) => s.id),
+    );
+    return {
+      tipo: 'servicios',
+      servicios: servicios.map((s) => {
+        const imagen = imagenes.get(s.id);
+        return imagen ? { ...s, imagen } : { ...s };
+      }),
+    };
   }
 }
