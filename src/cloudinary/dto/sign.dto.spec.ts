@@ -23,8 +23,8 @@ describe('SignDto', () => {
     const errors = await validate(
       plainToInstance(SignDto, { overwrite: 'sí' }),
     );
-    expect(errors.find((e) => e.property === 'overwrite')?.constraints).toHaveProperty(
-      'isBoolean',
-    );
+    expect(
+      errors.find((e) => e.property === 'overwrite')?.constraints,
+    ).toHaveProperty('isBoolean');
   });
 });

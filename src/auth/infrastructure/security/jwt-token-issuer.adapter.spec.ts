@@ -3,7 +3,10 @@ import { createHash } from 'crypto';
 import { JwtTokenIssuerAdapter } from './jwt-token-issuer.adapter';
 
 function build(ttlSeconds = 900) {
-  return new JwtTokenIssuerAdapter(new JwtService({ secret: 'test-secret' }), ttlSeconds);
+  return new JwtTokenIssuerAdapter(
+    new JwtService({ secret: 'test-secret' }),
+    ttlSeconds,
+  );
 }
 
 describe('JwtTokenIssuerAdapter (refresh)', () => {
@@ -15,7 +18,9 @@ describe('JwtTokenIssuerAdapter (refresh)', () => {
     const adapter = build();
     const expected = createHash('sha256').update('valor').digest('hex');
     expect(adapter.hashRefreshToken('valor')).toBe(expected);
-    expect(adapter.hashRefreshToken('otro')).not.toBe(adapter.hashRefreshToken('valor'));
+    expect(adapter.hashRefreshToken('otro')).not.toBe(
+      adapter.hashRefreshToken('valor'),
+    );
   });
 
   it('issueRefreshToken entrega un valor opaco cuyo hash coincide, con familia propia', () => {

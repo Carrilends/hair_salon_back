@@ -1,4 +1,7 @@
-import { InvalidRefreshTokenError, RefreshTokenReuseDetectedError } from './errors';
+import {
+  InvalidRefreshTokenError,
+  RefreshTokenReuseDetectedError,
+} from './errors';
 
 export interface RefreshTokenProps {
   id?: string;
@@ -56,7 +59,9 @@ export class RefreshToken {
       // deriva del propio hash: el dominio no genera aleatoriedad.
       familyId: input.familyId ?? input.tokenHash,
       tokenHash: input.tokenHash,
-      expiresAt: new Date(input.now.getTime() + input.ttlDays * 24 * 60 * 60 * 1000),
+      expiresAt: new Date(
+        input.now.getTime() + input.ttlDays * 24 * 60 * 60 * 1000,
+      ),
       revokedAt: null,
       replacedByHash: null,
     });
@@ -67,9 +72,11 @@ export class RefreshToken {
   }
 
   assertUsable(now: Date): void {
-    if (this._replacedByHash !== null) throw new RefreshTokenReuseDetectedError();
+    if (this._replacedByHash !== null)
+      throw new RefreshTokenReuseDetectedError();
     if (this.isRevoked) throw new InvalidRefreshTokenError();
-    if (now.getTime() >= this.expiresAt.getTime()) throw new InvalidRefreshTokenError();
+    if (now.getTime() >= this.expiresAt.getTime())
+      throw new InvalidRefreshTokenError();
   }
 
   /**

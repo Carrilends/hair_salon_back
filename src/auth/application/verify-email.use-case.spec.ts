@@ -62,7 +62,10 @@ function deps({
         },
         invalidateAllOfType: async () => undefined,
       } as any,
-      { generate: () => ({ raw: 'r', hash: 'h' }), hash: () => 'hash-1' } as any,
+      {
+        generate: () => ({ raw: 'r', hash: 'h' }),
+        hash: () => 'hash-1',
+      } as any,
       { now: () => now } as any,
     ),
   };

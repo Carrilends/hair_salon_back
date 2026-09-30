@@ -15,7 +15,9 @@ export function parseDurationSeconds(value: string): number {
   const trimmed = value.trim();
   const match = /^(\d+)([smhd]?)$/.exec(trimmed);
   if (!match) {
-    throw new Error(`Vigencia inválida: "${value}" (use segundos o sufijos s/m/h/d)`);
+    throw new Error(
+      `Vigencia inválida: "${value}" (use segundos o sufijos s/m/h/d)`,
+    );
   }
   const amount = Number(match[1]);
   const unit = match[2] || 's';

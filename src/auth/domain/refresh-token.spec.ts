@@ -1,10 +1,18 @@
 import { RefreshToken } from './refresh-token';
-import { InvalidRefreshTokenError, RefreshTokenReuseDetectedError } from './errors';
+import {
+  InvalidRefreshTokenError,
+  RefreshTokenReuseDetectedError,
+} from './errors';
 
 const now = new Date('2026-08-04T10:00:00.000Z');
 
 function issue() {
-  return RefreshToken.issue({ userId: 'u-1', tokenHash: 'hash-1', now, ttlDays: 30 });
+  return RefreshToken.issue({
+    userId: 'u-1',
+    tokenHash: 'hash-1',
+    now,
+    ttlDays: 30,
+  });
 }
 
 describe('RefreshToken', () => {
@@ -12,7 +20,9 @@ describe('RefreshToken', () => {
     const token = issue();
     expect(token.revokedAt).toBeNull();
     expect(token.familyId).toBeTruthy();
-    expect(token.expiresAt.getTime() - now.getTime()).toBe(30 * 24 * 60 * 60 * 1000);
+    expect(token.expiresAt.getTime() - now.getTime()).toBe(
+      30 * 24 * 60 * 60 * 1000,
+    );
     expect(() => token.assertUsable(now)).not.toThrow();
   });
 
@@ -30,7 +40,9 @@ describe('RefreshToken', () => {
   it('reutilizar un token ya rotado se distingue de un token simplemente expirado', () => {
     const first = issue();
     first.rotate({ tokenHash: 'hash-2', now });
-    expect(() => first.assertUsable(now)).toThrow(RefreshTokenReuseDetectedError);
+    expect(() => first.assertUsable(now)).toThrow(
+      RefreshTokenReuseDetectedError,
+    );
 
     const other = issue();
     const tooLate = new Date('2026-09-10T10:00:00.000Z');

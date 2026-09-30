@@ -4,11 +4,7 @@ import { UserRepositoryPort } from '../domain/ports/user-repository.port';
 import { ReviewAuthorRenamerPort } from '../domain/ports/review-author-renamer.port';
 import { TokenIssuerPort } from '../domain/ports/token-issuer.port';
 import { AuthSession, buildAuthSession } from './auth-session';
-import {
-  USER_REPOSITORY,
-  REVIEW_AUTHOR_RENAMER,
-  TOKEN_ISSUER,
-} from './tokens';
+import { USER_REPOSITORY, REVIEW_AUTHOR_RENAMER, TOKEN_ISSUER } from './tokens';
 
 export interface UpdateProfileCommand {
   fullName: string;
