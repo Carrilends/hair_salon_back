@@ -15,9 +15,11 @@ import { SYSTEM_PROMPT } from './system-prompt';
 import { fechaDelSalon, inicioDelDiaDelSalon } from './salon-day';
 import { AssistantBudget } from './assistant-budget';
 import { ConversationSummarizer } from './summarize-conversation.use-case';
+import { DailyTokenLedger } from './daily-token-ledger';
 import {
   ASSISTANT_BUDGET,
   ASSISTANT_CLOCK,
+  ASSISTANT_DAILY_LEDGER,
   ASSISTANT_SUMMARIZER,
   ASSISTANT_TOOLS,
   CONVERSATION_REPOSITORY,
@@ -62,6 +64,8 @@ export interface SendMessageResult {
 @Injectable()
 export class SendMessageUseCase {
   private readonly toolsByName: Map<string, AssistantTool>;
+  /** Siembra de la cuenta del día en curso, para no lanzar varias a la vez. */
+  private siembraEnVuelo: Promise<void> | null = null;
 
   constructor(
     @Inject(LLM) private readonly llm: LlmPort,
@@ -72,17 +76,39 @@ export class SendMessageUseCase {
     @Inject(ASSISTANT_BUDGET) private readonly budget: AssistantBudget,
     @Inject(ASSISTANT_SUMMARIZER)
     private readonly summarizer: ConversationSummarizer,
+    @Inject(ASSISTANT_DAILY_LEDGER)
+    private readonly ledger: DailyTokenLedger,
   ) {
     this.toolsByName = new Map(this.tools.map((t) => [t.name, t]));
   }
 
   async execute(input: SendMessageInput): Promise<SendMessageResult> {
-    const conversation = await this.loadOrStart(input);
+    const ahora = this.clock.now();
+    const dia = fechaDelSalon(ahora);
 
-    // (0) Techo de la instalación, antes que los topes personales y para todo
-    // el mundo —administración incluida—: quien pone tope a una factura no hace
-    // excepciones. Es la última red si los otros tres fallan.
-    await this.assertDailyCeiling();
+    // (0) Techo de la instalación, lo PRIMERO y para todo el mundo
+    // —administración incluida—: quien pone tope a una factura no hace
+    // excepciones. Va antes incluso de cargar la conversación para que una
+    // petición condenada no cueste tres consultas a la base.
+    const reservado = await this.reservarEnElTecho(dia, ahora);
+    // Consumo de ESTE turno, declarado aquí porque el `finally` lo necesita
+    // para liquidar la reserva con lo que de verdad se gastó, también cuando el
+    // turno termina mal.
+    let usoDelTurno = TokenUsage.zero();
+
+    try {
+      return await this.turno(input, ahora, (u) => (usoDelTurno = u));
+    } finally {
+      if (reservado) this.ledger.liquidar(dia, usoDelTurno.total);
+    }
+  }
+
+  private async turno(
+    input: SendMessageInput,
+    ahora: Date,
+    anotarUso: (uso: TokenUsage) => void,
+  ): Promise<SendMessageResult> {
+    const conversation = await this.loadOrStart(input);
 
     // A7: los dos límites duros se comprueban ANTES de la primera llamada, para no
     // pagar por rechazar. (1) tope por conversación.
@@ -92,7 +118,7 @@ export class SendMessageUseCase {
     // anónimos se acotan por IP en el borde HTTP, T7). La consulta real la
     // implementa el repositorio TypeORM (T7); el punto de control vive aquí.
     if (input.userId) {
-      const since = new Date(this.clock.now().getTime() - DAY_MS);
+      const since = new Date(ahora.getTime() - DAY_MS);
       const dailyCount = await this.repository.countMessagesOfUserSince(
         input.userId,
         since,
@@ -108,7 +134,7 @@ export class SendMessageUseCase {
     // reanudar esta conversación (propiedad) es del borde HTTP (T7).
     const context: AssistantContext = {
       userId: input.userId,
-      now: this.clock.now(),
+      now: ahora,
       // El rol admin viaja desde el borde HTTP (JWT), nunca desde el chat. Ausente
       // ⇒ false: una omisión nunca concede privilegios.
       isAdmin: input.isAdmin ?? false,
@@ -125,7 +151,9 @@ export class SendMessageUseCase {
     // Consumo de ESTE turno, aparte del acumulado de la conversación: es lo que
     // se imputa al mensaje de respuesta para que la auditoría por mensaje
     // (`assistant_messages.prompt_tokens`) diga algo. Sin él, un abuso no se
-    // puede reconstruir: solo se vería el total de la conversación.
+    // puede reconstruir: solo se vería el total de la conversación. Se va
+    // publicando hacia fuera para que la reserva del techo se liquide con la
+    // cifra real aunque el turno acabe lanzando.
     let usoDelTurno = TokenUsage.zero();
     for (let i = 0; i < MAX_TOOL_ITERATIONS; i++) {
       const completion = await this.llm.complete({
@@ -135,6 +163,7 @@ export class SendMessageUseCase {
       // Acumular el consumo en CADA vuelta, no solo en la última.
       conversation.recordUsage(completion.usage);
       usoDelTurno = usoDelTurno.plus(completion.usage);
+      anotarUso(usoDelTurno);
 
       const toolCalls = completion.message.toolCalls ?? [];
       if (toolCalls.length === 0) {
@@ -189,6 +218,10 @@ export class SendMessageUseCase {
       const { summary, usage } = await this.summarizer.execute(conversation);
       conversation.setSummary(summary);
       conversation.recordUsage(usage);
+      // El resumen lo provocó este turno, así que su coste es de este turno.
+      conversation.imputarAlUltimoMensaje(usage);
+      usoDelTurno = usoDelTurno.plus(usage);
+      anotarUso(usoDelTurno);
     }
 
     const saved = await this.repository.save(conversation);
@@ -202,26 +235,54 @@ export class SendMessageUseCase {
   /**
    * Techo diario de tokens de toda la instalación.
    *
-   * Se falla **cerrado**: si el contador no responde, se rechaza. Un contador
-   * caído no puede convertirse en barra libre — es el mismo criterio que el
-   * plan fija para el tope por origen, y lo contrario del que rige la
-   * telemetría, donde perder una métrica nunca tumba un turno.
+   * La cuenta vive en memoria y se **reserva por adelantado** (ver
+   * `DailyTokenLedger`): sin reserva, N peticiones simultáneas leerían todas la
+   * misma cifra por debajo del techo y las N llamarían al proveedor. La base
+   * solo se consulta para sembrar la cuenta, una vez por día y por arranque.
+   *
+   * Se falla **cerrado**: si la siembra no responde, se rechaza. Un contador
+   * caído no puede convertirse en barra libre — es el mismo criterio que rige
+   * el tope por origen, y lo contrario del que rige la telemetría, donde perder
+   * una métrica nunca tumba un turno.
+   *
+   * @returns `true` si quedó una reserva que hay que liquidar.
    */
-  private async assertDailyCeiling(): Promise<void> {
-    if (this.budget.maxTokensPerDay <= 0) return;
+  private async reservarEnElTecho(dia: string, ahora: Date): Promise<boolean> {
+    const techo = this.budget.maxTokensPerDay;
+    if (techo <= 0) return false;
 
-    let gastoDelDia: number;
-    try {
-      gastoDelDia = await this.repository.sumTokensSince(
-        inicioDelDiaDelSalon(this.clock.now()),
-      );
-    } catch {
-      throw new BudgetExceededError(DAILY_CEILING_REPLY);
+    if (this.ledger.necesitaSiembra(dia)) {
+      try {
+        await this.sembrarUnaSolaVez(dia, ahora);
+      } catch {
+        throw new BudgetExceededError(DAILY_CEILING_REPLY);
+      }
     }
 
-    if (gastoDelDia >= this.budget.maxTokensPerDay) {
+    if (!this.ledger.reservar(dia, techo)) {
       throw new BudgetExceededError(DAILY_CEILING_REPLY);
     }
+    return true;
+  }
+
+  /**
+   * Siembra compartida: si varias peticiones llegan con la cuenta fría, todas
+   * esperan a la MISMA consulta en vez de disparar una cada una. Sin esto, un
+   * arranque con tráfico convierte la red de seguridad en una tormenta de
+   * agregaciones sobre `assistant_messages`.
+   */
+  private async sembrarUnaSolaVez(dia: string, ahora: Date): Promise<void> {
+    this.siembraEnVuelo ??= (async () => {
+      try {
+        const total = await this.repository.sumTokensSince(
+          inicioDelDiaDelSalon(ahora),
+        );
+        this.ledger.sembrar(dia, total);
+      } finally {
+        this.siembraEnVuelo = null;
+      }
+    })();
+    await this.siembraEnVuelo;
   }
 
   private async loadOrStart(input: SendMessageInput): Promise<Conversation> {
@@ -235,6 +296,10 @@ export class SendMessageUseCase {
         if (existing.userId && existing.userId !== input.userId) {
           throw new ConversationAccessError();
         }
+        // Quien la reanuda ya identificada se queda con ella: si no, la
+        // conversación seguiría sin dueño y sus mensajes no contarían contra
+        // ningún tope (ver `Conversation.claimBy`).
+        if (input.userId) existing.claimBy(input.userId);
         return existing;
       }
     }

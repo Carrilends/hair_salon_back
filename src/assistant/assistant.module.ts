@@ -19,14 +19,17 @@ import { GeminiLlmAdapter } from './infrastructure/llm/gemini-llm.adapter';
 import { AssistantController } from './infrastructure/http/assistant.controller';
 import { IpLimiterPruneScheduler } from './infrastructure/scheduling/ip-limiter-prune.scheduler';
 import { SlidingWindowRateLimiter } from 'src/common/rate-limit/sliding-window-rate-limiter';
+import { enteroDeEntorno } from 'src/common/config/entero-de-entorno';
 
 import { SendMessageUseCase } from './application/send-message.use-case';
 import { GetAssistantUsageUseCase } from './application/get-usage.use-case';
+import { DailyTokenLedger } from './application/daily-token-ledger';
 import { SummarizeConversationUseCase } from './application/summarize-conversation.use-case';
 import { buildAssistantTools } from './build-assistant-tools';
 import {
   ASSISTANT_BUDGET,
   ASSISTANT_CLOCK,
+  ASSISTANT_DAILY_LEDGER,
   ASSISTANT_IP_LIMITER,
   ASSISTANT_SUMMARIZER,
   ASSISTANT_TOOLS,
@@ -52,6 +55,12 @@ const DEFAULT_MAX_MESSAGES_PER_IP_PER_HOUR = 20;
 // `GET /api/assistant/usage` una vez haya tráfico real; hasta entonces es una
 // red de seguridad holgada, no un presupuesto ajustado.
 const DEFAULT_MAX_TOKENS_PER_DAY = 200_000;
+// Tokens que la cuenta del día aparta mientras un turno está en vuelo. Medido
+// el 2026-09-29: una pregunta trivial costó 1.419 de entrada y 60 de salida, y
+// el prefijo de sistema con las nueve herramientas es el grueso de eso. Se
+// redondea al alza porque pasarse solo adelanta el corte unos turnos, mientras
+// que quedarse corto reabre la carrera que la reserva viene a cerrar.
+const RESERVA_POR_TURNO = 2_000;
 
 @Module({
   imports: [
@@ -95,20 +104,29 @@ const DEFAULT_MAX_TOKENS_PER_DAY = 200_000;
     {
       provide: ASSISTANT_BUDGET,
       useFactory: () => ({
-        maxMessagesPerConversation: Number(
-          process.env.ASSISTANT_MAX_MESSAGES_PER_CONVERSATION ?? 20,
+        maxMessagesPerConversation: enteroDeEntorno(
+          'ASSISTANT_MAX_MESSAGES_PER_CONVERSATION',
+          20,
         ),
-        maxMessagesPerUserPerDay: Number(
-          process.env.ASSISTANT_MAX_MESSAGES_PER_USER_PER_DAY ?? 50,
+        maxMessagesPerUserPerDay: enteroDeEntorno(
+          'ASSISTANT_MAX_MESSAGES_PER_USER_PER_DAY',
+          50,
         ),
         // Techo de la instalación, en tokens facturables del día del salón.
         // En tokens y no en mensajes porque un turno son hasta seis llamadas al
         // modelo: contar mensajes no acota la factura. 0 = sin techo.
-        maxTokensPerDay: Number(
-          process.env.ASSISTANT_MAX_TOKENS_PER_DAY ??
-            DEFAULT_MAX_TOKENS_PER_DAY,
+        maxTokensPerDay: enteroDeEntorno(
+          'ASSISTANT_MAX_TOKENS_PER_DAY',
+          DEFAULT_MAX_TOKENS_PER_DAY,
         ),
       }),
+    },
+    {
+      // Cuenta del gasto del día. Una sola instancia para toda la aplicación:
+      // con más de una, cada copia llevaría su cuenta y el techo valdría por
+      // el número de copias.
+      provide: ASSISTANT_DAILY_LEDGER,
+      useFactory: () => new DailyTokenLedger(RESERVA_POR_TURNO),
     },
     {
       // Tope por origen del borde HTTP, para quien conversa sin sesión. En
@@ -118,9 +136,9 @@ const DEFAULT_MAX_TOKENS_PER_DAY = 200_000;
       provide: ASSISTANT_IP_LIMITER,
       useFactory: () =>
         new SlidingWindowRateLimiter(
-          Number(
-            process.env.ASSISTANT_MAX_MESSAGES_PER_IP_PER_HOUR ??
-              DEFAULT_MAX_MESSAGES_PER_IP_PER_HOUR,
+          enteroDeEntorno(
+            'ASSISTANT_MAX_MESSAGES_PER_IP_PER_HOUR',
+            DEFAULT_MAX_MESSAGES_PER_IP_PER_HOUR,
           ),
           IP_WINDOW_MS,
         ),

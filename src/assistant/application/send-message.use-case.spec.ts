@@ -1,6 +1,7 @@
 import { SendMessageUseCase } from './send-message.use-case';
 import { ConversationSummarizer } from './summarize-conversation.use-case';
 import { AssistantBudget } from './assistant-budget';
+import { DailyTokenLedger } from './daily-token-ledger';
 import { FakeLlmAdapter } from '../infrastructure/llm/fake-llm.adapter';
 import { Conversation } from '../domain/conversation';
 import { Message } from '../domain/message';
@@ -96,8 +97,10 @@ class FakeRepo implements ConversationRepositoryPort {
     private readonly existing: Conversation | null = null,
     private readonly dailyCount = 0,
   ) {}
+  vecesConsultadoElGasto = 0;
   async sumTokensSince(since: Date): Promise<number> {
     this.ventanaPedida = since;
+    this.vecesConsultadoElGasto++;
     if (this.falloDelContador) throw this.falloDelContador;
     return this.gastoDelDia;
   }
@@ -125,13 +128,16 @@ class FakeRepo implements ConversationRepositoryPort {
 
 class FakeSummarizer implements ConversationSummarizer {
   calls = 0;
+  constructor(private readonly usage: TokenUsage = TokenUsage.zero()) {}
   async execute(): Promise<{ summary: string; usage: TokenUsage }> {
     this.calls++;
-    return { summary: 'resumen generado', usage: TokenUsage.zero() };
+    return { summary: 'resumen generado', usage: this.usage };
   }
 }
 
 const clock: ClockPort = { now: () => new Date('2026-08-19T14:00:00Z') };
+/** Reserva pequeña en pruebas: así los números del techo se leen a simple vista. */
+const RESERVA_POR_TURNO_EN_PRUEBAS = 1;
 const DEFAULT_BUDGET: AssistantBudget = {
   maxMessagesPerConversation: 20,
   maxMessagesPerUserPerDay: 50,
@@ -145,14 +151,18 @@ function makeUseCase(opts: {
   tools?: AssistantTool[];
   budget?: AssistantBudget;
   summarizer?: ConversationSummarizer;
+  ledger?: DailyTokenLedger;
+  clock?: ClockPort;
 }): SendMessageUseCase {
   return new SendMessageUseCase(
     opts.llm,
     opts.repo,
     opts.tools ?? [],
-    clock,
+    opts.clock ?? clock,
     opts.budget ?? DEFAULT_BUDGET,
     opts.summarizer ?? new FakeSummarizer(),
+    // Libro nuevo por caso de uso: el estado del día no se filtra entre pruebas.
+    opts.ledger ?? new DailyTokenLedger(RESERVA_POR_TURNO_EN_PRUEBAS),
   );
 }
 
@@ -271,6 +281,41 @@ describe('SendMessageUseCase', () => {
     expect(respuesta.usage!.completionTokens).toBe(50);
   });
 
+  it('el coste del resumen se imputa al turno que lo provocó', async () => {
+    // El resumidor manda al modelo el historial ENTERO, así que es la llamada
+    // más cara de la conversación. Si su consumo se quedara solo en el total de
+    // la conversación, ni el techo diario ni la consulta de gasto —que agregan
+    // sobre los mensajes— lo verían, y la factura real sería mayor que la
+    // medida justo en las conversaciones largas.
+    const conversation = Conversation.start({ userId: 'u1' });
+    // Con ocho mensajes previos, los dos de este turno completan diez y disparan
+    // el resumen.
+    for (let i = 0; i < 8; i++) conversation.append(Message.user(`m${i}`));
+    const llm = new FakeLlmAdapter([
+      {
+        message: { role: 'assistant', content: 'Hola.' },
+        usage: TokenUsage.of(100, 20),
+      },
+    ]);
+    const repo = new FakeRepo(conversation);
+    const summarizer = new FakeSummarizer(TokenUsage.of(900, 80));
+    const useCase = makeUseCase({ llm, repo, summarizer });
+
+    await useCase.execute({
+      conversationId: 'c1',
+      message: 'hola',
+      userId: 'u1',
+    });
+
+    expect(summarizer.calls).toBe(1);
+    const guardados = repo.saved!.messages;
+    const respuesta = guardados[guardados.length - 1];
+    expect(respuesta.usage!.promptTokens).toBe(1000);
+    expect(respuesta.usage!.completionTokens).toBe(100);
+    // Y el total de la conversación no se cuenta dos veces.
+    expect(repo.saved!.usage.promptTokens).toBe(1000);
+  });
+
   describe('techo diario de la instalación', () => {
     function llmDeUnTurno(): FakeLlmAdapter {
       return new FakeLlmAdapter([
@@ -343,6 +388,112 @@ describe('SendMessageUseCase', () => {
         useCase.execute({ message: 'hola', userId: null }),
       ).rejects.toBeInstanceOf(BudgetExceededError);
       expect(llm.calls).toHaveLength(0);
+    });
+
+    it('dos turnos SIMULTÁNEOS no comparten el último hueco', async () => {
+      // El defecto: el gasto solo se escribe al terminar el turno, así que sin
+      // reserva por adelantado las dos peticiones leían la misma cifra por
+      // debajo del techo y las dos llamaban al proveedor. Con reservas de 1000
+      // y 1000 de margen, solo cabe una.
+      let soltarPrimera: (() => void) | undefined;
+      const enVuelo = new Promise<void>((r) => (soltarPrimera = r));
+      let llamadas = 0;
+      const llm = {
+        async complete() {
+          llamadas++;
+          await enVuelo;
+          return {
+            message: { role: 'assistant' as const, content: 'Hola.' },
+            usage: TokenUsage.of(50, 10),
+          };
+        },
+      };
+      const repo = new FakeRepo(null);
+      repo.gastoDelDia = 199_000;
+      const useCase = makeUseCase({
+        llm: llm as never,
+        repo,
+        budget: { ...DEFAULT_BUDGET, maxTokensPerDay: 200_000 },
+        ledger: new DailyTokenLedger(1_000),
+      });
+
+      const primera = useCase.execute({ message: 'a', userId: null });
+      const segunda = useCase
+        .execute({ message: 'b', userId: null })
+        .then(() => 'pasó')
+        .catch((e: unknown) =>
+          e instanceof BudgetExceededError ? 'rechazada' : 'otro error',
+        );
+
+      await expect(segunda).resolves.toBe('rechazada');
+      soltarPrimera!();
+      await primera;
+      // La segunda ni siquiera llegó al proveedor.
+      expect(llamadas).toBe(1);
+    });
+
+    it('la base se consulta una vez al día, no en cada turno', async () => {
+      // Antes, cada petición —incluidas las que el techo iba a rechazar—
+      // disparaba una agregación sobre `assistant_messages`. La red de
+      // seguridad se convertía en un amplificador contra Postgres durante la
+      // misma ráfaga que la activó.
+      const repo = new FakeRepo(null);
+      repo.gastoDelDia = 0;
+      const useCase = makeUseCase({
+        llm: new FakeLlmAdapter([
+          {
+            message: { role: 'assistant', content: 'Hola.' },
+            usage: TokenUsage.of(50, 10),
+          },
+          {
+            message: { role: 'assistant', content: 'Hola.' },
+            usage: TokenUsage.of(50, 10),
+          },
+        ]),
+        repo,
+        budget: { ...DEFAULT_BUDGET, maxTokensPerDay: 200_000 },
+      });
+
+      await useCase.execute({ message: 'a', userId: null });
+      await useCase.execute({ message: 'b', userId: null });
+
+      expect(repo.vecesConsultadoElGasto).toBe(1);
+    });
+
+    it('el gasto del turno se descuenta aunque el turno acabe lanzando', async () => {
+      // Los tokens ya gastados cuando el proveedor se cae no llegan a la base,
+      // porque no se guarda nada. Si tampoco se anotaran en la cuenta del día,
+      // serían gasto invisible: un proveedor inestable erosionaría el techo.
+      const libro = new DailyTokenLedger(1_000);
+      let vueltas = 0;
+      const llm = {
+        async complete() {
+          vueltas++;
+          if (vueltas === 2) throw new Error('el proveedor se cayó');
+          return {
+            message: {
+              role: 'assistant' as const,
+              content: '',
+              toolCalls: [{ id: 't1', name: 'marca', arguments: {} }],
+            },
+            usage: TokenUsage.of(400, 100),
+          };
+        },
+      };
+      const repo = new FakeRepo(null);
+      const useCase = makeUseCase({
+        llm: llm as never,
+        repo,
+        tools: [new FakeTool('marca', { ok: true })],
+        budget: { ...DEFAULT_BUDGET, maxTokensPerDay: 200_000 },
+        ledger: libro,
+      });
+
+      await expect(
+        useCase.execute({ message: 'hola', userId: null }),
+      ).rejects.toThrow('el proveedor se cayó');
+
+      expect(libro.gastoConocido).toBe(500);
     });
 
     it('la ventana es el día del salón, no las últimas 24 horas', async () => {
@@ -609,6 +760,62 @@ describe('SendMessageUseCase', () => {
       userId: 'B',
     });
     expect(res.reply).toBe('Hola');
+  });
+
+  it('al reanudarla con sesión, la conversación anónima pasa a ser de quien la reanuda', async () => {
+    // Si no se reclamase, esa conversación se quedaría sin dueño para siempre y
+    // sus mensajes no contarían contra el tope diario del usuario —que se cuenta
+    // por dueño de la conversación—, mientras que el tope por origen tampoco se
+    // le aplica por tener sesión. Sería la vía más barata para saltarse los dos.
+    const anon = Conversation.start({ userId: null });
+    const llm = new FakeLlmAdapter([
+      {
+        message: { role: 'assistant', content: 'Hola' },
+        usage: TokenUsage.of(10, 5),
+      },
+    ]);
+    const repo = new FakeRepo(anon);
+    const useCase = makeUseCase({ llm, repo });
+
+    await useCase.execute({
+      conversationId: 'c1',
+      message: 'hola',
+      userId: 'B',
+    });
+
+    expect(repo.saved!.userId).toBe('B');
+  });
+
+  it('una conversación anónima que sigue sin sesión no adquiere dueño', async () => {
+    const anon = Conversation.start({ userId: null });
+    const llm = new FakeLlmAdapter([
+      {
+        message: { role: 'assistant', content: 'Hola' },
+        usage: TokenUsage.of(10, 5),
+      },
+    ]);
+    const repo = new FakeRepo(anon);
+    const useCase = makeUseCase({ llm, repo });
+
+    await useCase.execute({
+      conversationId: 'c1',
+      message: 'hola',
+      userId: null,
+    });
+
+    expect(repo.saved!.userId).toBeNull();
+  });
+
+  it('reclamada por su dueña, ya no la puede continuar un anónimo', async () => {
+    const anon = Conversation.start({ userId: null });
+    anon.claimBy('B');
+    const llm = new FakeLlmAdapter([]);
+    const repo = new FakeRepo(anon);
+    const useCase = makeUseCase({ llm, repo });
+
+    await expect(
+      useCase.execute({ conversationId: 'c1', message: 'hola', userId: null }),
+    ).rejects.toBeInstanceOf(ConversationAccessError);
   });
 
   it('solo envía system + fecha + resumen + ventana de 8 + el mensaje nuevo', async () => {

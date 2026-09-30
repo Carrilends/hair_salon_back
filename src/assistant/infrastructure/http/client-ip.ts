@@ -1,3 +1,5 @@
+import { isIP } from 'node:net';
+
 /**
  * Cubo compartido para las peticiones cuya IP no se puede determinar. Que todas
  * caigan juntas es deliberado: sin origen conocido, el tope se aplica igual. Es
@@ -18,6 +20,12 @@ export const CLAVE_DESCONOCIDA = 'desconocida';
  * dirección del socket, y con el número de saltos del despliegue es el extremo
  * que escribió el proxy propio. Aquí no se lee `X-Forwarded-For` a mano
  * precisamente para no confiar en una cabecera que cualquiera puede escribir.
+ *
+ * Aun así, lo que llega se **valida**: con saltos declarados el valor procede
+ * de esa cabecera, y Express no comprueba que sea una dirección. Sin validar,
+ * bastaría con enviar una cadena distinta en cada petición para tener un cubo
+ * nuevo cada vez —tope infinito— y hacer crecer el mapa una entrada por
+ * petición. Lo que no es una dirección va al cubo compartido.
  */
 export function clavePorIp(req: { ip?: string }): string {
   const cruda = (req.ip ?? '').trim();
@@ -26,16 +34,20 @@ export function clavePorIp(req: { ip?: string }): string {
   // El identificador de zona (`%eth0`) describe la interfaz local, no al cliente.
   const sinZona = cruda.split('%')[0];
 
+  const familia = isIP(sinZona);
+  if (familia === 0) return CLAVE_DESCONOCIDA;
+  if (familia === 4) return sinZona;
+
   // Node entrega las conexiones IPv4 de un socket dual como `::ffff:a.b.c.d`.
   // Sin desenvolverlas, la misma máquina ocuparía dos cubos según el transporte.
   const mapeada = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/i.exec(sinZona);
   if (mapeada) return mapeada[1];
 
-  if (!sinZona.includes(':')) return sinZona;
-
   const grupos = expandirIpv6(sinZona);
-  // Una dirección que no se sabe leer se usa entera: acota menos de lo ideal,
-  // pero nunca agrupa a clientes distintos en un mismo cubo por error.
+  // Ya se sabe que es IPv6 válida, así que `expandirIpv6` solo devuelve `null`
+  // en las formas con IPv4 embebida (`::ffff:c0a8:101` ya salió arriba; queda
+  // `a::b:1.2.3.4`). Se usa entera: acota menos de lo ideal, pero nunca agrupa
+  // a clientes distintos en un mismo cubo por error.
   return grupos ? grupos.slice(0, 4).join(':') : sinZona;
 }
 

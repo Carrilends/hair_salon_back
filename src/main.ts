@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { useContainer } from 'class-validator';
 import cookieParser from 'cookie-parser';
+import { enteroDeEntorno } from './common/config/entero-de-entorno';
 
 async function bootstrap() {
   // `rawBody: true` conserva los bytes crudos de cada petición además del cuerpo
@@ -29,11 +30,15 @@ async function bootstrap() {
   // (Netlify → Railway → contenedor) hay que fijarlo; con el valor de menos,
   // todo el mundo compartiría el cubo del proxy y el tope echaría a clientas
   // reales. Ver `TRUST_PROXY_HOPS` en `.env.example`.
-  const saltosDeProxy = Number(process.env.TRUST_PROXY_HOPS ?? 0);
-  app.set('trust proxy', Number.isFinite(saltosDeProxy) ? saltosDeProxy : 0);
-  if (process.env.NODE_ENV === 'production' && !process.env.TRUST_PROXY_HOPS) {
+  const saltosDeProxy = enteroDeEntorno('TRUST_PROXY_HOPS', 0);
+  app.set('trust proxy', saltosDeProxy);
+  // El aviso mira el valor EFECTIVO, no si la variable está declarada: el
+  // `.env.example` la trae a 0 y copiarlo tal cual es lo normal al desplegar.
+  // Con 0 detrás de un proxy, `req.ip` es la dirección del proxy para todo el
+  // mundo y el tope por origen acabaría echando a clientas reales.
+  if (process.env.NODE_ENV === 'production' && saltosDeProxy === 0) {
     new Logger('Bootstrap').warn(
-      'TRUST_PROXY_HOPS sin definir en produccion: todas las peticiones compartiran el tope por origen del asistente.',
+      'TRUST_PROXY_HOPS efectivo = 0 en produccion: si hay un proxy delante, TODAS las peticiones compartiran el tope por origen del asistente. Mide el valor con GET /api/health.',
     );
   }
 

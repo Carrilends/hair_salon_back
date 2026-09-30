@@ -14,3 +14,10 @@ export const ASSISTANT_SUMMARIZER = Symbol('ConversationSummarizer');
  * infraestructura: es el mismo criterio que sigue el canal de WhatsApp.
  */
 export const ASSISTANT_IP_LIMITER = Symbol('AssistantIpRateLimiter');
+
+/**
+ * Cuenta en memoria del gasto del día (`DailyTokenLedger`). Es un **singleton
+ * de proceso**: si hubiera más de una instancia, cada una llevaría su propia
+ * cuenta y el techo valdría lo que valga multiplicado por el número de réplicas.
+ */
+export const ASSISTANT_DAILY_LEDGER = Symbol('AssistantDailyTokenLedger');

@@ -20,7 +20,7 @@ export interface ConversationProps {
  */
 export class Conversation {
   readonly id?: string;
-  readonly userId: string | null;
+  private _userId: string | null;
   private _summary: string | null;
   private readonly _messages: Message[];
   private _usage: TokenUsage;
@@ -29,7 +29,7 @@ export class Conversation {
 
   private constructor(props: ConversationProps) {
     this.id = props.id;
-    this.userId = props.userId ?? null;
+    this._userId = props.userId ?? null;
     this._summary = props.summary ?? null;
     this._messages = props.messages ?? [];
     this._usage = props.usage ?? TokenUsage.zero();
@@ -45,6 +45,28 @@ export class Conversation {
   /** Rehidrata una conversación persistida (usado por el repositorio). */
   static fromPersistence(props: ConversationProps): Conversation {
     return new Conversation(props);
+  }
+
+  get userId(): string | null {
+    return this._userId;
+  }
+
+  /**
+   * Una conversación que empezó sin sesión pasa a ser de quien la reanuda ya
+   * identificada.
+   *
+   * No es cosmética: el tope diario de mensajes se cuenta **por dueño de la
+   * conversación**, y el tope por origen no se aplica a quien tiene sesión. Una
+   * conversación que se quedara sin dueño para siempre sería, por tanto, una
+   * zona sin ningún tope —la vía más barata para saltarse los dos—. Reclamarla
+   * también cierra la puerta a que otra visitante anónima siga leyendo el
+   * historial de alguien que ya se identificó.
+   *
+   * Solo se reclama lo que no tiene dueño: la propiedad, una vez establecida,
+   * no cambia de manos.
+   */
+  claimBy(userId: string): void {
+    if (this._userId === null) this._userId = userId;
   }
 
   get summary(): string | null {
@@ -95,6 +117,32 @@ export class Conversation {
     if (this._messages.length >= maxMessages) {
       throw new BudgetExceededError();
     }
+  }
+
+  /**
+   * Suma un consumo adicional al que ya lleva imputado el último mensaje.
+   *
+   * Existe por el resumidor: su llamada manda al modelo el historial entero, así
+   * que es la más cara de la conversación, y sucede **después** de anexar la
+   * respuesta del turno. Sin imputársela a esa respuesta, su coste viviría solo
+   * en el total de la conversación, y ni el techo diario ni la consulta de
+   * gasto —que agregan sobre los mensajes— lo verían: la factura real sería
+   * mayor que la medida justo en las conversaciones largas.
+   *
+   * El último mensaje es siempre uno recién anexado en este turno, de modo que
+   * la fila aún no existe en la base y la imputación viaja con el INSERT.
+   */
+  imputarAlUltimoMensaje(extra: TokenUsage): void {
+    const ultimo = this._messages[this._messages.length - 1];
+    if (!ultimo) return;
+    this._messages[this._messages.length - 1] = Message.fromPersistence({
+      id: ultimo.id,
+      role: ultimo.role,
+      content: ultimo.content,
+      toolName: ultimo.toolName,
+      toolCallId: ultimo.toolCallId,
+      usage: (ultimo.usage ?? TokenUsage.zero()).plus(extra),
+    });
   }
 
   /** Acumula el consumo de tokens de un turno en el total de la conversación. */

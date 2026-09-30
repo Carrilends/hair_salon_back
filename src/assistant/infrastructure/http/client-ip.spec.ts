@@ -32,6 +32,31 @@ describe('clavePorIp', () => {
     expect(clavePorIp({ ip: 'fe80::1%eth0' })).toBe('fe80:0:0:0');
   });
 
+  describe('lo que no es una dirección no abre cubos nuevos', () => {
+    // Con saltos de proxy declarados, `req.ip` sale de `X-Forwarded-For`, que
+    // la escribe el cliente. Si cualquier cadena valiera como clave, bastaría
+    // con mandar una distinta en cada petición para tener tope infinito —y de
+    // paso hacer crecer el mapa una entrada por petición—.
+    it('una cadena arbitraria cae al cubo compartido', () => {
+      expect(clavePorIp({ ip: 'no-soy-una-ip' })).toBe(CLAVE_DESCONOCIDA);
+      expect(clavePorIp({ ip: 'a'.repeat(200) })).toBe(CLAVE_DESCONOCIDA);
+    });
+
+    it('una IPv6 con basura no se confunde con la red legítima que empieza igual', () => {
+      // `parseInt('12zz', 16)` es 18, así que sin validar esta dirección
+      // inventada caía en el mismo cubo que la red real `12:0:0:0::`.
+      expect(clavePorIp({ ip: '12zz:0:0:0:1:2:3:4' })).toBe(CLAVE_DESCONOCIDA);
+    });
+
+    it('una dirección con puerto pegado no es una dirección', () => {
+      expect(clavePorIp({ ip: '1.2.3.4:5678' })).toBe(CLAVE_DESCONOCIDA);
+    });
+
+    it('una IPv4 fuera de rango tampoco pasa', () => {
+      expect(clavePorIp({ ip: '999.1.1.1' })).toBe(CLAVE_DESCONOCIDA);
+    });
+  });
+
   it('sin IP devuelve una clave compartida: falla cerrado, no abierto', () => {
     expect(clavePorIp({})).toBe(CLAVE_DESCONOCIDA);
     expect(clavePorIp({ ip: '' })).toBe(CLAVE_DESCONOCIDA);
