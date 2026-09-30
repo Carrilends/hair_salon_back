@@ -13,6 +13,7 @@ import {
 import { AssistantContext, AssistantTool } from './tools/assistant-tool';
 import { AssistantPresentation } from './tools/assistant-presentation';
 import { SYSTEM_PROMPT } from './system-prompt';
+import { RECIENTES_EN_EL_ESTADO } from './screening/turn-screen';
 import { fechaDelSalon, inicioDelDiaDelSalon } from './salon-day';
 import { AssistantBudget } from './assistant-budget';
 import { ConversationSummarizer } from './summarize-conversation.use-case';
@@ -152,6 +153,21 @@ export class SendMessageUseCase {
       // El rol admin viaja desde el borde HTTP (JWT), nunca desde el chat. Ausente
       // ⇒ false: una omisión nunca concede privilegios.
       isAdmin: input.isAdmin ?? false,
+      // Los últimos mensajes, el nuevo incluido y los viejos primero. Lo pide
+      // la verificación previa a reservar (plan 04, T5): sin historial no hay
+      // con qué comparar la reserva que se va a crear. Se manda un mensaje más
+      // de los que caben en el estado a propósito: quien arma la pregunta es
+      // quien decide cuántos entran, y el nuevo es el que nunca puede faltar.
+      recientes: [
+        ...conversation.window(RECIENTES_EN_EL_ESTADO).map((m) => ({
+          rol:
+            m.role === 'assistant'
+              ? ('asistente' as const)
+              : ('clienta' as const),
+          texto: m.content,
+        })),
+        { rol: 'clienta' as const, texto: input.message },
+      ],
     };
     const messages = this.buildContext(
       conversation,

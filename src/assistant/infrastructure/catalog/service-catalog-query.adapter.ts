@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Service } from 'src/service/entities/service.entity';
 import {
   AssistantServiceSummary,
@@ -390,5 +390,16 @@ export class ServiceCatalogQueryAdapter implements ServiceCatalogQueryPort {
       if (!porServicio.has(row.id)) porServicio.set(row.id, row.url);
     }
     return porServicio;
+  }
+
+  async findNamesByIds(ids: string[]): Promise<Map<string, string>> {
+    // Sin ids no hay nada que consultar (y `IN ()` sería SQL inválido).
+    if (ids.length === 0) return new Map();
+
+    const rows = await this.repo.find({
+      where: { id: In(ids) },
+      select: ['id', 'name'],
+    });
+    return new Map(rows.map((row) => [row.id, row.name]));
   }
 }

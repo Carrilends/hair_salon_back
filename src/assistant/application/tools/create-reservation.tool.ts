@@ -1,8 +1,14 @@
+import { Logger } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { AssistantContext, AssistantTool } from './assistant-tool';
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
+import { JudgmentPort } from '../../domain/ports/judgment.port';
+import { ServiceCatalogQueryPort } from '../../domain/ports/service-catalog-query.port';
 import { CreateReservationArgsDto } from './create-reservation-args.dto';
+import { ModoDeJuicio } from '../judgment-settings';
+import { fechaYHoraEnPalabras } from '../salon-day';
+import { verificarReservaPropuesta } from '../screening/verify-reservation';
 import {
   DomainError,
   DuplicateServicesError,
@@ -25,6 +31,18 @@ export interface CreateReservationExecutor {
     serviceIds: string[];
     userId?: string | null;
   }): Promise<{ id?: string; status: string }>;
+}
+
+/**
+ * Lo que hace falta para verificar la correspondencia antes de crear (plan 04,
+ * T5). Es **opcional** en el constructor: sin ella la herramienta se comporta
+ * exactamente como antes, que es lo que necesitan el servidor MCP y las pruebas
+ * que no miran esto.
+ */
+export interface VerificacionDeReserva {
+  judge: JudgmentPort;
+  modo: ModoDeJuicio;
+  catalog: Pick<ServiceCatalogQueryPort, 'findNamesByIds'>;
 }
 
 /**
@@ -59,7 +77,12 @@ export class CreateReservationTool implements AssistantTool {
     },
   };
 
-  constructor(private readonly createReservation: CreateReservationExecutor) {}
+  private readonly logger = new Logger(CreateReservationTool.name);
+
+  constructor(
+    private readonly createReservation: CreateReservationExecutor,
+    private readonly verificacion?: VerificacionDeReserva,
+  ) {}
 
   async execute(
     args: Record<string, unknown>,
@@ -84,6 +107,53 @@ export class CreateReservationTool implements AssistantTool {
       };
     }
 
+    // Verificación de correspondencia (plan 04, T5), DESPUÉS de los dos
+    // rechazos que el código resuelve solo: no se paga un juicio —ni la
+    // consulta de nombres que lo prepara— por una petición ya rechazada.
+    const verificacion = this.verificacion;
+    // Las tres condiciones se comprueban ANTES de preparar la pregunta, porque
+    // prepararla cuesta una consulta a la base: que la colocación exista, que
+    // no esté apagada, y que haya conversación con la que comparar.
+    if (
+      verificacion &&
+      verificacion.modo !== 'off' &&
+      (context.recientes?.length ?? 0) > 0
+    ) {
+      const propuesta = await this.propuestaEnPalabras(
+        dto,
+        verificacion.catalog,
+      );
+      const veredicto = await verificarReservaPropuesta({
+        judge: verificacion.judge,
+        modo: verificacion.modo,
+        servicios: propuesta.servicios,
+        fecha: propuesta.fecha,
+        hora: propuesta.hora,
+        recientes: context.recientes,
+      });
+      if (veredicto.prob !== null) {
+        // Queda registrado siempre, también en sombra: el registro es
+        // justamente lo que permite calibrar el umbral con turnos reales.
+        this.logger.log(
+          `Juicio previo a reservar: ${veredicto.prob} (${verificacion.modo}, ${veredicto.ms} ms)` +
+            `${veredicto.habriaFrenado ? ' — habría pedido confirmación' : ''}`,
+        );
+      }
+      if (!veredicto.permitir) {
+        // No cancela nada: convierte la duda en una pregunta. La propuesta
+        // viaja para que el modelo la lea tal cual en vez de inventarla, y la
+        // instrucción va en el resultado —y no en el prefijo de sistema—
+        // porque así la pagan solo los turnos que la necesitan.
+        return {
+          ok: false,
+          motivo: 'confirmacion_requerida',
+          propuesta,
+          instruccion:
+            'Lee la propuesta a la clienta y pídele que confirme; si confirma, vuelve a llamar crearReserva con los mismos argumentos.',
+        };
+      }
+    }
+
     try {
       // A6: el caso de uso real. El asistente no es una vía privilegiada.
       const reservation = await this.createReservation.execute({
@@ -99,6 +169,37 @@ export class CreateReservationTool implements AssistantTool {
     } catch (error) {
       return { ok: false, motivo: mapDomainErrorToReason(error) };
     }
+  }
+
+  /**
+   * La reserva propuesta **en palabras**: los nombres de los servicios y el día
+   * y la hora del salón como se dirían en voz alta. La clienta habla de «un
+   * corte el viernes», nunca de un UUID en UTC.
+   *
+   * Si el catálogo no contesta se devuelven los nombres que se tengan (o
+   * ninguno) y el juicio se queda sin preguntar: fail-open también aquí, porque
+   * una consulta de nombres que revienta no puede costarle la reserva a la
+   * clienta.
+   */
+  private async propuestaEnPalabras(
+    dto: CreateReservationArgsDto,
+    catalog: VerificacionDeReserva['catalog'],
+  ): Promise<{ servicios: string[]; fecha: string; hora: string }> {
+    const { fecha, hora } = fechaYHoraEnPalabras(dto.fechaHoraIso);
+    let servicios: string[] = [];
+    try {
+      const nombres = await catalog.findNamesByIds(dto.serviciosIds);
+      servicios = dto.serviciosIds
+        .map((id) => nombres.get(id))
+        .filter((nombre): nombre is string => Boolean(nombre));
+    } catch (error) {
+      this.logger.warn(
+        `No se pudieron leer los nombres de los servicios: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
+    return { servicios, fecha, hora };
   }
 }
 

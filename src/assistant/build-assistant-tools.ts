@@ -15,12 +15,19 @@ import { ComposePackageTool } from './application/tools/compose-package.tool';
 import { ReservePackageTool } from './application/tools/reserve-package.tool';
 import { ServiceCatalogQueryAdapter } from './infrastructure/catalog/service-catalog-query.adapter';
 import { AvailabilityQueryAdapter } from './infrastructure/availability/availability-query.adapter';
+import { JudgmentPort } from './domain/ports/judgment.port';
+import { JudgmentSettings } from './application/judgment-settings';
 
 /**
  * Composición del arreglo `ASSISTANT_TOOLS` (P1 de la Fase 6: esta fase solo
  * **añade** herramientas; el bucle, el presupuesto y la telemetría no se tocan).
  * Se extrae del módulo para poder probar el registro sin levantar la DI de Nest.
  * El orden de los parámetros debe coincidir con el arreglo `inject` del módulo.
+ *
+ * `judge` y `settings` son **opcionales** (plan 04): sin ellos las herramientas
+ * son exactamente las de antes. Importa porque esta misma lista es la que
+ * publica el servidor MCP —`ASSISTANT_TOOLS`, un solo arreglo para los dos—, y
+ * montar la verificación cuando no hay proveedor se la impondría también a él.
  */
 export function buildAssistantTools(
   catalog: ServiceCatalogQueryAdapter,
@@ -29,11 +36,17 @@ export function buildAssistantTools(
   getMyReservations: GetMyReservationsUseCase,
   cancelReservation: CancelReservationUseCase,
   rescheduleReservation: RescheduleReservationUseCase,
+  judge?: JudgmentPort,
+  settings?: JudgmentSettings,
 ): AssistantTool[] {
+  // Verificación de correspondencia previa a crear (T5). Se monta solo si hay
+  // proveedor; que esté encendida o apagada lo decide el propio modo.
+  const verificacion =
+    judge && settings ? { judge, modo: settings.reserva, catalog } : undefined;
   return [
     new ListServicesTool(catalog),
     new CheckAvailabilityTool(availability),
-    new CreateReservationTool(createReservation),
+    new CreateReservationTool(createReservation, verificacion),
     new MyReservationsTool(getMyReservations),
     new CancelReservationTool(cancelReservation),
     new RescheduleReservationTool(rescheduleReservation),

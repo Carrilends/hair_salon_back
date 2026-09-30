@@ -820,6 +820,48 @@ describe('SendMessageUseCase', () => {
     expect(repo.saved?.messages).toHaveLength(2);
   });
 
+  it('las herramientas reciben los últimos mensajes y el nuevo, los viejos primero', async () => {
+    // Lo necesita la verificación previa a reservar (plan 04, T5): sin
+    // historial no hay con qué comparar la reserva que se va a crear. Lo
+    // rellena SOLO este bucle; MCP y el webhook de WhatsApp no tienen
+    // conversación y dejan el campo sin poner, de modo que allí no se juzga.
+    const conversation = Conversation.start({ userId: 'u1' });
+    conversation.append(Message.user('quiero un corte'));
+    conversation.append(Message.assistant('Tenemos el jueves y el viernes.'));
+    const tool = new ContextCapturingTool('crearReserva');
+    const llm = new FakeLlmAdapter([
+      {
+        message: {
+          role: 'assistant',
+          content: '',
+          toolCalls: [{ id: 't1', name: 'crearReserva', arguments: {} }],
+        },
+        usage: TokenUsage.of(10, 5),
+      },
+      {
+        message: { role: 'assistant', content: 'Reservado.' },
+        usage: TokenUsage.of(10, 5),
+      },
+    ]);
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(conversation),
+      tools: [tool],
+    });
+
+    await useCase.execute({
+      conversationId: 'c1',
+      message: 'el viernes a las 3',
+      userId: 'u1',
+    });
+
+    expect(tool.lastContext!.recientes).toEqual([
+      { rol: 'clienta', texto: 'quiero un corte' },
+      { rol: 'asistente', texto: 'Tenemos el jueves y el viernes.' },
+      { rol: 'clienta', texto: 'el viernes a las 3' },
+    ]);
+  });
+
   it('corta con cortesía cuando el modelo repite la MISMA llamada con los mismos argumentos', async () => {
     // El turno más caro que existe es el que agota las cinco vueltas pidiendo
     // siempre lo mismo. Repetir herramienta Y argumentos dentro del mismo turno

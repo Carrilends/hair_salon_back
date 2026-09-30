@@ -11,6 +11,12 @@ export const ASSISTANT_TOOLS = Symbol('AssistantTools');
  * configurada se inyecta el adaptador nulo y todo pasa igual que hoy.
  */
 export const JUDGMENT = Symbol('JudgmentPort');
+/**
+ * Qué colocaciones del juicio están encendidas (`JudgmentSettings`). Se lee del
+ * entorno una vez, al arrancar: encender una colocación es una decisión de
+ * despliegue, no de código.
+ */
+export const JUDGMENT_SETTINGS = Symbol('JudgmentSettings');
 export const ASSISTANT_CLOCK = Symbol('AssistantClockPort');
 export const ASSISTANT_BUDGET = Symbol('AssistantBudget');
 export const ASSISTANT_SUMMARIZER = Symbol('ConversationSummarizer');

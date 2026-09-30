@@ -1,4 +1,5 @@
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
+import { MensajeReciente } from '../screening/turn-screen';
 import { AssistantPresentation } from './assistant-presentation';
 
 /** Contexto de ejecución que el bucle inyecta a cada herramienta en cada turno. */
@@ -12,6 +13,17 @@ export interface AssistantContext {
    * puede fijarlo. Habilita la cancelación de administración de §6.4 (Fase 6).
    */
   isAdmin: boolean;
+  /**
+   * Últimos mensajes de la conversación, los más viejos primero. Lo rellena
+   * **solo** el bucle del asistente; los otros adaptadores primarios —MCP,
+   * webhook de WhatsApp, cron— no tienen conversación y lo dejan sin poner.
+   *
+   * Existe para la verificación de correspondencia previa a crear una reserva
+   * (plan 04, T5): sin historial no hay con qué comparar lo que se va a
+   * reservar, y esa salvaguarda es del canal conversacional, no una regla que
+   * se le imponga a los demás.
+   */
+  recientes?: MensajeReciente[];
 }
 
 /**

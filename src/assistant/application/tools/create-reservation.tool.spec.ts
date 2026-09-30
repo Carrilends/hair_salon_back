@@ -77,3 +77,253 @@ describe('CreateReservationTool', () => {
     });
   });
 });
+
+describe('CreateReservationTool con verificación previa (plan 04, T5)', () => {
+  const ISO_VIERNES_15 = '2026-10-02T20:00:00.000Z';
+
+  class JuezDoble {
+    peticiones: { state: Record<string, unknown> }[] = [];
+    constructor(private readonly noul: number) {}
+    async ask(request: { state: Record<string, unknown> }) {
+      this.peticiones.push(request);
+      return {
+        ok: true as const,
+        answers: { correspondencia: { type: 'noul', noul: this.noul } },
+        model: 'jev-1.13.0',
+        inputTokens: 300,
+        ms: 240,
+      };
+    }
+  }
+
+  const catalogo = {
+    findNamesByIds: async () => new Map([[UUID, 'Corte de dama']]),
+  };
+
+  const conHistorial = (userId: string | null = 'u1'): AssistantContext => ({
+    ...ctx(userId),
+    recientes: [
+      { rol: 'clienta', texto: 'quiero un corte el viernes a las 3' },
+      { rol: 'asistente', texto: 'Perfecto, tengo ese espacio.' },
+    ],
+  });
+
+  it('frena la reserva desviada y pide confirmación, sin crearla', async () => {
+    // El veredicto negativo NO cancela ni bloquea en silencio: convierte la
+    // duda en una pregunta, que es lo barato. Y viaja la propuesta para que el
+    // modelo la lea tal cual en vez de inventarla.
+    const create = new FakeCreateReservation(() => ({
+      id: 'r1',
+      status: 'pendiente',
+    }));
+    const tool = new CreateReservationTool(create as never, {
+      judge: new JuezDoble(0.08) as never,
+      modo: 'on',
+      catalog: catalogo,
+    });
+
+    const res = (await tool.execute(
+      { fechaHoraIso: ISO_VIERNES_15, serviciosIds: [UUID] },
+      conHistorial(),
+    )) as { ok: boolean; motivo: string; propuesta: Record<string, unknown> };
+
+    expect(res.ok).toBe(false);
+    expect(res.motivo).toBe('confirmacion_requerida');
+    expect(res.propuesta).toMatchObject({ servicios: ['Corte de dama'] });
+    expect(create.calls).toBe(0);
+  });
+
+  it('deja crear la reserva que se corresponde con lo que pidió', async () => {
+    const create = new FakeCreateReservation(() => ({
+      id: 'r1',
+      status: 'pendiente',
+    }));
+    const tool = new CreateReservationTool(create as never, {
+      judge: new JuezDoble(0.95) as never,
+      modo: 'on',
+      catalog: catalogo,
+    });
+
+    const res = await tool.execute(
+      { fechaHoraIso: ISO_VIERNES_15, serviciosIds: [UUID] },
+      conHistorial(),
+    );
+
+    expect(res).toMatchObject({ ok: true, reservaId: 'r1' });
+    expect(create.calls).toBe(1);
+  });
+
+  it('en sombra pregunta pero crea igual', async () => {
+    const create = new FakeCreateReservation(() => ({
+      id: 'r1',
+      status: 'pendiente',
+    }));
+    const juez = new JuezDoble(0.08);
+    const tool = new CreateReservationTool(create as never, {
+      judge: juez as never,
+      modo: 'shadow',
+      catalog: catalogo,
+    });
+
+    const res = await tool.execute(
+      { fechaHoraIso: ISO_VIERNES_15, serviciosIds: [UUID] },
+      conHistorial(),
+    );
+
+    expect(res).toMatchObject({ ok: true });
+    expect(juez.peticiones).toHaveLength(1);
+  });
+
+  it('no paga un juicio por lo que ya está rechazado: sin sesión ni con argumentos malos', async () => {
+    // «Nunca se llama si el código puede decidir solo»: acertar no cuesta ni
+    // una llamada.
+    const juez = new JuezDoble(0.95);
+    const create = new FakeCreateReservation(() => ({
+      id: 'r1',
+      status: 'pendiente',
+    }));
+    const tool = new CreateReservationTool(create as never, {
+      judge: juez as never,
+      modo: 'on',
+      catalog: catalogo,
+    });
+
+    await tool.execute(
+      { fechaHoraIso: ISO_VIERNES_15, serviciosIds: [UUID] },
+      conHistorial(null),
+    );
+    await tool.execute(
+      { fechaHoraIso: 'no-es-fecha', serviciosIds: [] },
+      conHistorial(),
+    );
+
+    expect(juez.peticiones).toHaveLength(0);
+  });
+
+  it('al proveedor le llegan los NOMBRES del catálogo y el día en palabras', async () => {
+    const juez = new JuezDoble(0.95);
+    const tool = new CreateReservationTool(
+      new FakeCreateReservation(() => ({
+        id: 'r1',
+        status: 'pendiente',
+      })) as never,
+      { judge: juez as never, modo: 'on', catalog: catalogo },
+    );
+
+    await tool.execute(
+      { fechaHoraIso: ISO_VIERNES_15, serviciosIds: [UUID] },
+      conHistorial(),
+    );
+
+    expect(juez.peticiones[0].state).toMatchObject({
+      services: ['Corte de dama'],
+      time: '15:00',
+    });
+    expect(String(juez.peticiones[0].state.date)).toContain('viernes');
+  });
+
+  it('sin historial no se pregunta: es el caso de MCP y del webhook', async () => {
+    const juez = new JuezDoble(0.01);
+    const create = new FakeCreateReservation(() => ({
+      id: 'r1',
+      status: 'pendiente',
+    }));
+    const tool = new CreateReservationTool(create as never, {
+      judge: juez as never,
+      modo: 'on',
+      catalog: catalogo,
+    });
+
+    const res = await tool.execute(
+      { fechaHoraIso: ISO_VIERNES_15, serviciosIds: [UUID] },
+      ctx('u1'),
+    );
+
+    expect(res).toMatchObject({ ok: true });
+    expect(juez.peticiones).toHaveLength(0);
+  });
+
+  it('en off no consulta el catálogo: lo apagado no cuesta ni una consulta', async () => {
+    // El nombre de los servicios solo hace falta para preguntar. Pedirlo con el
+    // juicio apagado sería una consulta a la base en cada reserva a cambio de
+    // nada.
+    let consultas = 0;
+    const tool = new CreateReservationTool(
+      new FakeCreateReservation(() => ({
+        id: 'r1',
+        status: 'pendiente',
+      })) as never,
+      {
+        judge: new JuezDoble(0.01) as never,
+        modo: 'off',
+        catalog: {
+          findNamesByIds: async () => {
+            consultas++;
+            return new Map();
+          },
+        },
+      },
+    );
+
+    const res = await tool.execute(
+      { fechaHoraIso: ISO_VIERNES_15, serviciosIds: [UUID] },
+      conHistorial(),
+    );
+
+    expect(res).toMatchObject({ ok: true });
+    expect(consultas).toBe(0);
+  });
+
+  it('sin historial tampoco consulta el catálogo', async () => {
+    let consultas = 0;
+    const tool = new CreateReservationTool(
+      new FakeCreateReservation(() => ({
+        id: 'r1',
+        status: 'pendiente',
+      })) as never,
+      {
+        judge: new JuezDoble(0.01) as never,
+        modo: 'on',
+        catalog: {
+          findNamesByIds: async () => {
+            consultas++;
+            return new Map();
+          },
+        },
+      },
+    );
+
+    await tool.execute(
+      { fechaHoraIso: ISO_VIERNES_15, serviciosIds: [UUID] },
+      ctx('u1'),
+    );
+
+    expect(consultas).toBe(0);
+  });
+
+  it('si el catálogo falla, la reserva se crea como hoy', async () => {
+    // Fail-open también aquí: una consulta de nombres que revienta no puede
+    // costarle la reserva a la clienta.
+    const create = new FakeCreateReservation(() => ({
+      id: 'r1',
+      status: 'pendiente',
+    }));
+    const tool = new CreateReservationTool(create as never, {
+      judge: new JuezDoble(0.01) as never,
+      modo: 'on',
+      catalog: {
+        findNamesByIds: async () => {
+          throw new Error('la base no contesta');
+        },
+      },
+    });
+
+    const res = await tool.execute(
+      { fechaHoraIso: ISO_VIERNES_15, serviciosIds: [UUID] },
+      conHistorial(),
+    );
+
+    expect(res).toMatchObject({ ok: true });
+    expect(create.calls).toBe(1);
+  });
+});

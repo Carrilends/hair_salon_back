@@ -16,6 +16,8 @@ import { SystemClock } from './infrastructure/time/system-clock.adapter';
 import { ServiceCatalogQueryAdapter } from './infrastructure/catalog/service-catalog-query.adapter';
 import { AvailabilityQueryAdapter } from './infrastructure/availability/availability-query.adapter';
 import { GeminiLlmAdapter } from './infrastructure/llm/gemini-llm.adapter';
+import { TypeSafeJudgeAdapter } from './infrastructure/judgment/typesafe-judge.adapter';
+import { NoopJudgeAdapter } from './infrastructure/judgment/noop-judge.adapter';
 import { AssistantController } from './infrastructure/http/assistant.controller';
 import { IpLimiterPruneScheduler } from './infrastructure/scheduling/ip-limiter-prune.scheduler';
 import { SlidingWindowRateLimiter } from 'src/common/rate-limit/sliding-window-rate-limiter';
@@ -34,8 +36,11 @@ import {
   ASSISTANT_SUMMARIZER,
   ASSISTANT_TOOLS,
   CONVERSATION_REPOSITORY,
+  JUDGMENT,
+  JUDGMENT_SETTINGS,
   LLM,
 } from './application/tokens';
+import { ajustesDeJuicioDeEntorno } from './application/judgment-settings';
 
 // Dos modelos, no uno: es lo que hace real el enrutamiento por coste de §6.2 (D4).
 // El `router` atiende la conversación normal y debe ser el barato; el `main` queda
@@ -61,6 +66,15 @@ const DEFAULT_MAX_TOKENS_PER_DAY = 200_000;
 // redondea al alza porque pasarse solo adelanta el corte unos turnos, mientras
 // que quedarse corto reabre la carrera que la reserva viene a cerrar.
 const RESERVA_POR_TURNO = 2_000;
+
+// Proveedor de juicios (plan 04). Versión FIJA y no `jev-latest`: los umbrales
+// del banco de calibración se midieron contra esta, y un modelo que cambia sin
+// avisar mueve los umbrales sin que nadie lo sepa.
+const DEFAULT_JUDGMENT_MODEL = 'jev-1.13.0';
+// Un segundo. Medido contra la API con estado pequeño: mediana 250 ms, p95
+// 420 ms. Aquí hay una clienta esperando su turno, así que el tope es corto y
+// no hay reintento en banda; si no llega, el turno sigue por el camino de hoy.
+const DEFAULT_JUDGMENT_TIMEOUT_MS = 1_000;
 
 @Module({
   imports: [
@@ -100,6 +114,31 @@ const RESERVA_POR_TURNO = 2_000;
           routerModel: process.env.GEMINI_MODEL_ROUTER ?? DEFAULT_ROUTER_MODEL,
           mainModel: process.env.GEMINI_MODEL_MAIN ?? DEFAULT_MAIN_MODEL,
         }),
+    },
+    {
+      // Único punto que construye el proveedor de juicios. Sin
+      // TYPESAFE_API_KEY se inyecta el adaptador nulo: la aplicación arranca
+      // igual, todo pasa como hoy y el asistente no lo menciona en ninguna
+      // parte.
+      provide: JUDGMENT,
+      useFactory: () =>
+        process.env.TYPESAFE_API_KEY
+          ? new TypeSafeJudgeAdapter({
+              apiKey: process.env.TYPESAFE_API_KEY,
+              model: process.env.TYPESAFE_MODEL ?? DEFAULT_JUDGMENT_MODEL,
+              timeoutMs: enteroDeEntorno(
+                'TYPESAFE_TIMEOUT_MS',
+                DEFAULT_JUDGMENT_TIMEOUT_MS,
+              ),
+            })
+          : new NoopJudgeAdapter(),
+    },
+    {
+      // Qué colocaciones del juicio están encendidas. Todas en `off` por
+      // defecto: una colocación que actúa entra primero en sombra, y eso se
+      // decide en el entorno, no en el código.
+      provide: JUDGMENT_SETTINGS,
+      useFactory: ajustesDeJuicioDeEntorno,
     },
     {
       provide: ASSISTANT_BUDGET,
@@ -155,6 +194,8 @@ const RESERVA_POR_TURNO = 2_000;
         GetMyReservationsUseCase,
         CancelReservationUseCase,
         RescheduleReservationUseCase,
+        JUDGMENT,
+        JUDGMENT_SETTINGS,
       ],
     },
   ],

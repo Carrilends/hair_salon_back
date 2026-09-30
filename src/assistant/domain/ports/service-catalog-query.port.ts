@@ -56,4 +56,16 @@ export interface ServiceCatalogQueryPort {
    * construir la tarjeta, que no pasa por el LLM.
    */
   findPrincipalImages(ids: string[]): Promise<Map<string, string>>;
+
+  /**
+   * Nombre de cada servicio pedido, indexado por id; los que no existan no
+   * aparecen en el mapa.
+   *
+   * Existe para el juicio de correspondencia previo a reservar (plan 04, T5):
+   * al proveedor de juicios hay que darle los **nombres**, porque la clienta
+   * habla de «un corte» y nunca de `9f1c…`. Es una consulta aparte y no un
+   * campo más de `AssistantServiceSummary` por la misma razón que las imágenes:
+   * lo que devuelve `search` se le entrega al modelo y se paga en tokens.
+   */
+  findNamesByIds(ids: string[]): Promise<Map<string, string>>;
 }
