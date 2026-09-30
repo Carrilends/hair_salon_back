@@ -1,4 +1,8 @@
 import { AssistantTool } from './assistant-tool';
+import {
+  AssistantPresentation,
+  PackagePresentation,
+} from './assistant-presentation';
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
 import { AssistantServiceSummary } from '../../domain/ports/service-catalog-query.port';
 import {
@@ -30,9 +34,6 @@ export interface ComposePackageCatalogPort {
  */
 export class ComposePackageTool implements AssistantTool {
   readonly name = 'componerPaquete';
-
-  // El widget pinta la propuesta como tarjeta (T7): el bucle la surfacea.
-  readonly presentable = true;
 
   readonly definition: LlmToolDefinition = {
     name: this.name,
@@ -99,6 +100,21 @@ export class ComposePackageTool implements AssistantTool {
       serviciosIds: propuesta.lineas.map((l) => l.serviceId),
       omitidas: propuesta.omitidas,
       ...(fecha ? { fecha } : {}),
+    };
+  }
+
+  /**
+   * El widget pinta la propuesta como tarjeta. Lo que se presenta es lo mismo
+   * que se le devuelve al modelo —aquí no hay nada que enriquecer—, con el
+   * discriminante puesto. Un evento inexistente devuelve `ok:false` y no se
+   * presenta: una tarjeta vacía sería peor que ninguna.
+   */
+  presentar(result: unknown): AssistantPresentation | null {
+    if (typeof result !== 'object' || result === null) return null;
+    if ((result as { ok?: unknown }).ok === false) return null;
+    return {
+      tipo: 'paquete',
+      ...(result as Omit<PackagePresentation, 'tipo'>),
     };
   }
 }

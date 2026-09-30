@@ -107,28 +107,27 @@ describe('AssistantController', () => {
     expect(uc.lastInput!.isAdmin).toBe(false);
   });
 
-  it('incluye la propuesta estructurada cuando el caso de uso la devuelve', async () => {
-    const propuesta = {
-      evento: 'boda',
-      serviciosIds: ['r1', 'm1'],
-      total: 150000,
-    };
+  it('incluye las presentaciones cuando el caso de uso las devuelve', async () => {
+    const presentaciones = [
+      { tipo: 'paquete', evento: 'boda', total: 150000 },
+      { tipo: 'servicios', servicios: [{ id: 's1', nombre: 'Corte' }] },
+    ];
     const uc = new FakeSendMessage(() => ({
       conversationId: 'c1',
       reply: 'Aquí tu paquete.',
-      propuesta,
+      presentaciones,
     }));
     const ctrl = controlador(uc);
 
     const res = (await ctrl.messages(
       { conversationId: 'c1', message: 'me caso' },
       req({ id: 'u1' } as User),
-    )) as { propuesta?: unknown };
+    )) as { presentaciones?: unknown };
 
-    expect(res.propuesta).toEqual(propuesta);
+    expect(res.presentaciones).toEqual(presentaciones);
   });
 
-  it('no incluye propuesta cuando no la hay', async () => {
+  it('no incluye presentaciones cuando no las hay', async () => {
     const uc = new FakeSendMessage(() => ({
       conversationId: 'c1',
       reply: 'Hola',
@@ -140,7 +139,7 @@ describe('AssistantController', () => {
       req({ id: 'u1' } as User),
     )) as Record<string, unknown>;
 
-    expect('propuesta' in res).toBe(false);
+    expect('presentaciones' in res).toBe(false);
   });
 
   it('sin sesión pasa userId null', async () => {

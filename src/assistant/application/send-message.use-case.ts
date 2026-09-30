@@ -11,6 +11,7 @@ import {
   DAILY_CEILING_REPLY,
 } from '../domain/errors';
 import { AssistantContext, AssistantTool } from './tools/assistant-tool';
+import { AssistantPresentation } from './tools/assistant-presentation';
 import { SYSTEM_PROMPT } from './system-prompt';
 import { fechaDelSalon, inicioDelDiaDelSalon } from './salon-day';
 import { AssistantBudget } from './assistant-budget';
@@ -48,11 +49,15 @@ export interface SendMessageResult {
   conversationId?: string;
   reply: string;
   /**
-   * Dato estructurado que una herramienta "presentable" produjo en el turno (una
-   * propuesta de paquete, T7). El borde HTTP lo devuelve junto al texto para que
-   * el widget lo pinte; ausente si no hubo ninguno.
+   * Datos tipados que las herramientas produjeron en el turno, en el orden en
+   * que se llamaron, para que el widget los pinte junto al texto. Ausente si no
+   * hubo ninguno.
+   *
+   * Es una lista y no un solo dato desde el plan 03: antes ganaba el último y un
+   * turno que componía un paquete y además listaba servicios solo podía enseñar
+   * una cosa.
    */
-  propuesta?: unknown;
+  presentaciones?: AssistantPresentation[];
 }
 
 /**
@@ -147,7 +152,7 @@ export class SendMessageUseCase {
     const toolDefinitions = this.tools.map((t) => t.definition);
 
     let reply = '';
-    let propuesta: unknown;
+    let presentaciones: AssistantPresentation[] = [];
     // Consumo de ESTE turno, aparte del acumulado de la conversación: es lo que
     // se imputa al mensaje de respuesta para que la auditoría por mensaje
     // (`assistant_messages.prompt_tokens`) diga algo. Sin él, un abuso no se
@@ -186,11 +191,13 @@ export class SendMessageUseCase {
         const result = tool
           ? await tool.execute(call.arguments, context)
           : { ok: false, motivo: 'herramienta_desconocida' };
-        // T7: si la herramienta es "presentable" y no devolvió un error, se
-        // guarda su resultado para surfacearlo como dato estructurado (la última
-        // gana, si hubiera varias en el turno).
-        if (tool?.presentable && isPresentableResult(result)) {
-          propuesta = result;
+        // Si la herramienta sabe presentar, se le pide el dato tipado para el
+        // widget. Quien decide que un resultado no se presenta es la propia
+        // herramienta (devolviendo `null`), no el bucle: solo ella sabe qué es
+        // un error suyo.
+        const presentacion = await tool?.presentar?.(result);
+        if (presentacion && !yaPresentada(presentaciones, presentacion)) {
+          presentaciones.push(presentacion);
         }
         messages.push({
           role: 'tool',
@@ -201,11 +208,11 @@ export class SendMessageUseCase {
     }
 
     // Al agotar las vueltas sin respuesta final, se responde con cortesía en vez
-    // de seguir facturando. En ese caso NO se surfacea la propuesta: la tarjeta
-    // del paquete junto a un texto de fracaso sería contradictoria.
+    // de seguir facturando. En ese caso NO se surfacea nada: una tarjeta junto a
+    // un texto de fracaso sería contradictoria.
     if (!reply) {
       reply = COURTESY_REPLY;
-      propuesta = undefined;
+      presentaciones = [];
     }
 
     // Historia durable: el mensaje de la clienta y la respuesta final. El
@@ -228,7 +235,7 @@ export class SendMessageUseCase {
     return {
       conversationId: saved.id,
       reply,
-      ...(propuesta !== undefined ? { propuesta } : {}),
+      ...(presentaciones.length > 0 ? { presentaciones } : {}),
     };
   }
 
@@ -338,11 +345,17 @@ function toLlmRole(role: string): 'system' | 'user' | 'assistant' | 'tool' {
   return 'user';
 }
 
-/** Un resultado surfaceable: objeto que no es un error (`ok: false`). */
-function isPresentableResult(result: unknown): boolean {
-  return (
-    typeof result === 'object' &&
-    result !== null &&
-    (result as { ok?: unknown }).ok !== false
-  );
+/**
+ * ¿Ya se recogió esta misma presentación en el turno? El modelo repite la misma
+ * llamada con los mismos argumentos más a menudo de lo que parece, y dos
+ * tarjetas idénticas seguidas se leen como un fallo. La comparación es por
+ * contenido serializado: los datos presentados son pequeños y planos, así que
+ * sale más barato que llevar cuenta de las llamadas.
+ */
+function yaPresentada(
+  recogidas: AssistantPresentation[],
+  candidata: AssistantPresentation,
+): boolean {
+  const serializada = JSON.stringify(candidata);
+  return recogidas.some((p) => JSON.stringify(p) === serializada);
 }

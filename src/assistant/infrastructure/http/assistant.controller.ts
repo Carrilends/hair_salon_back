@@ -111,8 +111,8 @@ export class AssistantController {
         conversationId: result.conversationId,
         reply: result.reply,
         ...(esNueva ? { aviso: LEGAL_NOTICE } : {}),
-        ...(result.propuesta !== undefined
-          ? { propuesta: result.propuesta }
+        ...(result.presentaciones !== undefined
+          ? { presentaciones: result.presentaciones }
           : {}),
       };
     } catch (error) {

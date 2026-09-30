@@ -8,6 +8,7 @@ import { Message } from '../domain/message';
 import { TokenUsage } from '../domain/token-usage';
 import { BudgetExceededError, ConversationAccessError } from '../domain/errors';
 import { AssistantContext, AssistantTool } from './tools/assistant-tool';
+import { AssistantPresentation } from './tools/assistant-presentation';
 import { LlmCompletion, LlmToolDefinition } from '../domain/ports/llm.port';
 import {
   AssistantUsage,
@@ -63,13 +64,18 @@ class ContextCapturingTool implements AssistantTool {
   }
 }
 
-/** Herramienta "presentable": su resultado se surfacea como propuesta estructurada. */
-class FakePresentableTool implements AssistantTool {
-  readonly presentable = true;
+/**
+ * Herramienta que presenta: además de devolverle datos al modelo, produce el
+ * dato tipado que el widget pinta. Imita a las de verdad —devuelve `null`
+ * cuando el resultado es un error— para que la regla de descarte se pruebe
+ * donde vive, que es en la herramienta.
+ */
+class FakePresentingTool implements AssistantTool {
   readonly definition: LlmToolDefinition;
   constructor(
     readonly name: string,
     private readonly result: unknown,
+    private readonly tipo: 'paquete' | 'servicios' = 'paquete',
   ) {
     this.definition = {
       name,
@@ -83,6 +89,11 @@ class FakePresentableTool implements AssistantTool {
   }
   async execute(): Promise<unknown> {
     return this.result;
+  }
+  presentar(result: unknown): AssistantPresentation | null {
+    if (typeof result !== 'object' || result === null) return null;
+    if ((result as { ok?: unknown }).ok === false) return null;
+    return { tipo: this.tipo, ...result } as AssistantPresentation;
   }
 }
 
@@ -572,13 +583,13 @@ describe('SendMessageUseCase', () => {
     expect(tool.lastContext?.isAdmin).toBe(false);
   });
 
-  it('surfacea la propuesta de una herramienta presentable en el resultado', async () => {
+  it('surfacea la presentación de una herramienta en el resultado', async () => {
     const propuesta = {
       evento: 'boda',
       lineas: [{ serviceId: 'r1' }],
       total: 60000,
     };
-    const tool = new FakePresentableTool('componerPaquete', propuesta);
+    const tool = new FakePresentingTool('componerPaquete', propuesta);
     const llm = new FakeLlmAdapter([
       {
         message: {
@@ -598,11 +609,11 @@ describe('SendMessageUseCase', () => {
 
     const res = await useCase.execute({ message: 'me caso', userId: 'u1' });
 
-    expect(res.propuesta).toEqual(propuesta);
+    expect(res.presentaciones).toEqual([{ tipo: 'paquete', ...propuesta }]);
   });
 
-  it('no surfacea propuesta si la herramienta presentable devuelve un error', async () => {
-    const tool = new FakePresentableTool('componerPaquete', {
+  it('no surfacea nada si la herramienta devuelve un error', async () => {
+    const tool = new FakePresentingTool('componerPaquete', {
       ok: false,
       motivo: 'evento_no_disponible',
     });
@@ -625,14 +636,14 @@ describe('SendMessageUseCase', () => {
 
     const res = await useCase.execute({ message: 'me gradúo', userId: 'u1' });
 
-    expect(res.propuesta).toBeUndefined();
+    expect(res.presentaciones).toBeUndefined();
   });
 
-  it('no surfacea propuesta si el turno acaba en respuesta de cortesía', async () => {
+  it('no surfacea nada si el turno acaba en respuesta de cortesía', async () => {
     // La herramienta compone (propuesta set) pero el modelo insiste con llamadas
     // hasta agotar las vueltas: la respuesta es de cortesía y NO debe llegar con
     // la tarjeta del paquete (sería un mensaje contradictorio).
-    const tool = new FakePresentableTool('componerPaquete', {
+    const tool = new FakePresentingTool('componerPaquete', {
       evento: 'boda',
       lineas: [{ serviceId: 'r1' }],
     });
@@ -651,10 +662,10 @@ describe('SendMessageUseCase', () => {
     const res = await useCase.execute({ message: 'me caso', userId: 'u1' });
 
     expect(res.reply.length).toBeGreaterThan(0);
-    expect(res.propuesta).toBeUndefined();
+    expect(res.presentaciones).toBeUndefined();
   });
 
-  it('no surfacea propuesta de herramientas no presentables', async () => {
+  it('no surfacea nada de herramientas que no presentan', async () => {
     const tool = new FakeTool('listarServicios', [{ id: 's1' }]);
     const llm = new FakeLlmAdapter([
       {
@@ -675,7 +686,89 @@ describe('SendMessageUseCase', () => {
 
     const res = await useCase.execute({ message: 'servicios', userId: 'u1' });
 
-    expect(res.propuesta).toBeUndefined();
+    expect(res.presentaciones).toBeUndefined();
+  });
+
+  it('surfacea TODAS las presentaciones del turno, en orden de llamada', async () => {
+    // Antes ganaba la última y las demás se perdían: un turno que compone un
+    // paquete y además lista servicios solo podía enseñar una cosa.
+    const paquete = new FakePresentingTool(
+      'componerPaquete',
+      { evento: 'boda', total: 60000 },
+      'paquete',
+    );
+    const listado = new FakePresentingTool(
+      'listarServicios',
+      { servicios: [{ id: 's1', nombre: 'Corte' }] },
+      'servicios',
+    );
+    const llm = new FakeLlmAdapter([
+      {
+        message: {
+          role: 'assistant',
+          content: '',
+          toolCalls: [
+            { id: 't1', name: 'componerPaquete', arguments: {} },
+            { id: 't2', name: 'listarServicios', arguments: {} },
+          ],
+        },
+        usage: TokenUsage.of(10, 5),
+      },
+      {
+        message: { role: 'assistant', content: 'Aquí tienes.' },
+        usage: TokenUsage.of(10, 5),
+      },
+    ]);
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [paquete, listado],
+    });
+
+    const res = await useCase.execute({ message: 'me caso', userId: 'u1' });
+
+    expect(res.presentaciones).toEqual([
+      { tipo: 'paquete', evento: 'boda', total: 60000 },
+      { tipo: 'servicios', servicios: [{ id: 's1', nombre: 'Corte' }] },
+    ]);
+  });
+
+  it('descarta la presentación repetida cuando el modelo repite la llamada', async () => {
+    // El modelo reincide en la misma herramienta con los mismos argumentos más a
+    // menudo de lo que parece. Dos tarjetas idénticas seguidas se ven como un
+    // fallo, y lo son.
+    const listado = new FakePresentingTool(
+      'listarServicios',
+      { servicios: [{ id: 's1' }] },
+      'servicios',
+    );
+    const vuelta = {
+      message: {
+        role: 'assistant' as const,
+        content: '',
+        toolCalls: [{ id: 't', name: 'listarServicios', arguments: {} }],
+      },
+      usage: TokenUsage.of(10, 5),
+    };
+    const llm = new FakeLlmAdapter([
+      vuelta,
+      vuelta,
+      {
+        message: { role: 'assistant', content: 'Eso es todo.' },
+        usage: TokenUsage.of(10, 5),
+      },
+    ]);
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [listado],
+    });
+
+    const res = await useCase.execute({ message: 'servicios', userId: 'u1' });
+
+    expect(res.presentaciones).toEqual([
+      { tipo: 'servicios', servicios: [{ id: 's1' }] },
+    ]);
   });
 
   it('corta a las 5 vueltas y NO ejecuta la herramienta en la última (evita escritura fantasma)', async () => {

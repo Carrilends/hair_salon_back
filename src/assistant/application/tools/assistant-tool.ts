@@ -1,4 +1,5 @@
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
+import { AssistantPresentation } from './assistant-presentation';
 
 /** Contexto de ejecución que el bucle inyecta a cada herramienta en cada turno. */
 export interface AssistantContext {
@@ -22,11 +23,22 @@ export interface AssistantTool {
   readonly name: string;
   readonly definition: LlmToolDefinition;
   /**
-   * Si es true, el bucle surfacea el resultado (no de error) de esta herramienta
-   * como dato estructurado en la respuesta, para que el widget lo pinte (una
-   * propuesta de paquete, T7). Mantiene el bucle desacoplado del nombre concreto.
+   * Traduce el resultado de `execute` al dato tipado que el widget pinta, o
+   * `null` si este resultado no se presenta (un error, o simplemente nada que
+   * enseñar). Opcional: la mayoría de las herramientas no pintan nada.
+   *
+   * Es un método aparte y no un campo del retorno de `execute` por una razón
+   * concreta: estas mismas nueve herramientas las ejecuta también el servidor
+   * MCP, que no sabe nada de tarjetas. Cambiar el tipo de retorno de `execute`
+   * le habría llegado a él; añadir un método que solo llama el bucle del
+   * asistente, no.
+   *
+   * Puede consultar lo que necesite para enriquecer la tarjeta (imágenes, por
+   * ejemplo): lo que devuelva NO viaja al modelo, así que no cuesta tokens.
    */
-  readonly presentable?: boolean;
+  presentar?(
+    result: unknown,
+  ): AssistantPresentation | null | Promise<AssistantPresentation | null>;
   /**
    * Devuelve datos ya compactados: lo que retorne aquí se convierte en tokens de
    * entrada de la siguiente llamada. Cada campo de más se paga (§6.2).
