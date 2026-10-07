@@ -12,7 +12,7 @@ import {
 
 /**
  * Rango del filtro de precio, en MILES de pesos (el control del portal va de
- * 5 a 200). `ServiceService` lo convierte a pesos con `rangoEnPesos`
+ * 5 a 300). `ServiceService` lo convierte a pesos con `rangoEnPesos`
  * (`src/service/precio-filtro.ts`) antes de compararlo con `s.price`.
  */
 export class RangoPreciosDto {

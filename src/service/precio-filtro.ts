@@ -1,6 +1,6 @@
 /**
  * El filtro de precio del catálogo llega en MILES de pesos: el control del
- * portal va de 5 a 200 y pinta «5.000 $ ― 200.000 $» (`PRECIO_ESCALA_MIN/MAX`
+ * portal va de 5 a 300 y pinta «5.000 $ ― 300.000 $» (`PRECIO_ESCALA_MIN/MAX`
  * en `hari_salon_front/src/stores/filters-store.ts`). Los precios de `service`
  * están en pesos, así que el rango se convierte aquí, una sola vez, antes de
  * compararlo. Sin esta conversión `s.price BETWEEN 5 AND 200` no casaba con
