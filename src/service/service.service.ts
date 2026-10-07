@@ -19,6 +19,7 @@ import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 import { ImageManager } from 'src/images/images.entity';
 import { ImagesService } from 'src/images/images.service';
 import { selectPrincipalImage } from 'src/images/utils/utils.images';
+import { rangoEnPesos } from './precio-filtro';
 
 // TODO: Continua con la edicion del detalle
 @Injectable()
@@ -201,7 +202,7 @@ export class ServiceService {
     }
 
     if (includePriceRange && filterDto.prices) {
-      const { min, max } = filterDto.prices;
+      const { min, max } = rangoEnPesos(filterDto.prices);
       qb.andWhere('s.price BETWEEN :min AND :max', { min, max });
     }
 

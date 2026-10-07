@@ -1,16 +1,29 @@
+import { Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
   IsNumber,
   IsOptional,
   IsString,
+  Min,
+  ValidateNested,
   // MinLength,
 } from 'class-validator';
 
-type pricesType = {
+/**
+ * Rango del filtro de precio, en MILES de pesos (el control del portal va de
+ * 5 a 200). `ServiceService` lo convierte a pesos con `rangoEnPesos`
+ * (`src/service/precio-filtro.ts`) antes de compararlo con `s.price`.
+ */
+export class RangoPreciosDto {
+  @IsNumber()
+  @Min(0)
   min: number;
+  @IsNumber()
+  @Min(0)
   max: number;
-};
+}
+
 export class FilterServiceDto {
   @IsString()
   @IsOptional()
@@ -31,7 +44,9 @@ export class FilterServiceDto {
   @IsOptional()
   includePromotionsOnly: boolean;
   @IsOptional()
-  prices: pricesType | null;
+  @ValidateNested()
+  @Type(() => RangoPreciosDto)
+  prices: RangoPreciosDto | null;
   @IsNumber()
   @IsOptional()
   page: number; // Para la paginación
