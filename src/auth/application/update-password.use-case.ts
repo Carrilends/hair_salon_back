@@ -29,6 +29,10 @@ export class UpdatePasswordUseCase {
   ): Promise<AuthSession> {
     const user = await this.users.findById(userId);
     if (!user) throw new UserNotFoundError();
+    // Una cuenta creada con Google no tiene contraseña local (S8): no hay nada
+    // que comparar. Sin esta guarda, bcrypt rechaza el `null` con un Error que
+    // no es de dominio y el borde respondía 500 en vez de 401 (plan 6).
+    if (!user.passwordHash) throw new InvalidCredentialsError();
     if (
       !(await this.hasher.compare(command.currentPassword, user.passwordHash))
     )

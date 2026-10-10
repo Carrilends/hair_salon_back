@@ -65,4 +65,19 @@ describe('RequestPasswordResetUseCase', () => {
     const d = deps(null);
     await expect(d.uc.execute('no-es-correo')).resolves.toBeUndefined();
   });
+
+  it('también envía el enlace a una cuenta creada con Google, sin contraseña (plan 6, C3)', async () => {
+    const d = deps({
+      id: 'u-2',
+      email: { value: 'ana@gmail.com' },
+      fullName: 'Ana',
+      isActive: true,
+      passwordHash: null,
+      googleId: 'g-1',
+    });
+    await d.uc.execute('ana@gmail.com');
+    expect(d.invalidated[0]).toEqual({ id: 'u-2', type: 'password_reset' });
+    expect(d.saved).toHaveLength(1);
+    expect(d.sent[0].to).toBe('ana@gmail.com');
+  });
 });

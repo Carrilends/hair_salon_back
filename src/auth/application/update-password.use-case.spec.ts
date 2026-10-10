@@ -3,7 +3,7 @@ import { InvalidCredentialsError, SamePasswordError } from '../domain/errors';
 import { UserAccount } from '../domain/user-account';
 import { Email } from '../domain/email';
 
-function account() {
+function account(overrides: any = {}) {
   return UserAccount.fromPersistence({
     id: 'u-1',
     email: Email.create('a@b.com'),
@@ -13,18 +13,23 @@ function account() {
     isActive: true,
     emailVerifiedAt: null,
     dataPolicyAcceptedAt: null,
+    ...overrides,
   });
 }
 
 function deps({
   compare = async () => true,
-}: { compare?: () => Promise<boolean> } = {}) {
+  user = account(),
+}: {
+  compare?: (plano: string, hash: string | null) => Promise<boolean>;
+  user?: UserAccount;
+} = {}) {
   const saved: any[] = [];
   return {
     saved,
     uc: new UpdatePasswordUseCase(
       {
-        findById: async () => account(),
+        findById: async () => user,
         save: async (u: any) => {
           saved.push(u);
           return u;
@@ -62,5 +67,21 @@ describe('UpdatePasswordUseCase', () => {
     await expect(
       d.uc.execute('u-1', { currentPassword: 'same', newPassword: 'same' }),
     ).rejects.toThrow(SamePasswordError);
+  });
+
+  it('una cuenta sin contraseña (solo Google) recibe credenciales inválidas, no un 500 (plan 6)', async () => {
+    const compare = jest.fn(async (plano: string, hash: string | null) => {
+      if (!hash) throw new Error('data and hash arguments required');
+      return plano.length > 0;
+    });
+    const d = deps({
+      compare,
+      user: account({ passwordHash: null, googleId: 'g-1' }),
+    });
+    await expect(
+      d.uc.execute('u-1', { currentPassword: 'x', newPassword: 'New-1234!' }),
+    ).rejects.toThrow(InvalidCredentialsError);
+    expect(compare).not.toHaveBeenCalled();
+    expect(d.saved).toHaveLength(0);
   });
 });

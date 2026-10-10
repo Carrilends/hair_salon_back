@@ -26,9 +26,11 @@ function account(overrides: any = {}) {
 function deps({
   compare = async () => true,
   emailTaken = false,
+  user = account(),
 }: {
-  compare?: () => Promise<boolean>;
+  compare?: (plano: string, hash: string | null) => Promise<boolean>;
   emailTaken?: boolean;
+  user?: UserAccount;
 } = {}) {
   const saved: any[] = [];
   const sent: any[] = [];
@@ -41,7 +43,7 @@ function deps({
     invalidated,
     uc: new UpdateEmailUseCase(
       {
-        findById: async () => account(),
+        findById: async () => user,
         existsByEmail: async () => emailTaken,
         save: async (u: any) => {
           saved.push(u);
@@ -126,6 +128,27 @@ describe('UpdateEmailUseCase', () => {
         newEmail: 'tomado@correo.com',
       }),
     ).rejects.toThrow(EmailAlreadyInUseError);
+    expect(d.saved).toHaveLength(0);
+  });
+
+  it('una cuenta sin contraseña (solo Google) recibe credenciales inválidas, no un 500 (plan 6)', async () => {
+    // Lo que hace bcrypt con un hash nulo: rechaza con un Error que no es de
+    // dominio, y el borde lo convertía en 500.
+    const compare = jest.fn(async (plano: string, hash: string | null) => {
+      if (!hash) throw new Error('data and hash arguments required');
+      return plano.length > 0;
+    });
+    const d = deps({
+      compare,
+      user: account({ passwordHash: null, googleId: 'g-1' }),
+    });
+    await expect(
+      d.uc.execute('u-1', {
+        currentPassword: 'cualquiera',
+        newEmail: 'nuevo@b.com',
+      }),
+    ).rejects.toThrow(InvalidCredentialsError);
+    expect(compare).not.toHaveBeenCalled();
     expect(d.saved).toHaveLength(0);
   });
 });

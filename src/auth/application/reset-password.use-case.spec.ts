@@ -37,7 +37,10 @@ function token(
   });
 }
 
-function deps({ found = token() as AuthToken | null } = {}) {
+function deps({
+  found = token() as AuthToken | null,
+  user = account(),
+}: { found?: AuthToken | null; user?: UserAccount } = {}) {
   const savedUsers: any[] = [];
   const savedTokens: any[] = [];
   const invalidated: any[] = [];
@@ -49,7 +52,7 @@ function deps({ found = token() as AuthToken | null } = {}) {
     revokedSessions,
     uc: new ResetPasswordUseCase(
       {
-        findById: async () => account(),
+        findById: async () => user,
         save: async (u: any) => {
           savedUsers.push(u);
           return u;
@@ -112,5 +115,25 @@ describe('ResetPasswordUseCase', () => {
     await expect(d.uc.execute('x', 'New-1234!')).rejects.toThrow(
       AuthTokenAlreadyUsedError,
     );
+  });
+
+  it('una cuenta solo de Google crea así su primera contraseña (plan 6, C3)', async () => {
+    const google = UserAccount.fromPersistence({
+      id: 'u-1',
+      email: Email.create('ana@gmail.com'),
+      passwordHash: null,
+      fullName: 'Ana',
+      roles: ['user'],
+      isActive: true,
+      emailVerifiedAt: now,
+      dataPolicyAcceptedAt: now,
+      googleId: 'g-1',
+    });
+    const d = deps({ user: google });
+    await d.uc.execute('raw-token', 'New-1234!');
+    expect(d.savedUsers[0].passwordHash).toBe('new-hash');
+    // Sigue pudiendo entrar con Google: crear la contraseña no la desvincula.
+    expect(d.savedUsers[0].googleId).toBe('g-1');
+    expect(d.revokedSessions).toEqual([{ userId: 'u-1', at: now }]);
   });
 });
