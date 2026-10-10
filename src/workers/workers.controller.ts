@@ -15,6 +15,7 @@ import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
 import { WorkersService } from './workers.service';
 import { WorkerAvailabilityQueryDto } from './dto/worker-availability-query.dto';
+import { WorkersWeekQueryDto } from './dto/workers-week-query.dto';
 
 @Controller('workers')
 export class WorkersController {
@@ -45,6 +46,16 @@ export class WorkersController {
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.workersService.remove(id);
+  }
+
+  /**
+   * Carga de la semana para «Mis estilistas» (contrato §4.5 de la hoja de ruta
+   * de las vistas). Solo la dueña: dice cuántas horas trabaja cada estilista.
+   */
+  @Auth(ValidRoles.admin)
+  @Get('availability/week')
+  week(@Query() query: WorkersWeekQueryDto) {
+    return this.workersService.getWeekLoad(query.start);
   }
 
   @Get('availability')
