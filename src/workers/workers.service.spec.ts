@@ -276,6 +276,24 @@ describe('WorkersService', () => {
     });
   });
 
+  describe('ensureDefaultWorker', () => {
+    it('una base nueva crea la predeterminada como «Sin preferencia»', async () => {
+      (
+        service.ensureDefaultWorker as unknown as jest.SpyInstance
+      ).mockRestore();
+      (workerRepository.findOne as jest.Mock).mockResolvedValue(null);
+      (workerRepository.create as jest.Mock).mockImplementation((w) => w);
+      (workerRepository.save as jest.Mock).mockResolvedValue({});
+
+      await service.ensureDefaultWorker();
+
+      expect(workerRepository.create).toHaveBeenCalledWith({
+        name: 'Sin preferencia',
+        isDefault: true,
+      });
+    });
+  });
+
   describe('getWeekLoad', () => {
     /**
      * Lo que devolvería Postgres: una fila por estilista y día con citas no

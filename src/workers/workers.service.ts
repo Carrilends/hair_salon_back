@@ -15,7 +15,12 @@ import { UpdateWorkerDto } from './dto/update-worker.dto';
 import { getDayBounds, getSalonNow } from '../reservations/salon-time';
 import { capacidadDelDia, diasDeLaSemana, lunesDeLaSemana } from './semana';
 
-const DEFAULT_WORKER_NAME = 'Estilista default';
+/**
+ * Nombre con que nace la opción predeterminada en una base nueva: el mismo
+ * que ve la clienta en el portal y el que deja la migración
+ * `DefaultWorkerNameTypo1791504000000` en las bases que ya existían.
+ */
+const DEFAULT_WORKER_NAME = 'Sin preferencia';
 
 export type ReservationBlock = {
   startMin: number;
