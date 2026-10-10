@@ -275,4 +275,108 @@ describe('WorkersService', () => {
       expect(result).toEqual({ deleted: true });
     });
   });
+
+  describe('getWeekLoad', () => {
+    /**
+     * Lo que devolvería Postgres: una fila por estilista y día con citas no
+     * canceladas. `used` llega como número (`::int`), pero se acepta texto por
+     * si el driver cambia: el servicio lo pasa por `Number`.
+     */
+    const filas = [
+      { worker_id: 'w-1', ymd: '2026-10-12', used: 90 },
+      { worker_id: 'w-1', ymd: '2026-10-14', used: '150' },
+      { worker_id: 'w-def', ymd: '2026-10-18', used: 60 },
+    ];
+
+    const query = () =>
+      reservationRepository.manager!.query as unknown as jest.Mock;
+
+    beforeEach(() => {
+      (workerRepository.find as jest.Mock).mockResolvedValue([
+        { id: 'w-1', name: 'Ana', isDefault: false },
+        { id: 'w-2', name: 'Bea', isDefault: false },
+        { id: 'w-def', name: 'Sin preferencia', isDefault: true },
+      ]);
+      query().mockResolvedValue(filas);
+    });
+
+    it('lleva el inicio al lunes y devuelve los siete días', async () => {
+      const semana = await service.getWeekLoad('2026-10-15'); // jueves
+
+      expect(semana.start).toBe('2026-10-12');
+      expect(semana.days).toEqual([
+        '2026-10-12',
+        '2026-10-13',
+        '2026-10-14',
+        '2026-10-15',
+        '2026-10-16',
+        '2026-10-17',
+        '2026-10-18',
+      ]);
+    });
+
+    it('la capacidad es el horario entero: 10 h el lunes festivo y el fin de semana, 12 h entre semana', async () => {
+      const semana = await service.getWeekLoad('2026-10-12');
+
+      expect(semana.workers[0].days.map((d) => d.capacityMinutes)).toEqual([
+        600, 720, 720, 720, 720, 600, 600,
+      ]);
+    });
+
+    it('reparte los minutos por estilista y día, con cero donde no hay citas', async () => {
+      const semana = await service.getWeekLoad('2026-10-12');
+      const minutos = (id: string) =>
+        semana.workers.find((w) => w.id === id)!.days.map((d) => d.usedMinutes);
+
+      expect(minutos('w-1')).toEqual([90, 0, 150, 0, 0, 0, 0]);
+      expect(minutos('w-2')).toEqual([0, 0, 0, 0, 0, 0, 0]);
+      // La predeterminada también trae su carga: si tiene citas, no se esconden.
+      expect(minutos('w-def')).toEqual([0, 0, 0, 0, 0, 0, 60]);
+    });
+
+    it('hoy cuenta el día entero, no solo lo que falta', async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-10-14T23:00:00.000Z')); // miércoles, 18:00 Bogotá
+
+      const semana = await service.getWeekLoad('2026-10-14');
+      const ana = semana.workers.find((w) => w.id === 'w-1')!;
+
+      expect(ana.days[2]).toEqual({
+        date: '2026-10-14',
+        usedMinutes: 150,
+        capacityMinutes: 720,
+      });
+    });
+
+    it('pide la semana entera en UNA consulta, agrupada y sin las canceladas', async () => {
+      await service.getWeekLoad('2026-10-14');
+
+      expect(query()).toHaveBeenCalledTimes(1);
+      expect(workerRepository.find).toHaveBeenCalledTimes(1);
+      const [sql, params] = query().mock.calls[0] as [string, unknown[]];
+      const plano = sql.replace(/\s+/g, ' ');
+      expect(plano).toContain("status <> 'cancelada'");
+      expect(plano).toContain('BETWEEN $2::date AND $3::date');
+      expect(plano).toContain('GROUP BY');
+      expect(params).toEqual(['America/Bogota', '2026-10-12', '2026-10-18']);
+    });
+
+    it('cruza el año sin perder días: Año Nuevo es festivo', async () => {
+      const semana = await service.getWeekLoad('2027-01-01'); // viernes
+
+      expect(semana.start).toBe('2026-12-28');
+      expect(semana.days[6]).toBe('2027-01-03');
+      expect(semana.workers[0].days.map((d) => d.capacityMinutes)).toEqual([
+        720, 720, 720, 720, 600, 600, 600,
+      ]);
+    });
+
+    it('las estilistas salen por nombre, con la predeterminada al final', async () => {
+      await service.getWeekLoad('2026-10-12');
+
+      expect(workerRepository.find).toHaveBeenCalledWith({
+        order: { isDefault: 'ASC', name: 'ASC' },
+      });
+    });
+  });
 });

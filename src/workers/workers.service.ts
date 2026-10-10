@@ -13,6 +13,7 @@ import { ReservationOrmEntity } from '../reservations/infrastructure/persistence
 import { CreateWorkerDto } from './dto/create-worker.dto';
 import { UpdateWorkerDto } from './dto/update-worker.dto';
 import { getDayBounds, getSalonNow } from '../reservations/salon-time';
+import { capacidadDelDia, diasDeLaSemana, lunesDeLaSemana } from './semana';
 
 const DEFAULT_WORKER_NAME = 'Estilista default';
 
@@ -46,6 +47,22 @@ export type WorkerAvailabilityResponse = {
     tz: string;
   };
 };
+
+/**
+ * Contrato §4.5 de `docs/superpowers/plans/2026-10-09-vistas-hoja-de-ruta.md`:
+ * la carga de cada estilista, día a día, de la semana que empieza en `start`.
+ * Su copia en el front vive en `hari_salon_front/src/api/workers-api.ts`.
+ */
+export interface WorkersWeekResponse {
+  start: string; // lunes, 'YYYY-MM-DD'
+  days: string[]; // 7 fechas 'YYYY-MM-DD'
+  workers: Array<{
+    id: string;
+    name: string;
+    isDefault: boolean;
+    days: Array<{ date: string; usedMinutes: number; capacityMinutes: number }>;
+  }>;
+}
 
 @Injectable()
 export class WorkersService implements OnModuleInit {
@@ -248,6 +265,65 @@ export class WorkersService implements OnModuleInit {
         minOfDay: salonNow.minOfDay,
         tz,
       },
+    };
+  }
+
+  /**
+   * La carga de la semana para el panel «Mis estilistas».
+   *
+   * No llama a `getAvailabilityByDate` siete veces: serían catorce consultas,
+   * y para HOY esa función recorta la capacidad y los minutos a lo que queda
+   * del día (sirve para ofrecer horas, no para medir carga). Aquí cada día
+   * cuenta su horario entero y la duración entera de sus citas, así las siete
+   * barras se comparan entre sí. Reutiliza lo que importa: la regla de horario
+   * (`capacidadDelDia`, la de `getDayBounds`) y el filtro de canceladas, con el
+   * mismo literal que `countOverlaps` y la restricción de exclusión.
+   */
+  async getWeekLoad(startYmd: string): Promise<WorkersWeekResponse> {
+    await this.ensureDefaultWorker();
+
+    const tz = process.env.SALON_TZ ?? 'America/Bogota';
+    const start = lunesDeLaSemana(startYmd);
+    const days = diasDeLaSemana(start);
+    const capacidades = days.map(capacidadDelDia);
+
+    const workers = await this.workerRepository.find({
+      order: { isDefault: 'ASC', name: 'ASC' },
+    });
+
+    type FilaCarga = { worker_id: string; ymd: string; used: number | string };
+    const filas = (await this.reservationRepository.manager.query(
+      `
+      SELECT
+        worker_id,
+        to_char((scheduled_at AT TIME ZONE $1)::date, 'YYYY-MM-DD') AS ymd,
+        SUM(total_duration_minutes)::int AS used
+      FROM reservations
+      WHERE (scheduled_at AT TIME ZONE $1)::date BETWEEN $2::date AND $3::date
+        AND status <> 'cancelada'
+      GROUP BY 1, 2
+      `,
+      [tz, days[0], days[6]],
+    )) as FilaCarga[];
+
+    const usados = new Map<string, number>();
+    for (const fila of filas) {
+      usados.set(`${fila.worker_id}|${fila.ymd}`, Number(fila.used));
+    }
+
+    return {
+      start,
+      days,
+      workers: workers.map((w) => ({
+        id: w.id,
+        name: w.name,
+        isDefault: w.isDefault,
+        days: days.map((date, i) => ({
+          date,
+          usedMinutes: usados.get(`${w.id}|${date}`) ?? 0,
+          capacityMinutes: capacidades[i],
+        })),
+      })),
     };
   }
 
