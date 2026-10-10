@@ -33,8 +33,7 @@ export class FaqsService {
    * manda un `sortOrder` explícito, se respeta.
    */
   async create(createFaqDto: CreateFaqDto) {
-    const sortOrder =
-      createFaqDto.sortOrder ?? (await this.siguientePuesto());
+    const sortOrder = createFaqDto.sortOrder ?? (await this.siguientePuesto());
 
     const faq = this.faqRepository.create({
       ...createFaqDto,
@@ -96,7 +95,12 @@ export class FaqsService {
         lock: { mode: 'pessimistic_write' },
       });
 
-      if (!esElMismoConjunto(ids, actuales.map((faq) => faq.id))) {
+      if (
+        !esElMismoConjunto(
+          ids,
+          actuales.map((faq) => faq.id),
+        )
+      ) {
         throw new BadRequestException(ORDEN_DESACTUALIZADO);
       }
 
