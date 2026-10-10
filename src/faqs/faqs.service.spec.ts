@@ -119,6 +119,20 @@ describe('FaqsService.reordenar', () => {
     );
   });
 
+  it('las bloquea siempre por id ascendente, contra interbloqueos', async () => {
+    const { service, repoTransaccion } = baseFalsa([
+      { id: A, sortOrder: 0 },
+      { id: B, sortOrder: 1 },
+    ]);
+
+    await service.reordenar([B, A]);
+
+    expect(repoTransaccion.find).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ order: { id: 'ASC' } }),
+    );
+  });
+
   it.each([
     ['falta una', [A, B]],
     ['sobra una que no existe', [A, B, C, D]],

@@ -92,6 +92,9 @@ export class FaqsService {
       const repositorio = manager.getRepository(Faq);
       const actuales = await repositorio.find({
         select: { id: true, sortOrder: true },
+        // Siempre en el mismo orden: dos reordenamientos a la vez no pueden
+        // bloquear las filas cruzadas y dejarse en un interbloqueo.
+        order: { id: 'ASC' },
         lock: { mode: 'pessimistic_write' },
       });
 
