@@ -10,6 +10,12 @@ export interface AuthSession {
   roles: string[];
   isActive: boolean;
   emailVerified: boolean;
+  /**
+   * `false` en las cuentas creadas con Google que aún no eligieron contraseña
+   * (S8). Mi cuenta enseña entonces «Entras con Google» y ofrece crearla con el
+   * enlace de restablecer (plan 6, C3). Nunca viaja el hash, solo el hecho.
+   */
+  hasPassword: boolean;
   token: string;
   expiresIn: number; // segundos de vida del access token
 }
@@ -31,6 +37,7 @@ export function buildAuthSession(
     roles: user.roles,
     isActive: user.isActive,
     emailVerified: user.isEmailVerified,
+    hasPassword: !!user.passwordHash,
     token: issuer.issueAccessToken({ id: user.id! }),
     expiresIn: issuer.accessTokenTtlSeconds(),
   };

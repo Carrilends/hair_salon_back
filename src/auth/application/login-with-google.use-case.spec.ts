@@ -108,4 +108,16 @@ describe('LoginWithGoogleUseCase', () => {
     expect(saved).toHaveLength(0); // no persiste vinculación de nuevo
     expect(result.refreshToken).toBe('raw-rt');
   });
+
+  it('la sesión de una cuenta nueva de Google dice que no tiene contraseña (plan 6, C3)', async () => {
+    const { uc } = build();
+    const result = await uc.execute({ idToken: 'x', dataPolicyAccepted: true });
+    expect(result.session.hasPassword).toBe(false);
+  });
+
+  it('vincular Google a una cuenta local conserva su contraseña en la sesión', async () => {
+    const { uc } = build({ byEmail: localAccount() });
+    const result = await uc.execute({ idToken: 'x' });
+    expect(result.session.hasPassword).toBe(true);
+  });
 });
