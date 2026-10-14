@@ -1,4 +1,11 @@
-import { InboundMessage } from '../domain/inbound-message';
+import { InboundMessage, InboundMessageKind } from '../domain/inbound-message';
+
+/**
+ * Tipos de Meta a los que no se responde: una reacción (👍 a un aviso) o un
+ * aviso del sistema («cambió de número»). Contestarles sería ruido, y desde F5,
+ * además, tokens.
+ */
+const SIN_RESPUESTA = new Set(['reaction', 'system']);
 
 /**
  * Reduce el sobre del webhook de Meta a los mensajes que nos interesan.
@@ -34,12 +41,33 @@ function leerMensaje(bruto: unknown): InboundMessage | null {
   const from = asString(pick(bruto, 'from'));
   if (!messageId || !from) return null;
 
+  const payload = leerPayload(bruto);
+  const text = asString(pick(pick(bruto, 'text'), 'body'));
   return {
     messageId,
     from,
-    payload: leerPayload(bruto),
-    text: asString(pick(pick(bruto, 'text'), 'body')),
+    kind: tipoDe(asString(pick(bruto, 'type')), payload, text),
+    payload,
+    text,
   };
+}
+
+/**
+ * Lo que se lee manda sobre lo que se declara: un botón es botón por traer su
+ * identificador, y un texto lo es por traer cuerpo. Solo cuando no hay ni uno
+ * ni otro se mira `type`. Cualquier tipo desconocido cuenta como `media`
+ * —«solo leo texto»— y no como texto: tratarlo como texto sería, desde F5,
+ * mandarle al asistente un mensaje vacío.
+ */
+function tipoDe(
+  type: string | null,
+  payload: string | null,
+  text: string | null,
+): InboundMessageKind {
+  if (payload) return 'button';
+  if (text) return 'text';
+  if (type && SIN_RESPUESTA.has(type)) return 'other';
+  return 'media';
 }
 
 /**

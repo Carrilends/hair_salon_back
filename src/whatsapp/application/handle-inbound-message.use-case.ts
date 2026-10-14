@@ -19,7 +19,7 @@ import {
 } from 'src/reservations/domain/errors';
 import { salonLocalToUtcIso } from 'src/reservations/salon-time';
 import { ClockPort } from 'src/reservations/domain/ports/clock.port';
-import { InboundMessage } from '../domain/inbound-message';
+import { InboundMessage, kindOf } from '../domain/inbound-message';
 import {
   ButtonPayload,
   encodeButtonPayload,
@@ -37,6 +37,18 @@ export interface WhatsAppChannelConfig {
   ownerPhone: string;
   timeZone: string;
 }
+
+/** Respuesta a lo que no es texto (plan 06, F2). */
+const SOLO_TEXTO =
+  'Por ahora solo puedo leer texto: no veo fotos, audios ni stickers. ' +
+  'Escríbeme lo que necesitas y te ayudo.';
+/**
+ * Respuesta a un botón que no reconocemos: uno de un formato anterior, o uno
+ * que este canal todavía no sabe atender. Antes caía en la rama del texto y
+ * le respondía con sus citas, sin relación con lo que pulsó.
+ */
+const BOTON_DESCONOCIDO =
+  'Ese botón ya no está disponible. Escríbeme lo que necesitas y te ayudo.';
 
 /** Tope de filas de una lista de WhatsApp. */
 const MAX_FILAS = 10;
@@ -95,16 +107,32 @@ export class HandleInboundMessageUseCase {
       ? { kind: 'admin' }
       : { kind: 'phone', phoneE164: from };
 
-    const payload = parseButtonPayload(mensaje.payload);
+    // Una rama por tipo (plan 06, F2). El orden importa poco: son excluyentes.
+    switch (kindOf(mensaje)) {
+      case 'other':
+        // Una reacción o un aviso del sistema: no se contesta.
+        return;
 
-    // Texto libre (o un botón que no reconocemos): se le ofrecen sus citas. Es
-    // también el punto por donde entraría el asistente el día que se conecte.
-    if (!payload) {
-      await this.ofrecerSusCitas(from, esDuena);
-      return;
+      case 'media':
+        await this.texto(from, SOLO_TEXTO);
+        return;
+
+      case 'text':
+        // Texto libre: se le ofrecen sus citas. Es el punto por donde entrará
+        // el asistente cuando se conecte (F5).
+        await this.ofrecerSusCitas(from, esDuena);
+        return;
+
+      case 'button': {
+        const payload = parseButtonPayload(mensaje.payload);
+        if (!payload) {
+          await this.texto(from, BOTON_DESCONOCIDO);
+          return;
+        }
+        await this.ejecutar(payload, from, esDuena, actor);
+        return;
+      }
     }
-
-    await this.ejecutar(payload, from, esDuena, actor);
   }
 
   private async ejecutar(

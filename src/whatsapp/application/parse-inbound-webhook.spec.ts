@@ -44,6 +44,7 @@ describe('parseInboundWebhook · formas reales de Meta', () => {
       {
         messageId: 'wamid.AAA',
         from: '573001112233',
+        kind: 'text',
         payload: null,
         text: 'hola, quiero cambiar mi cita',
       },
@@ -193,5 +194,75 @@ describe('parseInboundWebhook · entradas hostiles', () => {
   ])('devuelve [] ante %s sin lanzar', (_caso, body) => {
     expect(() => parseInboundWebhook(body)).not.toThrow();
     expect(parseInboundWebhook(body)).toEqual([]);
+  });
+});
+
+/**
+ * Plan 06, F2: el tipo del mensaje se conserva. Antes texto, audio, foto,
+ * sticker, reacción y botón acababan todos con `payload=null` en la misma rama;
+ * con el asistente conectado (F5) eso sería mandarle un sticker a la IA.
+ */
+describe('parseInboundWebhook · tipo de mensaje (plan 06, F2)', () => {
+  function unoDeTipo(extra: Record<string, unknown>) {
+    return parseInboundWebhook(
+      sobre({
+        ...METADATA,
+        messages: [{ from: '573001112233', id: 'wamid.T', ...extra }],
+      }),
+    )[0];
+  }
+
+  it('texto → text', () => {
+    expect(unoDeTipo({ type: 'text', text: { body: 'hola' } }).kind).toBe(
+      'text',
+    );
+  });
+
+  it('botón de plantilla y respuestas interactivas → button', () => {
+    expect(
+      unoDeTipo({ type: 'button', button: { payload: 'CANCEL|r-1' } }).kind,
+    ).toBe('button');
+    expect(
+      unoDeTipo({
+        type: 'interactive',
+        interactive: { type: 'list_reply', list_reply: { id: 'RSDAY|r-1|x' } },
+      }).kind,
+    ).toBe('button');
+  });
+
+  it.each([
+    ['image', { image: { id: 'm1', mime_type: 'image/jpeg' } }],
+    ['audio', { audio: { id: 'm2', voice: true } }],
+    ['video', { video: { id: 'm3' } }],
+    ['document', { document: { id: 'm4', filename: 'a.pdf' } }],
+    ['sticker', { sticker: { id: 'm5', animated: false } }],
+    ['location', { location: { latitude: 4.9, longitude: -73.9 } }],
+    ['contacts', { contacts: [{ name: { formatted_name: 'Ana' } }] }],
+    ['unsupported', { errors: [{ code: 131051 }] }],
+  ])('%s → media (no es texto que se pueda leer)', (type, extra) => {
+    const m = unoDeTipo({ type, ...extra });
+    expect(m.kind).toBe('media');
+    expect(m.payload).toBeNull();
+    expect(m.text).toBeNull();
+  });
+
+  it('una imagen con pie de foto sigue siendo media: el pie no es la conversación', () => {
+    expect(
+      unoDeTipo({
+        type: 'image',
+        image: { id: 'm1', caption: 'así lo quiero' },
+      }).kind,
+    ).toBe('media');
+  });
+
+  it.each([
+    ['reaction', { reaction: { message_id: 'wamid.X', emoji: '👍' } }],
+    ['system', { system: { body: 'cambió de número' } }],
+  ])('%s → other (no se le responde)', (type, extra) => {
+    expect(unoDeTipo({ type, ...extra }).kind).toBe('other');
+  });
+
+  it('un tipo que no conocemos y sin texto se trata como media, no como texto', () => {
+    expect(unoDeTipo({ type: 'tipo_del_futuro' }).kind).toBe('media');
   });
 });
