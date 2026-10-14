@@ -7,6 +7,13 @@ export interface AssistantBudget {
   maxMessagesPerConversation: number;
   maxMessagesPerUserPerDay: number;
   /**
+   * Tope de mensajes de la clienta por número de WhatsApp en 24 h (plan 06,
+   * D7). Es el equivalente del tope por usuario para quien no tiene cuenta: sin
+   * él, el tope por conversación se eludiría esperando a que una caduque.
+   * Ausente ⇒ el mismo valor que `maxMessagesPerUserPerDay`.
+   */
+  maxMessagesPerPhonePerDay?: number;
+  /**
    * Techo de tokens facturables (entrada + salida) de TODA la instalación en un
    * día del salón. Es la última red: aunque los topes por conversación, por
    * usuario y por origen fallen, la factura tiene tope.

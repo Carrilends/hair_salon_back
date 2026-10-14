@@ -1,6 +1,7 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { LlmMessage, LlmPort, LlmToolCall } from '../domain/ports/llm.port';
 import { ConversationRepositoryPort } from '../domain/ports/conversation-repository.port';
+import { PhoneConversationRepositoryPort } from '../domain/ports/phone-conversation-repository.port';
 import { ClockPort } from '../domain/ports/clock.port';
 import { Conversation } from '../domain/conversation';
 import { Message } from '../domain/message';
@@ -24,6 +25,7 @@ import {
   ASSISTANT_SUMMARIZER,
   ASSISTANT_TOOLS,
   ASSISTANT_JUDGMENT_TELEMETRY,
+  CONVERSATION_PHONE_REPOSITORY,
   CONVERSATION_REPOSITORY,
   JUDGMENT,
   JUDGMENT_SETTINGS,
@@ -80,6 +82,18 @@ export interface SendMessageInput {
    * entrada (ausente ⇒ `false`, mínimo privilegio); el contexto siempre lo lleva.
    */
   isAdmin?: boolean;
+  /**
+   * Canal por el que llega el mensaje (plan 06, F3a). Ausente ⇒ `'web'`, que es
+   * como llaman hoy el controlador HTTP y todas las pruebas.
+   *
+   * En `'whatsapp'` la identidad es `phoneE164` y la conversación se encuentra
+   * por número: `userId` tiene que ser null y `conversationId` no se admite.
+   * `isAdmin` lo decide el adaptador del webhook comparando el remitente con
+   * `SALON_OWNER_WHATSAPP`, nunca el chat.
+   */
+  canal?: 'web' | 'whatsapp';
+  /** Remitente firmado por Meta, en E.164. Solo con `canal: 'whatsapp'`. */
+  phoneE164?: string;
 }
 
 export interface SendMessageResult {
@@ -133,11 +147,25 @@ export class SendMessageUseCase {
     @Optional()
     @Inject(ASSISTANT_JUDGMENT_TELEMETRY)
     private readonly telemetria?: TelemetriaDeJuicios,
+    // Consultas por número de WhatsApp (plan 06, F3a). Opcional para que la web
+    // no dependa de él; un mensaje de WhatsApp sin él falla claro.
+    @Optional()
+    @Inject(CONVERSATION_PHONE_REPOSITORY)
+    private readonly porTelefono?: PhoneConversationRepositoryPort,
   ) {
     this.toolsByName = new Map(this.tools.map((t) => [t.name, t]));
   }
 
   async execute(input: SendMessageInput): Promise<SendMessageResult> {
+    // Antes que nada, ni siquiera el techo: una entrada incoherente es un fallo
+    // del adaptador que llama, y no debe costar ni una consulta.
+    validarIdentidad(input);
+    if (input.canal === 'whatsapp' && !this.porTelefono) {
+      throw new Error(
+        'El canal WhatsApp necesita el repositorio por teléfono (CONVERSATION_PHONE_REPOSITORY).',
+      );
+    }
+
     const ahora = this.clock.now();
     const dia = fechaDelSalon(ahora);
 
@@ -163,11 +191,19 @@ export class SendMessageUseCase {
     ahora: Date,
     anotarUso: (uso: TokenUsage) => void,
   ): Promise<SendMessageResult> {
-    const conversation = await this.loadOrStart(input);
+    const conversation = await this.loadOrStart(input, ahora);
+    const porWhatsApp = input.canal === 'whatsapp';
+    // La dueña escribiendo desde su WhatsApp (D7): gestiona la agenda, no
+    // conversa por gusto, y un tope que la dejara sin poder confirmar una cita
+    // a media tarde sería peor que el gasto que evita. Sigue bajo el techo
+    // global de tokens, que no exime a nadie. En la web no cambia nada.
+    const duenaPorWhatsApp = porWhatsApp && input.isAdmin === true;
 
     // A7: los dos límites duros se comprueban ANTES de la primera llamada, para no
     // pagar por rechazar. (1) tope por conversación.
-    conversation.assertWithinBudget(this.budget.maxMessagesPerConversation);
+    if (!duenaPorWhatsApp) {
+      conversation.assertWithinBudget(this.budget.maxMessagesPerConversation);
+    }
     // (2) tope diario por usuario: sin él, el tope por conversación se eludiría
     // abriendo conversaciones nuevas. Solo aplica a usuarios con sesión (los
     // anónimos se acotan por IP en el borde HTTP, T7). La consulta real la
@@ -182,6 +218,22 @@ export class SendMessageUseCase {
         throw new BudgetExceededError();
       }
     }
+    // (2 bis) Lo mismo por número de WhatsApp (D7): quien escribe por la línea
+    // del negocio no tiene cuenta, y sin esto el tope por conversación se
+    // saltaría esperando a que caduque.
+    if (porWhatsApp && !duenaPorWhatsApp) {
+      const since = new Date(ahora.getTime() - DAY_MS);
+      const delNumero = await this.porTelefono!.countMessagesOfPhoneSince(
+        input.phoneE164!,
+        since,
+      );
+      const tope =
+        this.budget.maxMessagesPerPhonePerDay ??
+        this.budget.maxMessagesPerUserPerDay;
+      if (delNumero >= tope) {
+        throw new BudgetExceededError();
+      }
+    }
 
     // El contexto de las herramientas sale del solicitante autenticado
     // (`input.userId`), no del dueño persistido: así un anónimo que inicia sesión
@@ -193,6 +245,9 @@ export class SendMessageUseCase {
       // El rol admin viaja desde el borde HTTP (JWT), nunca desde el chat. Ausente
       // ⇒ false: una omisión nunca concede privilegios.
       isAdmin: input.isAdmin ?? false,
+      // Plan 06, F3a: con qué identidad hablan las herramientas.
+      canal: input.canal ?? 'web',
+      ...(porWhatsApp ? { phoneE164: input.phoneE164 } : {}),
       // Este es el bucle del asistente, así que las salvaguardas del canal
       // conversacional quedan autorizadas. Ningún otro adaptador primario lo
       // marca.
@@ -541,10 +596,29 @@ export class SendMessageUseCase {
     await this.siembraEnVuelo;
   }
 
-  private async loadOrStart(input: SendMessageInput): Promise<Conversation> {
+  private async loadOrStart(
+    input: SendMessageInput,
+    ahora: Date,
+  ): Promise<Conversation> {
+    if (input.canal === 'whatsapp') {
+      // Por número, no por id (D2): la de las últimas 24 h, o una nueva. Es la
+      // misma ventana que WhatsApp, así que «una conversación» significa lo
+      // mismo para la clienta y para el sistema.
+      const activa = await this.porTelefono!.findActiveByPhone(
+        input.phoneE164!,
+        new Date(ahora.getTime() - DAY_MS),
+      );
+      return activa ?? Conversation.start({ phoneE164: input.phoneE164 });
+    }
+
     if (input.conversationId) {
       const existing = await this.repository.findById(input.conversationId);
       if (existing) {
+        // Una conversación de WhatsApp no se retoma desde la web (D2), ni con
+        // sesión: su historial es de un número, y el id no prueba ser su dueña.
+        if (existing.phoneE164) {
+          throw new ConversationAccessError();
+        }
         // Propiedad: una conversación con dueño solo la reanuda su dueño (cierra
         // la fuga de historial ajeno). Una conversación anónima (userId null) la
         // puede continuar cualquiera, incluido el mismo visitante tras iniciar
@@ -586,6 +660,33 @@ export class SendMessageUseCase {
     }
     messages.push({ role: 'user', content: message });
     return messages;
+  }
+}
+
+/**
+ * Coherencia entre canal e identidad (plan 06, D1). Lo que se rechaza aquí son
+ * errores de programación del adaptador que llama, no de la clienta: por eso
+ * es un `Error` llano y no un error de dominio que el borde traduciría.
+ */
+function validarIdentidad(input: SendMessageInput): void {
+  if (input.canal === 'whatsapp') {
+    if (!input.phoneE164) {
+      throw new Error('Un mensaje de WhatsApp tiene que traer el número.');
+    }
+    if (input.userId) {
+      throw new Error(
+        'Un mensaje de WhatsApp no lleva userId: nunca se fabrica uno desde un teléfono.',
+      );
+    }
+    if (input.conversationId) {
+      throw new Error(
+        'Un mensaje de WhatsApp no lleva conversationId: la conversación se encuentra por número.',
+      );
+    }
+    return;
+  }
+  if (input.phoneE164) {
+    throw new Error('Un mensaje de la web no lleva número de WhatsApp.');
   }
 }
 

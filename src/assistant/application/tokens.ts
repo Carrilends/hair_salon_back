@@ -4,6 +4,14 @@
  */
 export const LLM = Symbol('LlmPort');
 export const CONVERSATION_REPOSITORY = Symbol('ConversationRepositoryPort');
+/**
+ * Consultas por número de WhatsApp (`PhoneConversationRepositoryPort`, plan 06,
+ * F3a). En el módulo apunta al MISMO repositorio (`useExisting`); es un token
+ * aparte para que quien solo necesita el puerto de siempre no cargue con éste.
+ */
+export const CONVERSATION_PHONE_REPOSITORY = Symbol(
+  'PhoneConversationRepositoryPort',
+);
 export const ASSISTANT_TOOLS = Symbol('AssistantTools');
 /**
  * Proveedor de juicios (`JudgmentPort`). Se llama así y no por el nombre del

@@ -9,10 +9,11 @@ import {
 import { ConversationOrmEntity } from './conversation.orm-entity';
 import { AssistantMessageOrmEntity } from './assistant-message.orm-entity';
 import { ConversationMapper } from './conversation.mapper';
+import { PhoneConversationRepositoryPort } from '../../domain/ports/phone-conversation-repository.port';
 
 @Injectable()
 export class TypeOrmConversationRepository
-  implements ConversationRepositoryPort
+  implements ConversationRepositoryPort, PhoneConversationRepositoryPort
 {
   constructor(
     @InjectRepository(ConversationOrmEntity)
@@ -109,6 +110,35 @@ export class TypeOrmConversationRepository
       .createQueryBuilder('m')
       .innerJoin('m.conversation', 'c')
       .where('c.userId = :userId', { userId })
+      .andWhere('m.role = :role', { role: 'user' })
+      .andWhere('m.createdAt >= :since', { since: since.toISOString() })
+      .getCount();
+  }
+
+  async findActiveByPhone(
+    phoneE164: string,
+    since: Date,
+  ): Promise<Conversation | null> {
+    // `updated_at` se mueve en cada turno (el UPDATE de escalares lo toca
+    // siempre), así que es la marca de la última actividad. Índice parcial
+    // `(phone_e164, updated_at DESC)` en la migración.
+    const fila = await this.conversations
+      .createQueryBuilder('c')
+      .select('c.id')
+      .where('c.phoneE164 = :phone', { phone: phoneE164 })
+      .andWhere('c.updatedAt >= :since', { since: since.toISOString() })
+      .orderBy('c.updatedAt', 'DESC')
+      .limit(1)
+      .getOne();
+    return fila ? this.findById(fila.id) : null;
+  }
+
+  countMessagesOfPhoneSince(phoneE164: string, since: Date): Promise<number> {
+    // Espejo de `countMessagesOfUserSince`, con el número como dueño.
+    return this.messages
+      .createQueryBuilder('m')
+      .innerJoin('m.conversation', 'c')
+      .where('c.phoneE164 = :phone', { phone: phoneE164 })
       .andWhere('m.role = :role', { role: 'user' })
       .andWhere('m.createdAt >= :since', { since: since.toISOString() })
       .getCount();

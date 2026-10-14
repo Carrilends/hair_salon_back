@@ -5,6 +5,8 @@ import { BudgetExceededError } from './errors';
 export interface ConversationProps {
   id?: string;
   userId?: string | null;
+  /** Remitente de WhatsApp en E.164 (plan 06, F3a). Null en la web. */
+  phoneE164?: string | null;
   summary?: string | null;
   messages?: Message[];
   usage?: TokenUsage;
@@ -21,6 +23,7 @@ export interface ConversationProps {
 export class Conversation {
   readonly id?: string;
   private _userId: string | null;
+  private readonly _phoneE164: string | null;
   private _summary: string | null;
   private readonly _messages: Message[];
   private _usage: TokenUsage;
@@ -30,6 +33,7 @@ export class Conversation {
   private constructor(props: ConversationProps) {
     this.id = props.id;
     this._userId = props.userId ?? null;
+    this._phoneE164 = props.phoneE164 ?? null;
     this._summary = props.summary ?? null;
     this._messages = props.messages ?? [];
     this._usage = props.usage ?? TokenUsage.zero();
@@ -37,9 +41,27 @@ export class Conversation {
     this.updatedAt = props.updatedAt;
   }
 
-  /** Inicia una conversación nueva. `userId` null ⇒ anónima: solo consulta (A3). */
-  static start(props: { userId?: string | null }): Conversation {
-    return new Conversation({ userId: props.userId ?? null });
+  /**
+   * Inicia una conversación nueva. `userId` null ⇒ anónima: solo consulta (A3).
+   *
+   * `phoneE164` ⇒ conversación de WhatsApp (plan 06, F3a): su identidad es el
+   * número que firma Meta. Usuario y teléfono **no se mezclan** (D1, D3): unir
+   * una cuenta web con un número queda fuera de alcance, y una conversación con
+   * los dos sería de dos dueños a la vez.
+   */
+  static start(props: {
+    userId?: string | null;
+    phoneE164?: string | null;
+  }): Conversation {
+    if (props.userId && props.phoneE164) {
+      throw new Error(
+        'Una conversación es de un usuario web o de un número de WhatsApp, no de los dos.',
+      );
+    }
+    return new Conversation({
+      userId: props.userId ?? null,
+      phoneE164: props.phoneE164 ?? null,
+    });
   }
 
   /** Rehidrata una conversación persistida (usado por el repositorio). */
@@ -66,7 +88,17 @@ export class Conversation {
    * no cambia de manos.
    */
   claimBy(userId: string): void {
+    // Una conversación de WhatsApp ya tiene dueño: su número (D1, D3).
+    if (this._phoneE164 !== null) return;
     if (this._userId === null) this._userId = userId;
+  }
+
+  /**
+   * Número de WhatsApp dueño de la conversación, o `null` en la web. Inmutable:
+   * se fija al nacer y es lo que impide retomarla desde la web (D2).
+   */
+  get phoneE164(): string | null {
+    return this._phoneE164;
   }
 
   get summary(): string | null {

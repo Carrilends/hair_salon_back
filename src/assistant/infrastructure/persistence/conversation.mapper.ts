@@ -10,6 +10,9 @@ export class ConversationMapper {
   static toOrmScalars(c: Conversation): Partial<ConversationOrmEntity> {
     return {
       userId: c.userId,
+      // Solo cuando existe: el número se fija al nacer y no cambia, así que los
+      // UPDATE no lo necesitan, y las conversaciones de la web no lo llevan.
+      ...(c.phoneE164 ? { phoneE164: c.phoneE164 } : {}),
       summary: c.summary,
       promptTokens: c.usage.promptTokens,
       completionTokens: c.usage.completionTokens,
@@ -43,6 +46,7 @@ export class ConversationMapper {
     return Conversation.fromPersistence({
       id: c.id,
       userId: c.userId,
+      phoneE164: c.phoneE164 ?? null,
       summary: c.summary,
       usage: TokenUsage.of(
         c.promptTokens,

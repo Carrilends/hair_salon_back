@@ -36,6 +36,20 @@ export interface AssistantContext {
    * se le imponga a los demás.
    */
   recientes?: MensajeReciente[];
+  /**
+   * Por dónde habla quien escribe (plan 06, F3a). Lo fija **solo** el bucle del
+   * asistente: `'web'` para el widget, `'whatsapp'` para la línea del negocio.
+   * Los otros adaptadores primarios (MCP, cron) lo dejan sin poner, igual que
+   * `canalConversacional`. Sirve para que las herramientas sepan qué identidad
+   * tienen delante y cómo responder (F3b).
+   */
+  canal?: 'web' | 'whatsapp';
+  /**
+   * Número del remitente en E.164, **solo** en el canal WhatsApp. Viene firmado
+   * por Meta (HMAC), así que es tan fiable como un JWT; aun así nunca se
+   * convierte en un `userId` (D1).
+   */
+  phoneE164?: string;
 }
 
 /**

@@ -22,6 +22,14 @@ export class ConversationOrmEntity {
   @Column('uuid', { name: 'user_id', nullable: true })
   userId: string | null;
 
+  /**
+   * Remitente de WhatsApp en E.164 (plan 06, F3a). Null en las conversaciones
+   * de la web. Con él se encuentra la conversación de un número sin que el
+   * canal tenga que recordar ids, y es lo que impide retomarla desde la web.
+   */
+  @Column('text', { name: 'phone_e164', nullable: true })
+  phoneE164: string | null;
+
   @Column('text', { nullable: true })
   summary: string | null;
 

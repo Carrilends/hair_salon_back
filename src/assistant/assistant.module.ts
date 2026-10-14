@@ -37,6 +37,7 @@ import {
   ASSISTANT_JUDGMENT_TELEMETRY,
   ASSISTANT_SUMMARIZER,
   ASSISTANT_TOOLS,
+  CONVERSATION_PHONE_REPOSITORY,
   CONVERSATION_REPOSITORY,
   JUDGMENT,
   JUDGMENT_SETTINGS,
@@ -113,6 +114,12 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
       provide: CONVERSATION_REPOSITORY,
       useClass: TypeOrmConversationRepository,
     },
+    {
+      // Plan 06, F3a: el MISMO repositorio, visto por su puerto de teléfono.
+      // `useExisting` y no `useClass`, para no tener dos instancias.
+      provide: CONVERSATION_PHONE_REPOSITORY,
+      useExisting: CONVERSATION_REPOSITORY,
+    },
     { provide: ASSISTANT_CLOCK, useClass: SystemClock },
     {
       provide: ASSISTANT_SUMMARIZER,
@@ -179,6 +186,11 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
           'ASSISTANT_MAX_MESSAGES_PER_USER_PER_DAY',
           50,
         ),
+        // Lo mismo por número de WhatsApp (plan 06, D7).
+        maxMessagesPerPhonePerDay: enteroDeEntorno(
+          'ASSISTANT_MAX_MESSAGES_PER_PHONE_PER_DAY',
+          50,
+        ),
         // Techo de la instalación, en tokens facturables del día del salón.
         // En tokens y no en mensajes porque un turno son hasta seis llamadas al
         // modelo: contar mensajes no acota la factura. 0 = sin techo.
@@ -228,8 +240,9 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
     },
   ],
   // El arreglo de herramientas se exporta para que la superficie MCP publique
-  // **los mismos objetos**, no copias (Fase 7, M8). Nada mas sale de este modulo:
-  // el bucle, el presupuesto y la telemetria siguen siendo asunto suyo.
-  exports: [ASSISTANT_TOOLS],
+  // **los mismos objetos**, no copias (Fase 7, M8). El bucle sale desde el plan
+  // 06 (F3a) para que el webhook de WhatsApp converse con el MISMO asistente
+  // (F5); el presupuesto y la telemetria siguen siendo asunto de este modulo.
+  exports: [ASSISTANT_TOOLS, SendMessageUseCase],
 })
 export class AssistantModule {}
