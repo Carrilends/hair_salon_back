@@ -136,6 +136,9 @@ function montar(opts: {
     undefined,
     undefined,
     opts.sinPuertoDeTelefono ? undefined : repo,
+    // Desde F3b, WhatsApp exige sus juegos: aquí los dos con la herramienta
+    // espía, que es lo único que estas pruebas observan.
+    { clienta: [herramienta], duena: [herramienta] },
   );
   return { useCase, repo, llm, herramienta };
 }

@@ -11,9 +11,17 @@ import {
   ConversationAccessError,
   DAILY_CEILING_REPLY,
 } from '../domain/errors';
-import { AssistantContext, AssistantTool } from './tools/assistant-tool';
+import {
+  AssistantContext,
+  AssistantTool,
+  WhatsAppToolSets,
+} from './tools/assistant-tool';
 import { AssistantPresentation } from './tools/assistant-presentation';
-import { SYSTEM_PROMPT } from './system-prompt';
+import {
+  SYSTEM_PROMPT,
+  SYSTEM_PROMPT_WHATSAPP_CLIENTA,
+  SYSTEM_PROMPT_WHATSAPP_DUENA,
+} from './system-prompt';
 import { fechaDelSalon, inicioDelDiaDelSalon } from './salon-day';
 import { AssistantBudget } from './assistant-budget';
 import { ConversationSummarizer } from './summarize-conversation.use-case';
@@ -24,6 +32,7 @@ import {
   ASSISTANT_DAILY_LEDGER,
   ASSISTANT_SUMMARIZER,
   ASSISTANT_TOOLS,
+  ASSISTANT_WHATSAPP_TOOLS,
   ASSISTANT_JUDGMENT_TELEMETRY,
   CONVERSATION_PHONE_REPOSITORY,
   CONVERSATION_REPOSITORY,
@@ -152,6 +161,10 @@ export class SendMessageUseCase {
     @Optional()
     @Inject(CONVERSATION_PHONE_REPOSITORY)
     private readonly porTelefono?: PhoneConversationRepositoryPort,
+    // Juegos de herramientas de WhatsApp, clienta y dueña (plan 06, F3b).
+    @Optional()
+    @Inject(ASSISTANT_WHATSAPP_TOOLS)
+    private readonly herramientasWhatsApp?: WhatsAppToolSets,
   ) {
     this.toolsByName = new Map(this.tools.map((t) => [t.name, t]));
   }
@@ -163,6 +176,11 @@ export class SendMessageUseCase {
     if (input.canal === 'whatsapp' && !this.porTelefono) {
       throw new Error(
         'El canal WhatsApp necesita el repositorio por teléfono (CONVERSATION_PHONE_REPOSITORY).',
+      );
+    }
+    if (input.canal === 'whatsapp' && !this.herramientasWhatsApp) {
+      throw new Error(
+        'El canal WhatsApp necesita sus juegos de herramientas de WhatsApp (ASSISTANT_WHATSAPP_TOOLS).',
       );
     }
 
@@ -267,12 +285,17 @@ export class SendMessageUseCase {
         { rol: 'clienta' as const, texto: input.message },
       ],
     };
+    // Qué herramientas y qué instrucciones tiene este turno (plan 06, F3b). La
+    // búsqueda por nombre se hace DENTRO de este juego: si el modelo pide una
+    // herramienta de otro rol, no existe para él.
+    const juego = this.juegoDelTurno(input);
     const messages = this.buildContext(
       conversation,
       input.message,
       context.now,
+      juego.prompt,
     );
-    const toolDefinitions = this.tools.map((t) => t.definition);
+    const toolDefinitions = juego.tools.map((t) => t.definition);
 
     let reply = '';
     let presentaciones: AssistantPresentation[] = [];
@@ -352,7 +375,7 @@ export class SendMessageUseCase {
           // El modelo recibe el mismo dato y el efecto no se duplica.
           result = resultadosDelTurno.get(firma);
         } else {
-          const tool = this.toolsByName.get(call.name);
+          const tool = juego.porNombre.get(call.name);
           result = tool
             ? await tool.execute(call.arguments, context)
             : { ok: false, motivo: 'herramienta_desconocida' };
@@ -648,12 +671,43 @@ export class SendMessageUseCase {
     return Conversation.start({ userId: input.userId });
   }
 
+  /**
+   * Juego de herramientas y prompt del turno (plan 06, F3b): la web, como
+   * siempre; en WhatsApp, el de la dueña o el de la clienta según `isAdmin`,
+   * que fija el webhook y nunca el chat.
+   */
+  private juegoDelTurno(input: SendMessageInput): {
+    tools: AssistantTool[];
+    porNombre: Map<string, AssistantTool>;
+    prompt: string;
+  } {
+    if (input.canal !== 'whatsapp') {
+      return {
+        tools: this.tools,
+        porNombre: this.toolsByName,
+        prompt: SYSTEM_PROMPT,
+      };
+    }
+    const esDuena = input.isAdmin === true;
+    const tools = esDuena
+      ? this.herramientasWhatsApp!.duena
+      : this.herramientasWhatsApp!.clienta;
+    return {
+      tools,
+      porNombre: new Map(tools.map((t) => [t.name, t])),
+      prompt: esDuena
+        ? SYSTEM_PROMPT_WHATSAPP_DUENA
+        : SYSTEM_PROMPT_WHATSAPP_CLIENTA,
+    };
+  }
+
   private buildContext(
     conversation: Conversation,
     message: string,
     now: Date,
+    prompt: string = SYSTEM_PROMPT,
   ): LlmMessage[] {
-    const messages: LlmMessage[] = [{ role: 'system', content: SYSTEM_PROMPT }];
+    const messages: LlmMessage[] = [{ role: 'system', content: prompt }];
     // La fecha va DESPUÉS del prefijo constante, nunca dentro: así el prefijo
     // sigue siendo cacheable (§6.2) y el modelo puede resolver "mañana" o "el
     // viernes". Sin ella no entiende ninguna fecha relativa.

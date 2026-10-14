@@ -25,6 +25,15 @@ export interface GetMyReservationsExecutor {
 }
 
 /**
+ * Las citas de un número de WhatsApp (plan 06, F3b): las activas y no vencidas
+ * a nombre de ese teléfono. La compone el juego de herramientas de WhatsApp
+ * sobre `FindActionableReservationsUseCase`.
+ */
+export interface GetReservationsByPhoneExecutor {
+  execute(phoneE164: string): Promise<MyReservationView[]>;
+}
+
+/**
  * `misReservas`: consulta de solo lectura de las reservas de la clienta que
  * conversa. Fíjate en el esquema: **no tiene ningún parámetro de identidad**. La
  * identidad SIEMPRE sale del contexto de sesión (JWT), nunca de los argumentos:
@@ -46,15 +55,19 @@ export class MyReservationsTool implements AssistantTool {
     },
   };
 
-  constructor(private readonly getMine: GetMyReservationsExecutor) {}
+  constructor(
+    private readonly getMine: GetMyReservationsExecutor,
+    // Solo en el juego de WhatsApp. Sin él, un contexto de WhatsApp no cae a
+    // la consulta por usuario: responde como si no hubiera sesión.
+    private readonly porTelefono?: GetReservationsByPhoneExecutor,
+  ) {}
 
   async execute(
     _args: Record<string, unknown>,
     context: AssistantContext,
   ): Promise<unknown> {
-    if (!context.userId) return { ok: false, motivo: 'sesion_requerida' };
-
-    const reservations = await this.getMine.execute(context.userId);
+    const reservations = await this.lasDeQuienConversa(context);
+    if (!reservations) return { ok: false, motivo: 'sesion_requerida' };
 
     // Proyección compacta (§6.2): solo lo que hace falta para conversar. Se limita
     // a 10 para acotar los tokens de la siguiente llamada.
@@ -70,5 +83,20 @@ export class MyReservationsTool implements AssistantTool {
       // asignación, no una identidad: el chat sigue sin nombrar estilistas.
       estilistaElegida: r.workerPinned,
     }));
+  }
+
+  /**
+   * Por número en WhatsApp (el firmado, nunca uno escrito en el chat); por
+   * usuario en la web. `null` = no hay identidad con la que consultar.
+   */
+  private async lasDeQuienConversa(
+    context: AssistantContext,
+  ): Promise<MyReservationView[] | null> {
+    if (context.canal === 'whatsapp') {
+      if (!context.phoneE164 || !this.porTelefono) return null;
+      return this.porTelefono.execute(context.phoneE164);
+    }
+    if (!context.userId) return null;
+    return this.getMine.execute(context.userId);
   }
 }

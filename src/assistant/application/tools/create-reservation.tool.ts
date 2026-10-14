@@ -9,6 +9,7 @@ import { CreateReservationArgsDto } from './create-reservation-args.dto';
 import { ModoDeJuicio } from '../judgment-settings';
 import { fechaYHoraEnPalabras } from '../salon-day';
 import { verificarReservaPropuesta } from '../screening/verify-reservation';
+import { contactoDeWhatsApp } from './identidad';
 import {
   DomainError,
   DuplicateServicesError,
@@ -30,6 +31,8 @@ export interface CreateReservationExecutor {
     scheduledAt: string;
     serviceIds: string[];
     userId?: string | null;
+    /** Solo desde WhatsApp (plan 06, D3): nombre dado + número firmado. */
+    contact?: { name: string; phone: string } | null;
   }): Promise<{ id?: string; status: string }>;
 }
 
@@ -90,11 +93,14 @@ export class CreateReservationTool implements AssistantTool {
   ): Promise<unknown> {
     // A3: sin sesión no se reserva. Se devuelve como resultado (no excepción)
     // para que el modelo lo explique con sus palabras e invite a iniciar sesión.
-    if (!context.userId) {
-      return { ok: false, motivo: 'sesion_requerida' };
-    }
+    // Identidad: en la web, la sesión; en WhatsApp, el número firmado más el
+    // nombre que dio la clienta (plan 06, D3/D5). `nombre` se aparta antes de
+    // validar: solo existe en la definición de WhatsApp, y en la web sigue
+    // siendo un argumento que sobra.
+    const identidad = identidadParaCrear(args, context);
+    if ('motivo' in identidad) return { ok: false, ...identidad };
 
-    const dto = plainToInstance(CreateReservationArgsDto, args);
+    const dto = plainToInstance(CreateReservationArgsDto, identidad.resto);
     const errors = await validate(dto, {
       whitelist: true,
       forbidNonWhitelisted: true,
@@ -169,7 +175,7 @@ export class CreateReservationTool implements AssistantTool {
       const reservation = await this.createReservation.execute({
         scheduledAt: dto.fechaHoraIso,
         serviceIds: dto.serviciosIds,
-        userId: context.userId,
+        ...identidad.quien,
       });
       return {
         ok: true,
@@ -237,6 +243,42 @@ function preguntaDeConfirmacion({
 }
 
 /** Traduce los errores de dominio de Reservas a motivos cortos y legibles. */
+/**
+ * Quién crea y con qué argumentos se valida (plan 06, F3b). Compartido por
+ * `crearReserva` y `reservarPaquete`.
+ *
+ * - Web: hace falta sesión; `nombre` no es un argumento (la validación lo
+ *   rechazará como sobrante, como siempre).
+ * - WhatsApp: solo la clienta (la dueña no crea, D6), con `nombre` obligatorio;
+ *   la reserva nace sin usuario y con contacto `{nombre, número firmado}`.
+ */
+export function identidadParaCrear(
+  args: Record<string, unknown>,
+  context: AssistantContext,
+):
+  | {
+      quien:
+        | { userId: string }
+        | { userId: null; contact: { name: string; phone: string } };
+      resto: Record<string, unknown>;
+    }
+  | { motivo: string; pregunta?: string } {
+  if (context.canal !== 'whatsapp') {
+    if (!context.userId) return { motivo: 'sesion_requerida' };
+    return { quien: { userId: context.userId }, resto: args };
+  }
+  if (context.isAdmin) return { motivo: 'solo_clientas' };
+  const { nombre, ...resto } = args;
+  const contacto = contactoDeWhatsApp(context, nombre);
+  if (!contacto) {
+    return {
+      motivo: 'nombre_requerido',
+      pregunta: '¿A nombre de quién dejo la reserva?',
+    };
+  }
+  return { quien: { userId: null, contact: contacto }, resto };
+}
+
 export function mapDomainErrorToReason(error: unknown): string {
   if (error instanceof WorkerOverlapError) return 'hora_ocupada';
   if (error instanceof OutOfBusinessHoursError) return 'fuera_de_horario';

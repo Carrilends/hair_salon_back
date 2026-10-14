@@ -1,9 +1,11 @@
 import { AssistantModule } from './assistant.module';
 import { SendMessageUseCase } from './application/send-message.use-case';
 import {
+  ASSISTANT_WHATSAPP_TOOLS,
   CONVERSATION_PHONE_REPOSITORY,
   CONVERSATION_REPOSITORY,
 } from './application/tokens';
+import { buildWhatsAppTools } from './build-whatsapp-tools';
 
 /**
  * Plan 06, F3a (revisión). El puerto de teléfono se inyecta con `@Optional()`:
@@ -11,7 +13,11 @@ import {
  * aparecería con el primer mensaje de WhatsApp. Esto lo detecta antes, leyendo
  * los metadatos del módulo real sin instanciar nada.
  */
-type Proveedor = { provide?: unknown; useExisting?: unknown };
+type Proveedor = {
+  provide?: unknown;
+  useExisting?: unknown;
+  inject?: unknown[];
+};
 
 const proveedores = (): Proveedor[] =>
   (Reflect.getMetadata('providers', AssistantModule) ?? []) as Proveedor[];
@@ -30,5 +36,17 @@ describe('cableado de AssistantModule · canal WhatsApp', () => {
       []) as unknown[];
 
     expect(exportados).toContain(SendMessageUseCase);
+  });
+});
+
+describe('cableado de AssistantModule · herramientas de WhatsApp (F3b)', () => {
+  it('provee los juegos de WhatsApp con tantas dependencias como pide la fábrica', () => {
+    // Nest resuelve por POSICIÓN: una entrada descolocada le pasaría el caso
+    // de uso equivocado a la herramienta equivocada, sin romper el arranque.
+    const juegos = proveedores().find(
+      (p) => p.provide === ASSISTANT_WHATSAPP_TOOLS,
+    );
+
+    expect(juegos?.inject).toHaveLength(buildWhatsAppTools.length);
   });
 });

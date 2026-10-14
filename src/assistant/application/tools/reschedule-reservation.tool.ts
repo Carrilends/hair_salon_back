@@ -12,6 +12,7 @@ import {
   ChosenWorkerBusyError,
 } from 'src/reservations/domain/errors';
 import { ReservationActor } from 'src/reservations/domain/reservation-actor';
+import { actorDelContexto } from './identidad';
 
 /**
  * Contrato mínimo del caso de uso real de reprogramación. Como en la
@@ -81,7 +82,8 @@ export class RescheduleReservationTool implements AssistantTool {
     args: Record<string, unknown>,
     context: AssistantContext,
   ): Promise<unknown> {
-    if (!context.userId) return { ok: false, motivo: 'sesion_requerida' };
+    const actor = actorDelContexto(context);
+    if (!actor) return { ok: false, motivo: 'sesion_requerida' };
 
     const id = typeof args.reservaId === 'string' ? args.reservaId : null;
     const fecha = typeof args.nuevaFecha === 'string' ? args.nuevaFecha : null;
@@ -91,9 +93,7 @@ export class RescheduleReservationTool implements AssistantTool {
       const { reservation, workerChanged } = await this.reschedule.execute(
         id,
         fecha,
-        context.isAdmin
-          ? { kind: 'admin' }
-          : { kind: 'user', userId: context.userId },
+        actor,
       );
       // Un sí/no, nunca un nombre: el chat no nombra estilistas. Sin este campo
       // el modelo no tendría cómo enterarse —`misReservas` tampoco proyecta

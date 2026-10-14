@@ -9,12 +9,13 @@ import {
   ReservationOwnershipError,
 } from 'src/reservations/domain/errors';
 import { ReservationActor } from 'src/reservations/domain/reservation-actor';
+import { actorDelContexto } from './identidad';
 
 /**
  * Contrato mínimo del caso de uso real de cancelación (A6). El actor lleva la
- * identidad; sale del contexto de sesión, nunca del modelo. Aquí el asistente
- * solo puede fabricar actores `user` y `admin`: el actor `phone` pertenece al
- * canal de WhatsApp y no se cuela por esta puerta.
+ * identidad; sale del contexto, nunca del modelo (`actorDelContexto`): `user`
+ * o `admin` en la web, y desde el plan 06 `phone` o `admin` en WhatsApp, con el
+ * número que firma Meta.
  */
 export interface CancelReservationExecutor {
   execute(id: string, actor: ReservationActor): Promise<{ status: string }>;
@@ -54,18 +55,14 @@ export class CancelReservationTool implements AssistantTool {
     args: Record<string, unknown>,
     context: AssistantContext,
   ): Promise<unknown> {
-    if (!context.userId) return { ok: false, motivo: 'sesion_requerida' };
+    const actor = actorDelContexto(context);
+    if (!actor) return { ok: false, motivo: 'sesion_requerida' };
 
     const id = typeof args.reservaId === 'string' ? args.reservaId : null;
     if (!id) return { ok: false, motivo: 'argumentos_invalidos' };
 
     try {
-      const reservation = await this.cancel.execute(
-        id,
-        context.isAdmin
-          ? { kind: 'admin' }
-          : { kind: 'user', userId: context.userId },
-      );
+      const reservation = await this.cancel.execute(id, actor);
       return { ok: true, estado: reservation.status };
     } catch (error) {
       return { ok: false, motivo: mapCancelErrorToReason(error) };

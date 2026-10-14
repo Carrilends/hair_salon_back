@@ -80,6 +80,8 @@ import {
     ConfirmReservationUseCase,
     FindActionableReservationsUseCase,
     GetReservationUseCase,
+    // Plan 06, F3b: la agenda que la dueña consulta por WhatsApp (`verAgenda`).
+    ListActiveReservationsUseCase,
   ],
 })
 export class ReservationsModule {}

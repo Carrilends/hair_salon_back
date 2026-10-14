@@ -1,0 +1,149 @@
+import { GetMyReservationsUseCase } from 'src/reservations/application/get-my-reservations.use-case';
+import { FindActionableReservationsUseCase } from 'src/reservations/application/find-actionable-reservations.use-case';
+import { ListActiveReservationsUseCase } from 'src/reservations/application/list-active-reservations.use-case';
+import { ConfirmReservationUseCase } from 'src/reservations/application/confirm-reservation.use-case';
+
+import {
+  AssistantTool,
+  WhatsAppToolSets,
+} from './application/tools/assistant-tool';
+import { MyReservationsTool } from './application/tools/my-reservations.tool';
+import { ViewAgendaTool } from './application/tools/view-agenda.tool';
+import { ConfirmReservationTool } from './application/tools/confirm-reservation.tool';
+
+export type { WhatsAppToolSets };
+
+/** El argumento que WhatsApp añade a las dos herramientas que crean (D5). */
+const NOMBRE = {
+  type: 'string',
+  description:
+    'Nombre de la clienta para la reserva. Pídeselo si no lo ha dicho; no lo inventes.',
+};
+
+/**
+ * Composición de los juegos de WhatsApp (plan 06, F3b). Es la **tabla de
+ * permisos** del canal: lo que no está aquí, ese rol no lo puede ejecutar,
+ * porque el bucle solo busca herramientas dentro del juego del turno.
+ *
+ * Parte del arreglo de la web (`ASSISTANT_TOOLS`) y **no lo modifica**: las
+ * herramientas que en WhatsApp necesitan otra descripción u otro argumento se
+ * envuelven (`conDefinicion`), sin tocar el objeto original, que es el mismo
+ * que publica MCP. Las de la dueña (`verAgenda`, `confirmarReserva`) solo
+ * existen aquí, de modo que MCP no las publica.
+ *
+ * Falla al componer si falta una herramienta base: mejor un arranque roto que
+ * un canal al que le falta algo y solo se nota con el primer mensaje.
+ *
+ * El orden de los parámetros debe coincidir con el `inject` del módulo.
+ */
+export function buildWhatsAppTools(
+  base: AssistantTool[],
+  getMyReservations: GetMyReservationsUseCase,
+  findActionable: FindActionableReservationsUseCase,
+  listActive: ListActiveReservationsUseCase,
+  confirm: ConfirmReservationUseCase,
+): WhatsAppToolSets {
+  const de = (nombre: string): AssistantTool => {
+    const tool = base.find((t) => t.name === nombre);
+    if (!tool) {
+      throw new Error(
+        `Falta la herramienta ${nombre} para componer el canal WhatsApp.`,
+      );
+    }
+    return tool;
+  };
+
+  const listar = de('listarServicios');
+  const disponibilidad = de('consultarDisponibilidad');
+
+  const crear = conDefinicion(de('crearReserva'), {
+    description:
+      'Crea una reserva a nombre de la clienta que escribe, con su número de WhatsApp, en la fecha y servicios indicados. Hace falta su nombre.',
+    extra: { nombre: NOMBRE },
+  });
+  const paquete = conDefinicion(de('reservarPaquete'), {
+    description:
+      'Reserva un paquete ya compuesto a nombre de la clienta que escribe: crea UNA reserva con todos sus servicios. Hace falta su nombre.',
+    extra: { nombre: NOMBRE },
+  });
+  const cancelar = conDefinicion(de('cancelarReserva'), {
+    description:
+      'Cancela una cita por su id, si su estado y su plazo lo permiten.',
+  });
+  const reprogramar = conDefinicion(de('reprogramarReserva'), {
+    description: (
+      de('reprogramarReserva').definition.description ?? ''
+    ).replace(
+      'una reserva de la clienta con sesión iniciada',
+      'una cita por su id',
+    ),
+  });
+
+  // Las citas de ESE número: las activas y no vencidas, proyectadas a la misma
+  // forma que «mis reservas» de la web, para que el modelo las lea igual.
+  const misReservas = new MyReservationsTool(getMyReservations, {
+    execute: async (phoneE164: string) =>
+      (await findActionable.execute(phoneE164)).map((r) => ({
+        id: r.id,
+        scheduledAt: r.scheduledAt,
+        status: r.status,
+        totalDurationMinutes: r.totalDurationMinutes,
+        services: r.lines.map((l) => ({ name: l.name })),
+        workerPinned: r.workerPinned,
+      })),
+  });
+
+  return {
+    clienta: [
+      listar,
+      disponibilidad,
+      de('recomendarServicios'),
+      de('componerPaquete'),
+      crear,
+      paquete,
+      misReservas,
+      cancelar,
+      reprogramar,
+    ],
+    duena: [
+      listar,
+      disponibilidad,
+      new ViewAgendaTool(listActive),
+      new ConfirmReservationTool(confirm),
+      cancelar,
+      reprogramar,
+    ],
+  };
+}
+
+/**
+ * La misma herramienta con otra definición: otra descripción y, si hace falta,
+ * argumentos **obligatorios** de más. Delega en el original, sin copiarlo ni
+ * mutarlo.
+ */
+function conDefinicion(
+  tool: AssistantTool,
+  cambios: { description: string; extra?: Record<string, unknown> },
+): AssistantTool {
+  const params = tool.definition.parameters as {
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
+  const extra = cambios.extra ?? {};
+  return {
+    name: tool.name,
+    definition: {
+      ...tool.definition,
+      description: cambios.description,
+      parameters: {
+        ...params,
+        properties: { ...(params.properties ?? {}), ...extra },
+        required: [...(params.required ?? []), ...Object.keys(extra)],
+      },
+    },
+    execute: (args, context) => tool.execute(args, context),
+    ...(tool.presentar
+      ? { presentar: (result: unknown) => tool.presentar!(result) }
+      : {}),
+  };
+}

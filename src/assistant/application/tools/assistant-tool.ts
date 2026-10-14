@@ -86,3 +86,13 @@ export interface AssistantTool {
     context: AssistantContext,
   ): Promise<unknown>;
 }
+
+/**
+ * Los dos juegos de herramientas del canal WhatsApp (plan 06, D6). Los compone
+ * `build-whatsapp-tools.ts` y el bucle elige uno por turno según el rol; solo
+ * puede ejecutar herramientas del juego que ofreció.
+ */
+export interface WhatsAppToolSets {
+  clienta: AssistantTool[];
+  duena: AssistantTool[];
+}

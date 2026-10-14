@@ -7,6 +7,9 @@ import { CreateReservationUseCase } from 'src/reservations/application/create-re
 import { GetMyReservationsUseCase } from 'src/reservations/application/get-my-reservations.use-case';
 import { CancelReservationUseCase } from 'src/reservations/application/cancel-reservation.use-case';
 import { RescheduleReservationUseCase } from 'src/reservations/application/reschedule-reservation.use-case';
+import { FindActionableReservationsUseCase } from 'src/reservations/application/find-actionable-reservations.use-case';
+import { ListActiveReservationsUseCase } from 'src/reservations/application/list-active-reservations.use-case';
+import { ConfirmReservationUseCase } from 'src/reservations/application/confirm-reservation.use-case';
 import { Service } from 'src/service/entities/service.entity';
 
 import { ConversationOrmEntity } from './infrastructure/persistence/conversation.orm-entity';
@@ -29,6 +32,7 @@ import { GetAssistantUsageUseCase } from './application/get-usage.use-case';
 import { DailyTokenLedger } from './application/daily-token-ledger';
 import { SummarizeConversationUseCase } from './application/summarize-conversation.use-case';
 import { buildAssistantTools } from './build-assistant-tools';
+import { buildWhatsAppTools } from './build-whatsapp-tools';
 import {
   ASSISTANT_BUDGET,
   ASSISTANT_CLOCK,
@@ -37,6 +41,7 @@ import {
   ASSISTANT_JUDGMENT_TELEMETRY,
   ASSISTANT_SUMMARIZER,
   ASSISTANT_TOOLS,
+  ASSISTANT_WHATSAPP_TOOLS,
   CONVERSATION_PHONE_REPOSITORY,
   CONVERSATION_REPOSITORY,
   JUDGMENT,
@@ -236,6 +241,20 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
         RescheduleReservationUseCase,
         JUDGMENT,
         JUDGMENT_SETTINGS,
+      ],
+    },
+    {
+      // Plan 06, F3b: los juegos de WhatsApp, clienta y dueña. Parten de
+      // ASSISTANT_TOOLS sin modificarlo (MCP lo publica tal cual). El orden del
+      // `inject` DEBE coincidir con los parámetros de `buildWhatsAppTools`.
+      provide: ASSISTANT_WHATSAPP_TOOLS,
+      useFactory: buildWhatsAppTools,
+      inject: [
+        ASSISTANT_TOOLS,
+        GetMyReservationsUseCase,
+        FindActionableReservationsUseCase,
+        ListActiveReservationsUseCase,
+        ConfirmReservationUseCase,
       ],
     },
   ],

@@ -5,6 +5,7 @@ import { LlmToolDefinition } from '../../domain/ports/llm.port';
 import { CreateReservationArgsDto } from './create-reservation-args.dto';
 import {
   CreateReservationExecutor,
+  identidadParaCrear,
   mapDomainErrorToReason,
 } from './create-reservation.tool';
 
@@ -48,12 +49,14 @@ export class ReservePackageTool implements AssistantTool {
     args: Record<string, unknown>,
     context: AssistantContext,
   ): Promise<unknown> {
-    if (!context.userId) return { ok: false, motivo: 'sesion_requerida' };
+    // Misma identidad que `crearReserva` (plan 06, F3b).
+    const identidad = identidadParaCrear(args, context);
+    if ('motivo' in identidad) return { ok: false, ...identidad };
 
     // Misma validación de formato que `crearReserva` (fecha ISO, IDs UUID, al
     // menos uno): rechaza argumentos malformados con un motivo limpio y barato,
     // antes de tocar el caso de uso.
-    const dto = plainToInstance(CreateReservationArgsDto, args);
+    const dto = plainToInstance(CreateReservationArgsDto, identidad.resto);
     const errors = await validate(dto, {
       whitelist: true,
       forbidNonWhitelisted: true,
@@ -68,7 +71,7 @@ export class ReservePackageTool implements AssistantTool {
       const reservation = await this.createReservation.execute({
         scheduledAt: dto.fechaHoraIso,
         serviceIds: dto.serviciosIds,
-        userId: context.userId,
+        ...identidad.quien,
       });
       return {
         ok: true,

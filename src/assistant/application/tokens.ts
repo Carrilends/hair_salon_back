@@ -14,6 +14,12 @@ export const CONVERSATION_PHONE_REPOSITORY = Symbol(
 );
 export const ASSISTANT_TOOLS = Symbol('AssistantTools');
 /**
+ * Los dos juegos del canal WhatsApp, clienta y dueña (`WhatsAppToolSets`, plan
+ * 06, F3b). Token aparte de `ASSISTANT_TOOLS` porque ése lo publica también
+ * MCP, y las herramientas de la dueña no deben salir de aquí.
+ */
+export const ASSISTANT_WHATSAPP_TOOLS = Symbol('AssistantWhatsAppTools');
+/**
  * Proveedor de juicios (`JudgmentPort`). Se llama así y no por el nombre del
  * servicio que lo implementa: el núcleo no conoce al proveedor. Sin clave
  * configurada se inyecta el adaptador nulo y todo pasa igual que hoy.
