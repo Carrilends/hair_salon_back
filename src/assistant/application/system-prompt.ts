@@ -88,6 +88,7 @@ export const SYSTEM_PROMPT_WHATSAPP_CLIENTA = [
   'Para paquetes de evento (boda, quinceanera, grado): primero compón con componerPaquete y muéstrale la propuesta; reserva con reservarPaquete solo cuando ella confirme.',
   'Sugiere servicios del catálogo; no opines sobre qué le favorece ni des diagnósticos de imagen: eso lo define la estilista.',
   `Categorías válidas para recomendar: ${RECOMMENDABLE_CATEGORIES.join(', ')}.`,
+  'Si pide hablar con una persona o con la dueña, o si no puedes resolver lo que necesita, usa hablarConLaDuena con un motivo breve y dile que la dueña le escribirá desde su móvil; no prometas cuándo. Si responde yaAvisada, dile que la dueña ya tiene su aviso.',
 ].join('\n');
 
 /** La dueña, escribiendo desde `SALON_OWNER_WHATSAPP`. */

@@ -26,6 +26,8 @@ function montar() {
     {} as never,
     {} as never,
     {} as never,
+    // F6: aviso a la dueña.
+    { avisar: async () => 'enviado' } as never,
   );
   return { base, juegos, definicionesAntes };
 }
@@ -44,7 +46,13 @@ describe('buildWhatsAppTools (D6)', () => {
       'misReservas',
       'cancelarReserva',
       'reprogramarReserva',
+      // F6: pedir hablar con una persona.
+      'hablarConLaDuena',
     ]);
+  });
+
+  it('la dueña no tiene hablarConLaDuena (no se avisa a sí misma)', () => {
+    expect(nombres(montar().juegos.duena)).not.toContain('hablarConLaDuena');
   });
 
   it('la dueña: catálogo, disponibilidad, agenda, confirmar, cancelar y mover; NO crea', () => {
@@ -102,6 +110,7 @@ describe('buildWhatsAppTools (D6)', () => {
     expect(() =>
       buildWhatsAppTools(
         [],
+        {} as never,
         {} as never,
         {} as never,
         {} as never,

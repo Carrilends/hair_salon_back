@@ -4,6 +4,7 @@ import {
   ASSISTANT_WHATSAPP_TOOLS,
   CONVERSATION_PHONE_REPOSITORY,
   CONVERSATION_REPOSITORY,
+  OWNER_CONTACT,
 } from './application/tokens';
 import { buildWhatsAppTools } from './build-whatsapp-tools';
 
@@ -48,5 +49,13 @@ describe('cableado de AssistantModule · herramientas de WhatsApp (F3b)', () => 
     );
 
     expect(juegos?.inject).toHaveLength(buildWhatsAppTools.length);
+  });
+
+  it('provee el aviso a la dueña y lo pasa el último a los juegos (F6)', () => {
+    expect(proveedores().some((p) => p.provide === OWNER_CONTACT)).toBe(true);
+    const juegos = proveedores().find(
+      (p) => p.provide === ASSISTANT_WHATSAPP_TOOLS,
+    );
+    expect(juegos?.inject?.[juegos.inject.length - 1]).toBe(OWNER_CONTACT);
   });
 });

@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from 'src/auth/auth.module';
+import { NotificationsModule } from 'src/notifications/notifications.module';
+import { WHATSAPP_SENDER } from 'src/notifications/application/tokens';
+import { WhatsAppSenderPort } from 'src/notifications/domain/ports/whatsapp-sender.port';
+import { WhatsAppOwnerContactAdapter } from './infrastructure/whatsapp/owner-contact.adapter';
 import { WorkersModule } from 'src/workers/workers.module';
 import { ReservationsModule } from 'src/reservations/reservations.module';
 import { CreateReservationUseCase } from 'src/reservations/application/create-reservation.use-case';
@@ -53,6 +57,7 @@ import {
   JUDGMENT,
   JUDGMENT_SETTINGS,
   LLM,
+  OWNER_CONTACT,
   PENDING_BOOKINGS,
 } from './application/tokens';
 import { ajustesDeJuicioDeEntorno } from './application/judgment-settings';
@@ -119,6 +124,8 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
     AuthModule, // estrategia JWT para el guard de auth opcional
     WorkersModule, // WorkersService (disponibilidad)
     ReservationsModule, // CreateReservationUseCase (A6)
+    // Plan 06, F6: el transporte de WhatsApp para avisar a la dueña.
+    NotificationsModule,
   ],
   controllers: [AssistantController],
   providers: [
@@ -285,7 +292,19 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
         PENDING_BOOKINGS,
         ServiceCatalogQueryAdapter,
         GetReservationUseCase,
+        OWNER_CONTACT,
       ],
+    },
+    {
+      // Plan 06, F6: aviso a la dueña cuando una clienta pide hablar con una
+      // persona. Mismo número que el resto del canal; plantilla propia.
+      provide: OWNER_CONTACT,
+      useFactory: (sender: WhatsAppSenderPort) =>
+        new WhatsAppOwnerContactAdapter(sender, {
+          ownerPhone: process.env.SALON_OWNER_WHATSAPP ?? '',
+          templateName: process.env.WHATSAPP_TEMPLATE_CONTACTO_DUENA ?? '',
+        }),
+      inject: [WHATSAPP_SENDER],
     },
   ],
   // El arreglo de herramientas se exporta para que la superficie MCP publique

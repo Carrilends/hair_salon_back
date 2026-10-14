@@ -16,6 +16,12 @@ import {
   ProposeCancelTool,
   ProposeRescheduleTool,
 } from './application/tools/proponer.tool';
+import {
+  ContactOwnerTool,
+  ENFRIAMIENTO_CONTACTO_MS,
+} from './application/tools/contact-owner.tool';
+import { EnfriamientoPorNumero } from './application/enfriamiento-por-numero';
+import { OwnerContactPort } from './domain/ports/owner-contact.port';
 import { PendingBookingRepositoryPort } from './domain/ports/pending-booking-repository.port';
 import { ServiceCatalogQueryPort } from './domain/ports/service-catalog-query.port';
 
@@ -53,6 +59,7 @@ export function buildWhatsAppTools(
   pendientes: PendingBookingRepositoryPort,
   catalog: Pick<ServiceCatalogQueryPort, 'findNamesByIds'>,
   getReservation: GetReservationUseCase,
+  contacto: OwnerContactPort,
 ): WhatsAppToolSets {
   const de = (nombre: string): AssistantTool => {
     const tool = base.find((t) => t.name === nombre);
@@ -132,6 +139,12 @@ export function buildWhatsAppTools(
       misReservas,
       cancelar,
       reprogramar,
+      // Plan 06, F6: pedir hablar con una persona. Una instancia por
+      // aplicación: la fábrica corre una vez, así que el enfriamiento es único.
+      new ContactOwnerTool(
+        contacto,
+        new EnfriamientoPorNumero(ENFRIAMIENTO_CONTACTO_MS),
+      ),
     ],
     duena: [
       listar,
