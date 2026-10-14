@@ -64,6 +64,10 @@ import { TelemetriaDeJuicios } from './application/judgment-telemetry';
 // confirma Luis vía GEMINI_MODEL_ROUTER/_MAIN (A2, decisión de catálogo).
 const DEFAULT_ROUTER_MODEL = 'gemini-3.5-flash-lite';
 const DEFAULT_MAIN_MODEL = 'gemini-3.8-flash';
+// Tope de espera de cada llamada al modelo (revisión de F5). Holgado: una
+// respuesta normal tarda pocos segundos; lo que se corta es la llamada colgada,
+// que sin tope retenía minutos la cola de un número de WhatsApp.
+const DEFAULT_LLM_TIMEOUT_MS = 30_000;
 
 // Ventana del tope por origen. Una hora, y no un minuto, porque lo que se
 // quiere acotar es el gasto sostenido, no la ráfaga: una ráfaga de veinte
@@ -152,6 +156,10 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
           apiKey: process.env.GEMINI_API_KEY,
           routerModel: process.env.GEMINI_MODEL_ROUTER ?? DEFAULT_ROUTER_MODEL,
           mainModel: process.env.GEMINI_MODEL_MAIN ?? DEFAULT_MAIN_MODEL,
+          timeoutMs: enteroDeEntorno(
+            'GEMINI_TIMEOUT_MS',
+            DEFAULT_LLM_TIMEOUT_MS,
+          ),
         }),
     },
     {

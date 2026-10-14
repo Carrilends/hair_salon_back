@@ -30,6 +30,13 @@ export interface GeminiLlmConfig {
   apiKey?: string;
   routerModel: string;
   mainModel: string;
+  /**
+   * Tope de espera de cada llamada, en milisegundos. Sin él, una llamada
+   * colgada solo la cortaba el `fetch` de Node a los cinco minutos, y en
+   * WhatsApp retenía la cola de ese número —botones incluidos— todo ese rato
+   * (revisión de F5). Ausente o 0 = sin tope.
+   */
+  timeoutMs?: number;
 }
 
 export class GeminiLlmAdapter implements LlmPort {
@@ -60,19 +67,21 @@ export class GeminiLlmAdapter implements LlmPort {
 
     let respuesta: RespuestaProveedor;
     try {
-      respuesta = (await this.getClient().interactions.create({
-        model,
-        input: aPasos(conversacion),
-        ...(system ? { system_instruction: system } : {}),
-        tools: input.tools?.map((t) => ({
-          type: 'function',
-          name: t.name,
-          description: t.description,
-          parameters: t.parameters,
-        })),
-        // La app ya guarda el historial en Postgres y el puerto es sin estado.
-        store: false,
-      })) as RespuestaProveedor;
+      respuesta = (await this.conTope(
+        this.getClient().interactions.create({
+          model,
+          input: aPasos(conversacion),
+          ...(system ? { system_instruction: system } : {}),
+          tools: input.tools?.map((t) => ({
+            type: 'function',
+            name: t.name,
+            description: t.description,
+            parameters: t.parameters,
+          })),
+          // La app ya guarda el historial en Postgres y el puerto es sin estado.
+          store: false,
+        }),
+      )) as RespuestaProveedor;
     } catch (error) {
       // Credencial ausente, cuota agotada o petición rechazada: todo sale por
       // aquí con un mensaje seguro; el detalle queda en `causa` para el log.
@@ -87,6 +96,29 @@ export class GeminiLlmAdapter implements LlmPort {
         respuesta.usage?.total_cached_tokens ?? 0,
       ),
     };
+  }
+
+  /**
+   * La llamada, o un rechazo si tarda más que el tope. La petición abandonada
+   * sigue su curso, pero su resultado se descarta: el turno ya terminó con
+   * `LlmUnavailableError`, que el borde convierte en un mensaje legible.
+   */
+  private async conTope<T>(llamada: Promise<T>): Promise<T> {
+    const tope = this.config.timeoutMs;
+    if (!tope || tope <= 0) return llamada;
+    let reloj: NodeJS.Timeout | undefined;
+    const agotado = new Promise<never>((_, rechazar) => {
+      reloj = setTimeout(
+        () =>
+          rechazar(new Error(`El proveedor de IA no respondió en ${tope} ms.`)),
+        tope,
+      );
+    });
+    try {
+      return await Promise.race([llamada, agotado]);
+    } finally {
+      clearTimeout(reloj);
+    }
   }
 
   private getClient(): GeminiClientLike {

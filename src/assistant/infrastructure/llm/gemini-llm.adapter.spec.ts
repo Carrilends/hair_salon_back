@@ -295,4 +295,16 @@ describe('GeminiLlmAdapter', () => {
       /invalid argument/,
     );
   });
+  it('un proveedor que no contesta se corta con LlmUnavailableError (revisión de F5)', async () => {
+    // Sin tope, una llamada colgada retenía la cola de ese número de WhatsApp
+    // —y sus botones— durante minutos.
+    const colgado: GeminiClientLike = {
+      interactions: { create: () => new Promise(() => undefined) },
+    };
+    const adapter = new GeminiLlmAdapter({ ...CONFIG, timeoutMs: 20 }, colgado);
+
+    await expect(
+      adapter.complete({ messages: [{ role: 'user', content: 'hola' }] }),
+    ).rejects.toBeInstanceOf(LlmUnavailableError);
+  });
 });
