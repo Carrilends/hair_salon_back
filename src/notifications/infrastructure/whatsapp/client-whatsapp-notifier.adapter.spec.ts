@@ -275,3 +275,78 @@ describe('ClientWhatsAppNotifier · cambio de estilista al reprogramar', () => {
     expect(sent).toHaveLength(1);
   });
 });
+
+/**
+ * Plan 06, F1. `fallbackImageUrl` es a la vez la foto de respaldo y el
+ * interruptor: la plantilla v1 es de texto y la v2 tiene cabecera IMAGE, y Meta
+ * rechaza tanto la cabecera que sobra como la que falta. Por eso la cabecera va
+ * en **todos** los avisos de creación o en **ninguno**, nunca según la reserva.
+ */
+describe('ClientWhatsAppNotifier · imagen del aviso de creación', () => {
+  const RESPALDO =
+    'https://res.cloudinary.com/demo/image/upload/f_jpg,w_800/v1/whatsapp/respaldo-reserva.jpg';
+  const FOTO =
+    'https://res.cloudinary.com/demo/image/upload/f_jpg,w_800/v1/uploads/corte.jpg';
+
+  function conRespaldo(fallbackImageUrl?: string) {
+    const sent: WhatsAppMessage[] = [];
+    const sender = {
+      send: async (m: WhatsAppMessage) => {
+        sent.push(m);
+      },
+    };
+    const notifier = new ClientWhatsAppNotifier(sender as never, {
+      ...config,
+      fallbackImageUrl,
+    });
+    return { notifier, sent };
+  }
+
+  it('con respaldo configurado, usa la foto del servicio', async () => {
+    const { notifier, sent } = conRespaldo(RESPALDO);
+
+    await notifier.notify(makeEvent({ imageUrl: FOTO }));
+
+    expect(comoPlantilla(sent[0]).headerImageUrl).toBe(FOTO);
+  });
+
+  it('con respaldo configurado y sin foto del servicio, usa la de respaldo', async () => {
+    const { notifier, sent } = conRespaldo(RESPALDO);
+
+    await notifier.notify(makeEvent());
+
+    expect(comoPlantilla(sent[0]).headerImageUrl).toBe(RESPALDO);
+  });
+
+  it('sin respaldo configurado no manda cabecera aunque haya foto (plantilla v1)', async () => {
+    const { notifier, sent } = conRespaldo(undefined);
+
+    await notifier.notify(makeEvent({ imageUrl: FOTO }));
+
+    expect(comoPlantilla(sent[0])).not.toHaveProperty('headerImageUrl');
+  });
+
+  it('los demás avisos nunca llevan cabecera', async () => {
+    const { notifier, sent } = conRespaldo(RESPALDO);
+    const base = makeEvent();
+
+    await notifier.notify({ ...base, type: 'reservation.confirmed' });
+    await notifier.notify({
+      ...base,
+      type: 'reservation.cancelled',
+      byAdmin: true,
+    });
+    await notifier.notify({
+      ...base,
+      type: 'reservation.rescheduled',
+      byAdmin: true,
+      previousScheduledAt: new Date('2026-08-28T20:00:00Z'),
+      workerChanged: false,
+    });
+
+    expect(sent).toHaveLength(3);
+    for (const m of sent) {
+      expect(comoPlantilla(m)).not.toHaveProperty('headerImageUrl');
+    }
+  });
+});

@@ -86,6 +86,18 @@ export class CloudApiWhatsAppSender implements WhatsAppSenderPort {
           );
         }
         const components: Record<string, unknown>[] = [
+          // La imagen no se adjunta: va por URL y Meta la descarga ella misma,
+          // por eso tiene que ser pública, https y JPEG/PNG.
+          ...(message.headerImageUrl
+            ? [
+                {
+                  type: 'header',
+                  parameters: [
+                    { type: 'image', image: { link: message.headerImageUrl } },
+                  ],
+                },
+              ]
+            : []),
           {
             type: 'body',
             parameters: message.bodyParams.map((text) => ({

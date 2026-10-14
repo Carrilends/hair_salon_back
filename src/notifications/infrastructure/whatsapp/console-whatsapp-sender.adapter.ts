@@ -35,6 +35,9 @@ export class ConsoleWhatsAppSender implements WhatsAppSenderPort {
           .join('\n');
         return (
           `Plantilla: ${message.templateName} (${message.templateLang ?? 'idioma por defecto'})\n` +
+          (message.headerImageUrl
+            ? `Imagen: ${message.headerImageUrl}\n`
+            : '') +
           `Parámetros: ${message.bodyParams.join(' | ')}` +
           (botones ? `\n  Botones:\n${botones}` : '')
         );

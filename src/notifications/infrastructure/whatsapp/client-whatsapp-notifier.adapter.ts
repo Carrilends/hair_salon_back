@@ -20,6 +20,14 @@ export interface ClientWhatsAppConfig {
   templateCancelled: string;
   templateRescheduled: string;
   templateConfirmed: string;
+  /**
+   * Foto de respaldo de la cabecera del aviso de creación (plan 06, F1) y, a la
+   * vez, **el interruptor de la cabecera**: vacía, el aviso sale sin imagen
+   * (plantilla v1 de texto); con valor, sale siempre con imagen (plantilla v2
+   * con cabecera IMAGE). Así nunca se manda una cabecera a una plantilla que no
+   * la tiene, ni se omite en una que la exige: Meta rechaza las dos cosas.
+   */
+  fallbackImageUrl?: string;
 }
 
 /**
@@ -68,6 +76,9 @@ export class ClientWhatsAppNotifier implements NotifierPort {
           kind: 'template',
           to,
           templateName: this.config.templateCreated,
+          ...(this.config.fallbackImageUrl
+            ? { headerImageUrl: event.imageUrl ?? this.config.fallbackImageUrl }
+            : {}),
           bodyParams: [cuando, event.workerName, servicios],
           // El asa de toda la Etapa 2: el id de la reserva viaja dentro del
           // botón y vuelve intacto en el webhook cuando ella lo pulsa.
