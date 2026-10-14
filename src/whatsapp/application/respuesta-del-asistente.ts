@@ -5,6 +5,12 @@ import { mensajeDeConfirmacion } from './mensaje-de-confirmacion';
 
 /** Tope de un mensaje de texto de WhatsApp (límite de Meta). */
 export const MAX_TEXTO = 4096;
+/**
+ * Si el modelo devuelve solo espacios y no hay nada que confirmar, se contesta
+ * esto: el silencio no es una respuesta (NF11, revisión de F5).
+ */
+const SIN_RESPUESTA =
+  'Disculpa, no logré responderte. ¿Me lo escribes de otra forma?';
 /** Tope del pie de una imagen (límite de Meta). */
 const MAX_PIE = 1024;
 
@@ -79,17 +85,21 @@ export function mensajesDeLaRespuesta(
   const mensajes: WhatsAppMessage[] = [];
   if (aviso) mensajes.push({ kind: 'text', to, body: aviso });
 
-  for (const parte of partirTexto(aFormatoWhatsApp(respuesta.reply))) {
+  const partes = partirTexto(aFormatoWhatsApp(respuesta.reply));
+  const botones = conBotones(respuesta.presentaciones)
+    .map((p) => mensajeDeConfirmacion(p, to))
+    .filter((m): m is WhatsAppMessage => m !== null);
+
+  for (const parte of partes.length || botones.length
+    ? partes
+    : [SIN_RESPUESTA]) {
     mensajes.push({ kind: 'text', to, body: parte });
   }
 
   const foto = fotoDelServicio(respuesta.presentaciones, to);
   if (foto) mensajes.push(foto);
 
-  for (const p of conBotones(respuesta.presentaciones)) {
-    const m = mensajeDeConfirmacion(p, to);
-    if (m) mensajes.push(m);
-  }
+  mensajes.push(...botones);
   return mensajes;
 }
 

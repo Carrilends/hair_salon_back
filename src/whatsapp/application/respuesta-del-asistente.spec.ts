@@ -249,4 +249,13 @@ describe('mensajesDeLaRespuesta', () => {
     );
     expect(ms.map((m) => m.kind)).toEqual(['text']);
   });
+  it('una respuesta en blanco sin botones no deja a la persona sin contestar (NF11)', () => {
+    const ms = mensajesDeLaRespuesta(
+      { reply: ' \n ', presentaciones: [] },
+      TO,
+      null,
+    );
+    expect(ms).toHaveLength(1);
+    expect(textos(ms)[0]).toMatch(/de otra forma/);
+  });
 });
