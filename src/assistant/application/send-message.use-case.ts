@@ -200,10 +200,9 @@ export class SendMessageUseCase {
     const duenaPorWhatsApp = porWhatsApp && input.isAdmin === true;
 
     // A7: los dos límites duros se comprueban ANTES de la primera llamada, para no
-    // pagar por rechazar. (1) tope por conversación.
-    if (!duenaPorWhatsApp) {
-      conversation.assertWithinBudget(this.budget.maxMessagesPerConversation);
-    }
+    // pagar por rechazar. (1) tope por conversación. En WhatsApp nunca salta:
+    // `loadOrStart` ya abrió otra si la activa estaba llena (ver allí).
+    conversation.assertWithinBudget(this.budget.maxMessagesPerConversation);
     // (2) tope diario por usuario: sin él, el tope por conversación se eludiría
     // abriendo conversaciones nuevas. Solo aplica a usuarios con sesión (los
     // anónimos se acotan por IP en el borde HTTP, T7). La consulta real la
@@ -608,7 +607,20 @@ export class SendMessageUseCase {
         input.phoneE164!,
         new Date(ahora.getTime() - DAY_MS),
       );
-      return activa ?? Conversation.start({ phoneE164: input.phoneE164 });
+      // Una conversación llena no bloquea: se abre otra (revisión de F3a). En
+      // la web la visitante abre otra con solo recargar; en WhatsApp la
+      // conversación solo se renueva tras 24 h de silencio, así que bloquear
+      // aquí la dejaría un día sin asistente y el tope por número —el límite
+      // de verdad— no llegaría a actuar nunca. También acota la conversación
+      // de la dueña, que no tiene tope por número. Lo que se pierde al rotar
+      // es la ventana de contexto: el modelo empieza de nuevo.
+      if (
+        activa &&
+        activa.messageCount < this.budget.maxMessagesPerConversation
+      ) {
+        return activa;
+      }
+      return Conversation.start({ phoneE164: input.phoneE164 });
     }
 
     if (input.conversationId) {
@@ -668,10 +680,21 @@ export class SendMessageUseCase {
  * errores de programación del adaptador que llama, no de la clienta: por eso
  * es un `Error` llano y no un error de dominio que el borde traduciría.
  */
+/** E.164 sin «+», como lo entrega Meta en `from` (`573001234567`). */
+const WA_ID = /^[1-9]\d{7,14}$/;
+
 function validarIdentidad(input: SendMessageInput): void {
   if (input.canal === 'whatsapp') {
     if (!input.phoneE164) {
       throw new Error('Un mensaje de WhatsApp tiene que traer el número.');
+    }
+    // El formato `wa_id` de Meta: solo dígitos, sin «+». Dos formas del mismo
+    // número serían dos identidades —dos historiales y el doble de cupo—, así
+    // que aquí no se normaliza: se exige la canónica (revisión de F3a).
+    if (!WA_ID.test(input.phoneE164)) {
+      throw new Error(
+        'El número de WhatsApp tiene que venir en formato wa_id: solo dígitos, sin «+» ni espacios.',
+      );
     }
     if (input.userId) {
       throw new Error(

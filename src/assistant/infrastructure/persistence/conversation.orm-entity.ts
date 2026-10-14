@@ -26,6 +26,11 @@ export class ConversationOrmEntity {
    * Remitente de WhatsApp en E.164 (plan 06, F3a). Null en las conversaciones
    * de la web. Con él se encuentra la conversación de un número sin que el
    * canal tenga que recordar ids, y es lo que impide retomarla desde la web.
+   *
+   * Su índice (`idx_assistant_conversations_phone_e164`, parcial y con
+   * `updated_at DESC`) vive solo en la migración: TypeORM no sabe declararlo
+   * así, de modo que un `migration:generate` futuro propondrá borrarlo —igual
+   * que la restricción de exclusión de `reservations`—. Recortarlo siempre.
    */
   @Column('text', { name: 'phone_e164', nullable: true })
   phoneE164: string | null;

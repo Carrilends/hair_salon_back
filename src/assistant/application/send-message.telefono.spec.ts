@@ -42,6 +42,7 @@ class RepoDoble
   porId: Conversation | null = null;
   activaDelNumero: Conversation | null = null;
   mensajesDelNumeroHoy = 0;
+  gastoDelDia = 0;
   pedidasPorNumero: { phone: string; since: Date }[] = [];
   conteosPorNumero: { phone: string; since: Date }[] = [];
 
@@ -56,7 +57,7 @@ class RepoDoble
     return 0;
   }
   async sumTokensSince(): Promise<number> {
-    return 0;
+    return this.gastoDelDia;
   }
   async usageSince(): Promise<AssistantUsage> {
     return {
@@ -216,6 +217,24 @@ describe('SendMessageUseCase · canal WhatsApp (plan 06, F3a)', () => {
         'la web con un número',
         { phoneE164: NUMERO, userId: null, message: 'x' },
       ],
+      [
+        'un número con «+» (dos formas del mismo número serían dos identidades)',
+        {
+          canal: 'whatsapp' as const,
+          phoneE164: '+573001234567',
+          userId: null,
+          message: 'x',
+        },
+      ],
+      [
+        'un número con espacios',
+        {
+          canal: 'whatsapp' as const,
+          phoneE164: '57 300 123 4567',
+          userId: null,
+          message: 'x',
+        },
+      ],
     ])('rechaza una entrada incoherente: %s', async (_caso, entrada) => {
       const { useCase, llm, repo } = montar({});
 
@@ -342,24 +361,30 @@ describe('SendMessageUseCase · canal WhatsApp (plan 06, F3a)', () => {
       ).rejects.toBeInstanceOf(BudgetExceededError);
     });
 
-    it('la clienta también tiene el tope por conversación', async () => {
+    it('una conversación llena NO bloquea a la clienta: se abre otra (revisión de F3a)', async () => {
+      // Con bloqueo, la undécima vuelta la dejaba sin asistente 24 h —la
+      // conversación solo se renueva tras un día de silencio— y el tope por
+      // número no llegaba a actuar nunca. Rotando, el límite real es ése.
       const repo = new RepoDoble();
       repo.activaDelNumero = conversacionDelNumero(20);
       const { useCase } = montar({ repo });
 
-      await expect(
-        useCase.execute({
-          canal: 'whatsapp',
-          phoneE164: NUMERO,
-          userId: null,
-          message: 'otra',
-        }),
-      ).rejects.toBeInstanceOf(BudgetExceededError);
+      const res = await useCase.execute({
+        canal: 'whatsapp',
+        phoneE164: NUMERO,
+        userId: null,
+        message: 'otra',
+      });
+
+      expect(res.reply).toBe('Hola.');
+      expect(repo.guardada).not.toBe(repo.activaDelNumero);
+      expect(repo.guardada?.phoneE164).toBe(NUMERO);
+      expect(repo.guardada?.messageCount).toBe(2);
     });
 
-    it('la dueña por WhatsApp está exenta de los dos topes', async () => {
+    it('la dueña tampoco se bloquea, y su conversación no crece sin fin', async () => {
       const repo = new RepoDoble();
-      repo.activaDelNumero = conversacionDelNumero(40);
+      repo.activaDelNumero = conversacionDelNumero(20);
       repo.mensajesDelNumeroHoy = 500;
       const { useCase } = montar({ repo });
 
@@ -372,7 +397,29 @@ describe('SendMessageUseCase · canal WhatsApp (plan 06, F3a)', () => {
           message: 'la agenda de hoy',
         }),
       ).resolves.toMatchObject({ reply: 'Hola.' });
+      // Exenta del tope por número: ni se consulta.
       expect(repo.conteosPorNumero).toHaveLength(0);
+      expect(repo.guardada?.messageCount).toBe(2);
+    });
+
+    it('la dueña sigue bajo el techo diario de tokens', async () => {
+      const repo = new RepoDoble();
+      repo.gastoDelDia = 1_000;
+      const { useCase, llm } = montar({
+        repo,
+        presupuesto: { ...PRESUPUESTO, maxTokensPerDay: 1_000 },
+      });
+
+      await expect(
+        useCase.execute({
+          canal: 'whatsapp',
+          phoneE164: NUMERO,
+          userId: null,
+          isAdmin: true,
+          message: 'la agenda de hoy',
+        }),
+      ).rejects.toBeInstanceOf(BudgetExceededError);
+      expect(llm.calls).toHaveLength(0);
     });
 
     it('en la web, administración sigue teniendo el tope por conversación', async () => {
