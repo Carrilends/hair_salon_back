@@ -13,8 +13,8 @@
  * foto, un sticker, una reacción y un botón desconocido acababan todos con
  * `payload=null` en la rama del texto libre.
  *
- * - `text`: escribió algo. Es lo único que se puede leer (y, desde F5, lo que
- *   llegará al asistente).
+ * - `text`: escribió algo. Es lo único que se puede leer y lo que llega al
+ *   asistente (F5).
  * - `button`: pulsó un botón o una fila; el identificador va en `payload`.
  * - `media`: mandó algo que no es texto legible (foto, audio, vídeo, documento,
  *   sticker, ubicación, contacto, o un tipo que no conocemos).

@@ -35,13 +35,18 @@ import {
   WHATSAPP_CHANNEL_CONFIG,
   CLOCK,
   PENDING_BOOKING_ACTIONS,
+  ASSISTANT_CHAT,
 } from './tokens';
+import { AssistantChatPort } from '../domain/ports/assistant-chat.port';
+import { avisoLegal, mensajesDeLaRespuesta } from './respuesta-del-asistente';
 import { PendingBookingActionsPort } from '../domain/ports/pending-booking-actions.port';
 
 export interface WhatsAppChannelConfig {
   /** Móvil de la peluquería. Un mensaje desde aquí actúa como administración. */
   ownerPhone: string;
   timeZone: string;
+  /** Enlace a la política de datos para el aviso legal (D10). Sin él, el aviso va sin enlace. */
+  politicaUrl?: string;
 }
 
 /** Respuesta a lo que no es texto (plan 06, F2). */
@@ -55,6 +60,25 @@ const SOLO_TEXTO =
  */
 const BOTON_DESCONOCIDO =
   'Ese botón ya no está disponible. Escríbeme lo que necesitas y te ayudo.';
+
+/** El mismo tope que el DTO de la web: lo que no cabe allí tampoco se factura aquí. */
+const MAX_MENSAJE = 500;
+const MENSAJE_LARGO =
+  'Tu mensaje es muy largo para mí. ¿Me lo escribes en menos de 500 caracteres?';
+
+/** Por qué el asistente no contestó, dicho para quien escribe (D14). */
+function explicarAsistente(
+  motivo: 'limite' | 'no_disponible' | 'error',
+): string {
+  switch (motivo) {
+    case 'limite':
+      return 'Llegaste al límite de mensajes de hoy con el asistente. Mañana te atiendo de nuevo.';
+    case 'no_disponible':
+      return 'El asistente no está disponible en este momento.';
+    case 'error':
+      return 'Algo no salió bien con el asistente. Inténtalo de nuevo en un momento.';
+  }
+}
 
 /**
  * Por qué no se pudo confirmar una propuesta, dicho para la clienta. Una
@@ -114,6 +138,11 @@ export class HandleInboundMessageUseCase {
     @Optional()
     @Inject(PENDING_BOOKING_ACTIONS)
     private readonly propuestas?: PendingBookingActionsPort,
+    // El asistente (plan 06, F5). `null` u omitido ⇒ apagado: el texto libre
+    // sigue ofreciendo las citas, como antes de F5 (D13).
+    @Optional()
+    @Inject(ASSISTANT_CHAT)
+    private readonly asistente?: AssistantChatPort | null,
   ) {}
 
   async handle(mensaje: InboundMessage): Promise<void> {
@@ -149,8 +178,12 @@ export class HandleInboundMessageUseCase {
         return;
 
       case 'text':
-        // Texto libre: se le ofrecen sus citas. Es el punto por donde entrará
-        // el asistente cuando se conecte (F5).
+        // Texto libre: conversación con el asistente si está encendido (F5);
+        // si no, se le ofrecen sus citas, como antes.
+        if (this.asistente) {
+          await this.conversar(from, esDuena, mensaje.text ?? '');
+          return;
+        }
         await this.ofrecerSusCitas(from, esDuena);
         return;
 
@@ -252,6 +285,61 @@ export class HandleInboundMessageUseCase {
         ? 'Vale, no la reservo. Dime qué quieres cambiar.'
         : explicarPropuesta(r.motivo),
     );
+  }
+
+  // ---------------------------------------------- asistente (plan 06, F5)
+
+  /**
+   * Un turno con el asistente. La identidad es la de siempre en este canal:
+   * el número firmado, y la dueña solo si es `SALON_OWNER_WHATSAPP`. Nada de
+   * lo que conteste puede escribir en la agenda: lo que haya que hacer llega
+   * como botones (D4).
+   */
+  private async conversar(
+    from: string,
+    esDuena: boolean,
+    texto: string,
+  ): Promise<void> {
+    const limpio = texto.trim();
+    if (!limpio) {
+      await this.ofrecerSusCitas(from, esDuena);
+      return;
+    }
+    if (limpio.length > MAX_MENSAJE) {
+      await this.texto(from, MENSAJE_LARGO);
+      return;
+    }
+
+    const r = await this.asistente!.conversar({
+      phoneE164: from,
+      esDuena,
+      texto: limpio,
+    });
+
+    // Sin asistente no se queda sin salida (D14): se le dice por qué y se le
+    // ofrece lo que el canal sabe hacer sin IA.
+    if (r.ok === false) {
+      await this.texto(from, explicarAsistente(r.motivo));
+      await this.ofrecerSusCitas(from, esDuena);
+      return;
+    }
+
+    const aviso =
+      r.conversacionNueva && !esDuena
+        ? avisoLegal(this.config.politicaUrl)
+        : null;
+    // Cada envío por separado: que Meta rechace la foto no puede dejar a la
+    // clienta sin los botones para confirmar.
+    for (const m of mensajesDeLaRespuesta(r, from, aviso)) {
+      try {
+        await this.enviar(m);
+      } catch (error) {
+        this.logger.error(
+          `No se pudo enviar un mensaje (${m.kind}) del asistente a ${from}`,
+          error as Error,
+        );
+      }
+    }
   }
 
   // ---------------------------------------------------------------- consultar
