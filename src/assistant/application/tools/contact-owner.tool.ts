@@ -31,7 +31,7 @@ export class ContactOwnerTool implements AssistantTool {
   readonly definition: LlmToolDefinition = {
     name: this.name,
     description:
-      'Avisa a la dueña del salón de que esta clienta quiere hablar con una persona: le llegan su nombre, su número de WhatsApp y el motivo, y ella le escribe desde su móvil. Úsala cuando la clienta lo pida o cuando no puedas resolver lo que necesita.',
+      'Avisa a la dueña del salón de que esta clienta quiere hablar con una persona: le llegan su nombre, su número de WhatsApp y el motivo, y ella le escribe desde su móvil. Úsala solo si la clienta lo pide o acepta tu ofrecimiento: su número le llega a la dueña.',
     parameters: {
       type: 'object',
       properties: {
@@ -85,7 +85,14 @@ export class ContactOwnerTool implements AssistantTool {
         telefonoE164: numero,
         motivo,
       });
-      if (r === 'sin_configurar') return SIN_AVISO;
+      if (r === 'sin_configurar') {
+        // Sin esto, en producción nadie vería que las clientas piden a la
+        // dueña y reciben la alternativa (revisión de F6).
+        this.logger.warn(
+          'Una clienta pidió hablar con la dueña y no se le pudo avisar: falta SALON_OWNER_WHATSAPP o WHATSAPP_TEMPLATE_CONTACTO_DUENA.',
+        );
+        return SIN_AVISO;
+      }
       // Solo se anota lo que salió: un fallo no la deja seis horas esperando.
       this.enfriamiento.anotar(numero, context.now);
       return { ok: true, avisada: true };

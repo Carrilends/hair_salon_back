@@ -1,3 +1,5 @@
+import { Logger } from '@nestjs/common';
+import { SYSTEM_PROMPT_WHATSAPP_CLIENTA } from '../system-prompt';
 import { AssistantContext } from './assistant-tool';
 import {
   ContactOwnerTool,
@@ -133,5 +135,29 @@ describe('hablarConLaDuena (plan 06, F6)', () => {
     };
     expect(r.ok).toBe(false);
     expect(avisos).toHaveLength(0);
+  });
+  it('solo avisa si la clienta lo pide o lo acepta: el modelo no escala por su cuenta (revisión de F6)', () => {
+    const { tool } = montar();
+    const texto = tool.definition.description ?? '';
+    expect(texto).toMatch(/solo si/i);
+    expect(texto).not.toMatch(/cuando no puedas resolver/);
+    expect(SYSTEM_PROMPT_WHATSAPP_CLIENTA).toMatch(/solo si (ella )?acepta/);
+    expect(SYSTEM_PROMPT_WHATSAPP_CLIENTA).not.toMatch(
+      /o si no puedes resolver lo que necesita, usa hablarConLaDuena/,
+    );
+  });
+
+  it('sin dueña o plantilla configurada lo deja en el log (revisión de F6)', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const { tool } = montar(async () => 'sin_configurar');
+    await tool.execute({ motivo: 'a' }, clienta);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /SALON_OWNER_WHATSAPP|WHATSAPP_TEMPLATE_CONTACTO_DUENA/,
+      ),
+    );
+    warn.mockRestore();
   });
 });
