@@ -14,3 +14,5 @@ export const INBOUND_MESSAGE_LOG = Symbol('INBOUND_MESSAGE_LOG');
 export const RATE_LIMITER = Symbol('WHATSAPP_RATE_LIMITER');
 /** Confirmar o descartar propuestas de reserva del asistente (plan 06, F4). */
 export const PENDING_BOOKING_ACTIONS = Symbol('PENDING_BOOKING_ACTIONS');
+/** Conversar con el asistente (plan 06, F5). `null` si está apagado. */
+export const ASSISTANT_CHAT = Symbol('WHATSAPP_ASSISTANT_CHAT');
