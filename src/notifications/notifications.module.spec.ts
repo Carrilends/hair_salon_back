@@ -99,6 +99,8 @@ describe('NotificationsModule · WHATSAPP_FALLBACK_IMAGE_URL', () => {
     expect(
       moduleRef.get<ClientWhatsAppConfig>(CLIENT_WHATSAPP_CONFIG)
         .fallbackImageUrl,
-    ).toBe('https://res.cloudinary.com/demo/image/upload/f_jpg,w_800/v1/r.jpg');
+    ).toBe(
+      'https://res.cloudinary.com/demo/image/upload/f_jpg,w_800/f_jpg,w_800,c_limit/v1/r.jpg',
+    );
   });
 });

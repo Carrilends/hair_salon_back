@@ -8,13 +8,13 @@ const CLOUD = 'https://res.cloudinary.com/demo/image/upload';
 describe('toWhatsAppImageUrl', () => {
   it('fuerza JPG y un ancho de 800 en una URL de Cloudinary', () => {
     expect(toWhatsAppImageUrl(`${CLOUD}/v1/uploads/corte.webp`)).toBe(
-      `${CLOUD}/f_jpg,w_800/v1/uploads/corte.webp`,
+      `${CLOUD}/f_jpg,w_800,c_limit/v1/uploads/corte.webp`,
     );
   });
 
   it('también convierte un AVIF: Meta solo acepta JPEG o PNG en la cabecera', () => {
     expect(toWhatsAppImageUrl(`${CLOUD}/v1/uploads/tinte.avif`)).toBe(
-      `${CLOUD}/f_jpg,w_800/v1/uploads/tinte.avif`,
+      `${CLOUD}/f_jpg,w_800,c_limit/v1/uploads/tinte.avif`,
     );
   });
 
@@ -42,7 +42,7 @@ describe('pickNotificationImage', () => {
     ]);
 
     expect(pickNotificationImage(['s1', 's2'], imagenes)).toBe(
-      `${CLOUD}/f_jpg,w_800/v1/uploads/peinado.jpg`,
+      `${CLOUD}/f_jpg,w_800,c_limit/v1/uploads/peinado.jpg`,
     );
   });
 
@@ -53,7 +53,7 @@ describe('pickNotificationImage', () => {
     ]);
 
     expect(pickNotificationImage(['s1', 's2'], imagenes)).toBe(
-      `${CLOUD}/f_jpg,w_800/v1/uploads/corte.jpg`,
+      `${CLOUD}/f_jpg,w_800,c_limit/v1/uploads/corte.jpg`,
     );
   });
 
@@ -63,7 +63,7 @@ describe('pickNotificationImage', () => {
     ]);
 
     expect(pickNotificationImage(['s1'], imagenes)).toBe(
-      `${CLOUD}/f_jpg,w_800/v1/uploads/corte.jpg`,
+      `${CLOUD}/f_jpg,w_800,c_limit/v1/uploads/corte.jpg`,
     );
   });
 
@@ -71,7 +71,7 @@ describe('pickNotificationImage', () => {
     const imagenes = new Map([['s2', [`${CLOUD}/v1/uploads/peinado.jpg`]]]);
 
     expect(pickNotificationImage([null, 's2'], imagenes)).toBe(
-      `${CLOUD}/f_jpg,w_800/v1/uploads/peinado.jpg`,
+      `${CLOUD}/f_jpg,w_800,c_limit/v1/uploads/peinado.jpg`,
     );
   });
 

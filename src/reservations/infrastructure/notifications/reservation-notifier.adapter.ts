@@ -24,10 +24,15 @@ export class ReservationNotifierAdapter implements ReservationNotifierPort {
   ) {}
 
   async reservationCreated(reservation: Reservation): Promise<void> {
-    const imageUrl = await this.imagenDelAviso(reservation);
+    // En paralelo: la creación espera a los avisos, y estas dos consultas no
+    // dependen una de otra.
+    const [base, imageUrl] = await Promise.all([
+      this.baseEvent(reservation),
+      this.imagenDelAviso(reservation),
+    ]);
     await this.dispatcher.notify({
       type: 'reservation.created',
-      ...(await this.baseEvent(reservation)),
+      ...base,
       ...(imageUrl ? { imageUrl } : {}),
     });
   }

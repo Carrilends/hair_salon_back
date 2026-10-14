@@ -2,7 +2,14 @@ import { ServiceImagesAdapter } from './service-images.adapter';
 
 function repoQueDevuelve(filas: { serviceId: string; url: string }[]) {
   const qb: Record<string, jest.Mock> = {};
-  for (const m of ['innerJoin', 'select', 'addSelect', 'where', 'orderBy']) {
+  for (const m of [
+    'innerJoin',
+    'select',
+    'addSelect',
+    'where',
+    'orderBy',
+    'addOrderBy',
+  ]) {
     qb[m] = jest.fn(() => qb);
   }
   qb.getRawMany = jest.fn(async () => filas);
@@ -28,6 +35,7 @@ describe('ServiceImagesAdapter', () => {
     );
     // La principal delante: el orden lo pone la base, no el código.
     expect(qb.orderBy).toHaveBeenCalledWith('i.isPrincipal', 'DESC');
+    expect(qb.addOrderBy).toHaveBeenCalledWith('i.id', 'ASC');
   });
 
   it('no consulta la base si no hay servicios (IN () sería SQL inválido)', async () => {

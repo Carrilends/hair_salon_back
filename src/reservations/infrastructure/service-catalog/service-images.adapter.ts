@@ -30,6 +30,9 @@ export class ServiceImagesAdapter implements ServiceImagesPort {
       .addSelect('i.url', 'url')
       .where('s.id IN (:...serviceIds)', { serviceIds })
       .orderBy('i.isPrincipal', 'DESC')
+      // Desempate estable: con varias principales (o ninguna), la misma
+      // reserva tiene que dar siempre la misma foto.
+      .addOrderBy('i.id', 'ASC')
       .getRawMany<{ serviceId: string; url: string }>();
 
     const porServicio = new Map<string, string[]>();

@@ -183,7 +183,7 @@ describe('ReservationNotifierAdapter · imagen del aviso de creación', () => {
     expect(images.findImageUrls).toHaveBeenCalledWith(['s1', 's2']);
     expect(despachados[0]).toMatchObject({
       type: 'reservation.created',
-      imageUrl: `${CLOUD}/f_jpg,w_800/v1/uploads/peinado.webp`,
+      imageUrl: `${CLOUD}/f_jpg,w_800,c_limit/v1/uploads/peinado.webp`,
     });
   });
 

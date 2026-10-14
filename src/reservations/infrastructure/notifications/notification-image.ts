@@ -9,35 +9,12 @@
  * le fuerza el formato.
  */
 
-const CLOUDINARY_HOST = 'res.cloudinary.com';
-const IMAGE_UPLOAD = '/image/upload/';
+// La validación de la URL vive en `src/common`: la usa también el módulo de
+// notificaciones para la foto de respaldo, y ninguno de los dos contextos debe
+// importar del otro.
+import { toWhatsAppImageUrl } from 'src/common/whatsapp-image-url';
 
-/**
- * `f_jpg` porque en el catálogo hay WebP y AVIF que Meta rechazaría; `w_800`
- * porque una cabecera no necesita más y Meta limita el tamaño del archivo. Se
- * inyecta por manipulación de cadena, igual que `cloudinaryUrl.ts` en el front.
- */
-const TRANSFORMACION = 'f_jpg,w_800';
-
-/**
- * Devuelve la URL lista para la cabecera, o `null` si no sirve: el `'/'` por
- * defecto de la columna, vacías, los marcadores de `placehold.co` del seed y
- * cualquier host que no sea Cloudinary.
- */
-export function toWhatsAppImageUrl(url: string): string | null {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return null;
-  }
-  if (parsed.protocol !== 'https:' || parsed.hostname !== CLOUDINARY_HOST) {
-    return null;
-  }
-  if (!parsed.pathname.includes(IMAGE_UPLOAD)) return null;
-
-  return url.replace(IMAGE_UPLOAD, `${IMAGE_UPLOAD}${TRANSFORMACION}/`);
-}
+export { toWhatsAppImageUrl };
 
 /**
  * Recorre las líneas **en el orden de la reserva** y se queda con la primera
