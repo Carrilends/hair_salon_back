@@ -1,8 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Reservation } from '../../domain/reservation';
 import { ReservationNotifierPort } from '../../domain/ports/reservation-notifier.port';
 import { NotificationDispatcher } from 'src/notifications/application/notification-dispatcher';
 import { WorkersService } from 'src/workers/workers.service';
+import { ServiceImagesPort } from '../../domain/ports/service-images.port';
+import { SERVICE_IMAGES } from '../../application/tokens';
+import { pickNotificationImage } from './notification-image';
 
 /**
  * Traduce el lenguaje de Reservas ("una reserva fue creada") al del módulo de
@@ -12,15 +15,25 @@ import { WorkersService } from 'src/workers/workers.service';
  */
 @Injectable()
 export class ReservationNotifierAdapter implements ReservationNotifierPort {
+  private readonly logger = new Logger(ReservationNotifierAdapter.name);
+
   constructor(
     private readonly dispatcher: NotificationDispatcher,
     private readonly workers: WorkersService,
+    @Inject(SERVICE_IMAGES) private readonly images: ServiceImagesPort,
   ) {}
 
   async reservationCreated(reservation: Reservation): Promise<void> {
+    // En paralelo: la creación espera a los avisos, y estas dos consultas no
+    // dependen una de otra.
+    const [base, imageUrl] = await Promise.all([
+      this.baseEvent(reservation),
+      this.imagenDelAviso(reservation),
+    ]);
     await this.dispatcher.notify({
       type: 'reservation.created',
-      ...(await this.baseEvent(reservation)),
+      ...base,
+      ...(imageUrl ? { imageUrl } : {}),
     });
   }
 
@@ -61,6 +74,28 @@ export class ReservationNotifierAdapter implements ReservationNotifierPort {
       type: 'reservation.confirmed',
       ...(await this.baseEvent(reservation)),
     });
+  }
+
+  /**
+   * Foto para la cabecera del aviso (plan 06, F1). Un fallo aquí no puede
+   * costar el aviso entero, y menos la reserva (NF11): se registra y el aviso
+   * sale sin foto del servicio.
+   */
+  private async imagenDelAviso(
+    reservation: Reservation,
+  ): Promise<string | undefined> {
+    const serviceIds = reservation.lines.map((l) => l.serviceId);
+    try {
+      const imagenes = await this.images.findImageUrls(
+        serviceIds.filter((id): id is string => id !== null),
+      );
+      return pickNotificationImage(serviceIds, imagenes);
+    } catch (err) {
+      this.logger.warn(
+        `No se pudo leer la foto del aviso de la reserva ${reservation.id}: ${(err as Error).message}`,
+      );
+      return undefined;
+    }
   }
 
   /** Campos comunes a los cuatro eventos; resuelve el nombre del estilista (N7). */

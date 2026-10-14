@@ -31,6 +31,31 @@ describe('ConsoleWhatsAppSender', () => {
     log.mockRestore();
   });
 
+  it('imprime la imagen de cabecera de una plantilla, si la lleva', async () => {
+    // Sin credenciales es la única forma de ver qué foto habría recibido la
+    // clienta (plan 06, F1).
+    const log = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+    const sender = new ConsoleWhatsAppSender();
+
+    await sender.send({
+      kind: 'template',
+      to: '573001234567',
+      templateName: 'reserva_creada_cliente_v2',
+      headerImageUrl:
+        'https://res.cloudinary.com/demo/image/upload/f_jpg,w_800/v1/c.jpg',
+      bodyParams: ['sábado', 'Ana', 'Corte'],
+    });
+
+    const printed = String(log.mock.calls[0][0]);
+    expect(printed).toContain(
+      'Imagen: https://res.cloudinary.com/demo/image/upload/f_jpg,w_800/v1/c.jpg',
+    );
+
+    log.mockRestore();
+  });
+
   it('imprime los identificadores de los botones y de las filas, no solo su texto', async () => {
     // Son lo que hay que reenviar a mano al webhook para ejercitar el flujo sin
     // Meta: si no se imprimieran, la demostración sin credenciales no existiría.

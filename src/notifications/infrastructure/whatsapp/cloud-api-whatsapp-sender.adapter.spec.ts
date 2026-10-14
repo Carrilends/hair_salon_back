@@ -188,6 +188,53 @@ describe('CloudApiWhatsAppSender', () => {
     ]);
   });
 
+  it('pone la cabecera de imagen antes del cuerpo cuando el mensaje la trae', async () => {
+    // Plan 06, F1. Meta empareja los componentes por tipo, pero la cabecera va
+    // primero en su propia documentación y así se lee el payload en el log.
+    const captured: Captured = {};
+    const sender = new CloudApiWhatsAppSender(
+      baseConfig,
+      fakeFetch(captured, { ok: true, status: 200 }),
+    );
+
+    await sender.send({
+      ...PLANTILLA,
+      headerImageUrl:
+        'https://res.cloudinary.com/demo/image/upload/f_jpg,w_800/v1/c.jpg',
+    });
+
+    const components = JSON.parse(captured.init?.body ?? '{}').template
+      .components;
+    expect(components[0]).toEqual({
+      type: 'header',
+      parameters: [
+        {
+          type: 'image',
+          image: {
+            link: 'https://res.cloudinary.com/demo/image/upload/f_jpg,w_800/v1/c.jpg',
+          },
+        },
+      ],
+    });
+    expect(components[1].type).toBe('body');
+  });
+
+  it('sin imagen no manda componente de cabecera (las plantillas de texto lo rechazarían)', async () => {
+    const captured: Captured = {};
+    const sender = new CloudApiWhatsAppSender(
+      baseConfig,
+      fakeFetch(captured, { ok: true, status: 200 }),
+    );
+
+    await sender.send({ ...PLANTILLA });
+
+    const components = JSON.parse(captured.init?.body ?? '{}').template
+      .components;
+    expect(components.map((c: { type: string }) => c.type)).not.toContain(
+      'header',
+    );
+  });
+
   it('envía texto libre como type text', async () => {
     const captured: Captured = {};
     const sender = new CloudApiWhatsAppSender(

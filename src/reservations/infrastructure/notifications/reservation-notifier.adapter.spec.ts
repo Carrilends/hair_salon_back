@@ -3,6 +3,9 @@ import { Reservation } from '../../domain/reservation';
 import { ReservationStatus } from '../../domain/reservation-status';
 import { NotifiableEvent } from 'src/notifications/domain/events/notifiable-event';
 
+/** Catálogo sin fotos: los casos que no van de la imagen no deben depender de ella. */
+const sinImagenes = { findImageUrls: async () => new Map<string, string[]>() };
+
 function reservationWith(
   props: Partial<Parameters<typeof Reservation.fromPersistence>[0]> = {},
 ) {
@@ -34,6 +37,7 @@ describe('ReservationNotifierAdapter', () => {
     const adapter = new ReservationNotifierAdapter(
       dispatcher as any,
       workers as any,
+      sinImagenes as any,
     );
 
     await adapter.reservationCreated(reservationWith());
@@ -66,6 +70,7 @@ describe('ReservationNotifierAdapter', () => {
     const adapter = new ReservationNotifierAdapter(
       dispatcher as any,
       workers as any,
+      sinImagenes as any,
     );
 
     await adapter.reservationCreated(
@@ -97,6 +102,7 @@ describe('ReservationNotifierAdapter · reprogramación', () => {
       adapter: new ReservationNotifierAdapter(
         dispatcher as any,
         workers as any,
+        sinImagenes as any,
       ),
       despachados,
     };
@@ -131,5 +137,93 @@ describe('ReservationNotifierAdapter · reprogramación', () => {
     });
 
     expect(despachados[0]).toMatchObject({ workerChanged: false });
+  });
+});
+
+/**
+ * Plan 06, F1: el aviso «reserva creada» lleva la foto del servicio. El
+ * traductor la resuelve porque es quien conoce los `serviceId`; qué hacer si no
+ * hay (respaldo o sin cabecera) lo decide el canal de WhatsApp.
+ */
+describe('ReservationNotifierAdapter · imagen del aviso de creación', () => {
+  const CLOUD = 'https://res.cloudinary.com/demo/image/upload';
+
+  function montar(images: { findImageUrls: jest.Mock }) {
+    const despachados: NotifiableEvent[] = [];
+    const dispatcher = {
+      notify: async (e: NotifiableEvent) => {
+        despachados.push(e);
+      },
+    };
+    const workers = { getWorkerName: async () => 'Marlene' };
+    return {
+      adapter: new ReservationNotifierAdapter(
+        dispatcher as any,
+        workers as any,
+        images as any,
+      ),
+      despachados,
+    };
+  }
+
+  it('lleva la foto válida del primer servicio, ya en JPG', async () => {
+    const images = {
+      findImageUrls: jest.fn(
+        async () =>
+          new Map([
+            ['s1', ['/']],
+            ['s2', [`${CLOUD}/v1/uploads/peinado.webp`]],
+          ]),
+      ),
+    };
+    const { adapter, despachados } = montar(images);
+
+    await adapter.reservationCreated(reservationWith());
+
+    expect(images.findImageUrls).toHaveBeenCalledWith(['s1', 's2']);
+    expect(despachados[0]).toMatchObject({
+      type: 'reservation.created',
+      imageUrl: `${CLOUD}/f_jpg,w_800,c_limit/v1/uploads/peinado.webp`,
+    });
+  });
+
+  it('sin foto válida el evento no lleva imageUrl', async () => {
+    const { adapter, despachados } = montar({
+      findImageUrls: jest.fn(
+        async () => new Map([['s1', ['https://placehold.co/600']]]),
+      ),
+    });
+
+    await adapter.reservationCreated(reservationWith());
+
+    expect(despachados[0]).not.toHaveProperty('imageUrl');
+  });
+
+  it('si la consulta de fotos falla, el aviso sale igual (NF11)', async () => {
+    const { adapter, despachados } = montar({
+      findImageUrls: jest.fn(async () => {
+        throw new Error('se cayó la base');
+      }),
+    });
+
+    await adapter.reservationCreated(reservationWith());
+
+    expect(despachados).toHaveLength(1);
+    expect(despachados[0]).not.toHaveProperty('imageUrl');
+  });
+
+  it('los otros tres eventos no consultan fotos', async () => {
+    const images = { findImageUrls: jest.fn(async () => new Map()) };
+    const { adapter } = montar(images);
+
+    await adapter.reservationConfirmed(reservationWith());
+    await adapter.reservationCancelled(reservationWith(), { byAdmin: true });
+    await adapter.reservationRescheduled(reservationWith(), {
+      byAdmin: true,
+      previousScheduledAt: new Date('2026-08-19T15:00:00.000Z'),
+      workerChanged: false,
+    });
+
+    expect(images.findImageUrls).not.toHaveBeenCalled();
   });
 });

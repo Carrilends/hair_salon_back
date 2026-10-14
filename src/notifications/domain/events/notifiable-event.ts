@@ -26,6 +26,13 @@ export interface ReservationEventBase {
 
 export interface ReservationCreatedEvent extends ReservationEventBase {
   type: 'reservation.created';
+  /**
+   * Foto del servicio para la cabecera del aviso a la clienta (plan 06, F1), ya
+   * validada y en JPG. Ausente si ningún servicio tiene una que Meta acepte:
+   * entonces el canal decide (foto de respaldo o aviso sin cabecera). Solo la
+   * lleva la creación; los demás avisos son de texto.
+   */
+  imageUrl?: string;
 }
 
 export interface ReservationCancelledEvent extends ReservationEventBase {

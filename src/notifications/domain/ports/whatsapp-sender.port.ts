@@ -42,6 +42,12 @@ export type WhatsAppMessage =
        */
       templateName: string;
       templateLang?: string;
+      /**
+       * Foto de la cabecera, para plantillas aprobadas con cabecera IMAGE
+       * (plan 06, F1). Debe ir **solo** si la plantilla la tiene: Meta rechaza
+       * tanto la cabecera que sobra como la que falta.
+       */
+      headerImageUrl?: string;
       bodyParams: string[];
       buttons?: WhatsAppTemplateButton[];
     }

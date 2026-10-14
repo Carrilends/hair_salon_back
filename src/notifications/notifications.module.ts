@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { Logger, Module } from '@nestjs/common';
+import { imagenDeRespaldo } from './infrastructure/whatsapp/fallback-image';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
@@ -43,6 +44,27 @@ import {
  * depende de él por el correo). El gateway verifica el JWT con su propio
  * `JwtModule` y su propio repositorio de `User`.
  */
+/**
+ * Lee y valida la foto de respaldo, y deja dicho en el arranque en qué modo
+ * queda el aviso «reserva creada» (plan 06, F1): el interruptor tiene que
+ * coincidir con la plantilla configurada, y un desajuste solo se vería después,
+ * en los acuses de Meta.
+ */
+function respaldoDelAviso(): string | undefined {
+  const logger = new Logger('NotificationsModule');
+  const { url, error } = imagenDeRespaldo(
+    process.env.WHATSAPP_FALLBACK_IMAGE_URL,
+  );
+  if (error) logger.error(error);
+  const plantilla = process.env.WHATSAPP_TEMPLATE_RESERVA_CREADA ?? '';
+  logger.log(
+    url
+      ? `Aviso «reserva creada» CON imagen: la plantilla «${plantilla}» debe tener cabecera IMAGE.`
+      : `Aviso «reserva creada» SIN imagen: la plantilla «${plantilla}» debe ser de texto.`,
+  );
+  return url;
+}
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
@@ -102,6 +124,8 @@ import {
           process.env.WHATSAPP_TEMPLATE_RESERVA_REPROGRAMADA ?? '',
         templateConfirmed:
           process.env.WHATSAPP_TEMPLATE_RESERVA_CONFIRMADA ?? '',
+        // Vacía = aviso de creación sin imagen (plantilla v1). Ver la config.
+        fallbackImageUrl: respaldoDelAviso(),
       }),
     },
     {

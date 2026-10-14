@@ -4,6 +4,7 @@ import { WorkersModule } from 'src/workers/workers.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { NotificationsModule } from 'src/notifications/notifications.module';
 import { Service } from 'src/service/entities/service.entity';
+import { ImageManager } from 'src/images/images.entity';
 import { ReservationOrmEntity } from './infrastructure/persistence/reservation.orm-entity';
 import { ReservationServiceOrmEntity } from './infrastructure/persistence/reservation-service.orm-entity';
 import { ReservationsController } from './infrastructure/http/reservations.controller';
@@ -11,6 +12,7 @@ import { TypeOrmReservationRepository } from './infrastructure/persistence/typeo
 import { WorkersAvailabilityAdapter } from './infrastructure/workers/workers-availability.adapter';
 import { SystemClock } from './infrastructure/time/system-clock.adapter';
 import { ServiceCatalogAdapter } from './infrastructure/service-catalog/service-catalog.adapter';
+import { ServiceImagesAdapter } from './infrastructure/service-catalog/service-images.adapter';
 import { ReservationNotifierAdapter } from './infrastructure/notifications/reservation-notifier.adapter';
 import { ReservationPurgeScheduler } from './infrastructure/scheduling/reservation-purge.scheduler';
 import { CreateReservationUseCase } from './application/create-reservation.use-case';
@@ -31,6 +33,7 @@ import {
   CLOCK,
   SERVICE_CATALOG,
   RESERVATION_NOTIFIER,
+  SERVICE_IMAGES,
 } from './application/tokens';
 
 @Module({
@@ -39,6 +42,8 @@ import {
       ReservationOrmEntity,
       ReservationServiceOrmEntity,
       Service,
+      // Solo lectura, para la foto del aviso «reserva creada» (plan 06, F1).
+      ImageManager,
     ]),
     WorkersModule,
     AuthModule,
@@ -65,6 +70,7 @@ import {
     { provide: WORKER_AVAILABILITY, useClass: WorkersAvailabilityAdapter },
     { provide: CLOCK, useClass: SystemClock },
     { provide: SERVICE_CATALOG, useClass: ServiceCatalogAdapter },
+    { provide: SERVICE_IMAGES, useClass: ServiceImagesAdapter },
     { provide: RESERVATION_NOTIFIER, useClass: ReservationNotifierAdapter },
   ],
   // Exportados para que el asistente y el canal de WhatsApp reutilicen los casos
