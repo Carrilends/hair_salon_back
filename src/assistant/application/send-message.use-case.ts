@@ -120,6 +120,13 @@ export interface SendMessageResult {
    * una cosa.
    */
   presentaciones?: AssistantPresentation[];
+  /**
+   * Solo en WhatsApp (plan 06, F5, D10): el turno abrió una conversación —la
+   * primera del número, la de después de 24 h de silencio o la que sustituye a
+   * una llena—. El canal la usa para enviar el aviso legal una vez por
+   * conversación. La web no lo recibe: allí el aviso lo muestra el widget.
+   */
+  conversacionNueva?: boolean;
 }
 
 /**
@@ -219,6 +226,8 @@ export class SendMessageUseCase {
   ): Promise<SendMessageResult> {
     const conversation = await this.loadOrStart(input, ahora);
     const porWhatsApp = input.canal === 'whatsapp';
+    // Antes de añadir nada: una conversación recién abierta no tiene mensajes.
+    const esNueva = conversation.messageCount === 0;
     // La dueña escribiendo desde su WhatsApp (D7): gestiona la agenda, no
     // conversa por gusto, y un tope que la dejara sin poder confirmar una cita
     // a media tarde sería peor que el gasto que evita. Sigue bajo el techo
@@ -476,6 +485,7 @@ export class SendMessageUseCase {
       conversationId: saved.id,
       reply,
       ...(presentaciones.length > 0 ? { presentaciones } : {}),
+      ...(porWhatsApp ? { conversacionNueva: esNueva } : {}),
     };
   }
 

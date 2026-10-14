@@ -445,3 +445,50 @@ describe('SendMessageUseCase · canal WhatsApp (plan 06, F3a)', () => {
     });
   });
 });
+
+describe('SendMessageUseCase · conversación nueva (plan 06, F5, D10)', () => {
+  it('el primer mensaje de un número dice que la conversación es nueva', async () => {
+    const { useCase } = montar({});
+    const r = await useCase.execute({
+      canal: 'whatsapp',
+      phoneE164: NUMERO,
+      userId: null,
+      message: 'hola',
+    });
+    expect(r.conversacionNueva).toBe(true);
+  });
+
+  it('seguir una conversación activa no es nueva', async () => {
+    const repo = new RepoDoble();
+    repo.activaDelNumero = conversacionDelNumero(2);
+    const { useCase } = montar({ repo });
+    const r = await useCase.execute({
+      canal: 'whatsapp',
+      phoneE164: NUMERO,
+      userId: null,
+      message: 'y el sábado?',
+    });
+    expect(r.conversacionNueva).toBe(false);
+  });
+
+  it('una conversación llena que rota cuenta como nueva', async () => {
+    const repo = new RepoDoble();
+    repo.activaDelNumero = conversacionDelNumero(
+      PRESUPUESTO.maxMessagesPerConversation,
+    );
+    const { useCase } = montar({ repo });
+    const r = await useCase.execute({
+      canal: 'whatsapp',
+      phoneE164: NUMERO,
+      userId: null,
+      message: 'hola otra vez',
+    });
+    expect(r.conversacionNueva).toBe(true);
+  });
+
+  it('la web no recibe el campo', async () => {
+    const { useCase } = montar({});
+    const r = await useCase.execute({ userId: 'u-1', message: 'hola' });
+    expect(r).not.toHaveProperty('conversacionNueva');
+  });
+});
