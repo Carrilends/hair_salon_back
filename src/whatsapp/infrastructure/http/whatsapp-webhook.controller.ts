@@ -12,7 +12,10 @@ import {
 } from '@nestjs/common';
 import { HandleInboundMessageUseCase } from '../../application/handle-inbound-message.use-case';
 import { parseInboundWebhook } from '../../application/parse-inbound-webhook';
+import { parseFailedStatuses } from '../../application/parse-failed-statuses';
 import { InboundRateLimiter } from '../../application/rate-limiter';
+import { PerSenderQueue } from '../../application/per-sender-queue';
+import { InboundMessage } from '../../domain/inbound-message';
 import { InboundMessageLogPort } from '../../domain/ports/inbound-message-log.port';
 import { INBOUND_MESSAGE_LOG, RATE_LIMITER } from '../../application/tokens';
 import { MetaSignatureGuard } from './meta-signature.guard';
@@ -30,6 +33,12 @@ import { MetaSignatureGuard } from './meta-signature.guard';
 @Controller('whatsapp')
 export class WhatsAppWebhookController {
   private readonly logger = new Logger(WhatsAppWebhookController.name);
+  /**
+   * Un mensaje por número a la vez (plan 06, F2). Campo propio y no proveedor
+   * inyectado: el controlador ya es único en la aplicación, y la cola no tiene
+   * otro usuario.
+   */
+  private readonly cola = new PerSenderQueue();
 
   constructor(
     private readonly handler: HandleInboundMessageUseCase,
@@ -73,29 +82,36 @@ export class WhatsAppWebhookController {
   @Post('webhook')
   @HttpCode(200)
   receive(@Req() req: { body: unknown }): { ok: true } {
+    // Un envío nuestro que Meta no pudo entregar solo se sabe por aquí (plan
+    // 06, F2): sin este registro, un aviso que nunca llegó sería invisible.
+    for (const fallo of parseFailedStatuses(req.body)) {
+      this.logger.warn(
+        `Meta no entregó ${fallo.messageId} a ${fallo.recipient ?? 'destinatario desconocido'}: ` +
+          (fallo.errors.join('; ') || 'sin detalle'),
+      );
+    }
+
     const mensajes = parseInboundWebhook(req.body);
 
     for (const mensaje of mensajes) {
       // El trabajo se lanza sin `await` a propósito: la respuesta se cierra al
       // retornar. Cada mensaje lleva su propio `catch` para que uno que falle no
-      // se lleve por delante a los demás.
-      void this.procesar(mensaje).catch((error) => {
-        this.logger.error(
-          `Fallo procesando ${mensaje.messageId}`,
-          error as Error,
-        );
-      });
+      // se lleve por delante a los demás. La cola ordena los de un mismo número
+      // (plan 06, F2); los de números distintos siguen en paralelo.
+      void this.cola
+        .run(mensaje.from, () => this.procesar(mensaje))
+        .catch((error) => {
+          this.logger.error(
+            `Fallo procesando ${mensaje.messageId}`,
+            error as Error,
+          );
+        });
     }
 
     return { ok: true };
   }
 
-  private async procesar(mensaje: {
-    messageId: string;
-    from: string;
-    payload: string | null;
-    text: string | null;
-  }): Promise<void> {
+  private async procesar(mensaje: InboundMessage): Promise<void> {
     // Idempotencia primero: una reentrega no debe volver a responderle a la
     // clienta, aunque el dominio absorbiera la acción repetida.
     const esNuevo = await this.log.markProcessedIfNew(
