@@ -16,7 +16,12 @@ import { ComposedLine, Omission } from '../../domain/packages/package-composer';
  * existe: una clase nueva de tarjeta es una variante más, no un cambio en el
  * contrato de las anteriores.
  */
-export type AssistantPresentation = PackagePresentation | ServicesPresentation;
+export type AssistantPresentation =
+  | PackagePresentation
+  | ServicesPresentation
+  | ConfirmBookingPresentation
+  | ConfirmCancelPresentation
+  | ConfirmReschedulePresentation;
 
 /** Propuesta de paquete de evento, tal como la compone `componerPaquete`. */
 export interface PackagePresentation {
@@ -49,4 +54,34 @@ export interface PresentedService {
 export interface ServicesPresentation {
   tipo: 'servicios';
   servicios: PresentedService[];
+}
+
+/**
+ * Plan 06, F4 (D4): las tres presentaciones de WhatsApp que piden un botón.
+ * Nunca llegan a la web —solo las producen las herramientas del juego de
+ * WhatsApp—; el webhook (F5) las convierte en botones con
+ * `mensajeDeConfirmacion`.
+ */
+export interface ConfirmBookingPresentation {
+  tipo: 'confirmar-reserva';
+  /** Id de la propuesta guardada: va dentro del botón `BOOK_OK|…`. */
+  propuestaId: string;
+  nombre: string;
+  servicios: string[];
+  fecha: string;
+  hora: string;
+}
+
+export interface ConfirmCancelPresentation {
+  tipo: 'confirmar-cancelacion';
+  reservaId: string;
+}
+
+export interface ConfirmReschedulePresentation {
+  tipo: 'confirmar-cambio';
+  reservaId: string;
+  /** Hora nueva en la zona del salón, `YYYY-MM-DDTHH:mm`: la del botón `RSAT`. */
+  cuandoLocal: string;
+  fecha: string;
+  hora: string;
 }

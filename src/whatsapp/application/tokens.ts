@@ -12,3 +12,5 @@ export const INBOUND_MESSAGE_LOG = Symbol('INBOUND_MESSAGE_LOG');
 
 /** Ventana deslizante en memoria que acota el trabajo por remitente. */
 export const RATE_LIMITER = Symbol('WHATSAPP_RATE_LIMITER');
+/** Confirmar o descartar propuestas de reserva del asistente (plan 06, F4). */
+export const PENDING_BOOKING_ACTIONS = Symbol('PENDING_BOOKING_ACTIONS');

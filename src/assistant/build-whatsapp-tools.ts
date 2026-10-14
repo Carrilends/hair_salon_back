@@ -10,6 +10,13 @@ import {
 import { MyReservationsTool } from './application/tools/my-reservations.tool';
 import { ViewAgendaTool } from './application/tools/view-agenda.tool';
 import { ConfirmReservationTool } from './application/tools/confirm-reservation.tool';
+import {
+  ProposeBookingTool,
+  ProposeCancelTool,
+  ProposeRescheduleTool,
+} from './application/tools/proponer.tool';
+import { PendingBookingRepositoryPort } from './domain/ports/pending-booking-repository.port';
+import { ServiceCatalogQueryPort } from './domain/ports/service-catalog-query.port';
 
 export type { WhatsAppToolSets };
 
@@ -42,6 +49,8 @@ export function buildWhatsAppTools(
   findActionable: FindActionableReservationsUseCase,
   listActive: ListActiveReservationsUseCase,
   confirm: ConfirmReservationUseCase,
+  pendientes: PendingBookingRepositoryPort,
+  catalog: Pick<ServiceCatalogQueryPort, 'findNamesByIds'>,
 ): WhatsAppToolSets {
   const de = (nombre: string): AssistantTool => {
     const tool = base.find((t) => t.name === nombre);
@@ -56,27 +65,42 @@ export function buildWhatsAppTools(
   const listar = de('listarServicios');
   const disponibilidad = de('consultarDisponibilidad');
 
-  const crear = conDefinicion(de('crearReserva'), {
-    description:
-      'Crea una reserva a nombre de la clienta que escribe, con su número de WhatsApp, en la fecha y servicios indicados. Hace falta su nombre.',
-    extra: { nombre: NOMBRE },
-  });
-  const paquete = conDefinicion(de('reservarPaquete'), {
-    description:
-      'Reserva un paquete ya compuesto a nombre de la clienta que escribe: crea UNA reserva con todos sus servicios. Hace falta su nombre.',
-    extra: { nombre: NOMBRE },
-  });
-  const cancelar = conDefinicion(de('cancelarReserva'), {
-    description:
-      'Cancela una cita por su id, si su estado y su plazo lo permiten.',
-  });
-  const reprogramar = conDefinicion(de('reprogramarReserva'), {
-    description: sustituir(
-      de('reprogramarReserva').definition.description ?? '',
-      'una reserva de la clienta con sesión iniciada',
-      'una cita por su id',
-    ),
-  });
+  // Plan 06, F4 (D4): en WhatsApp las cuatro que escribían ahora PROPONEN, y
+  // escribe el botón. Conservan el nombre y la definición de WhatsApp de F3b.
+  const deps = { pendientes, catalog };
+  const crear = new ProposeBookingTool(
+    'crearReserva',
+    conDefinicion(de('crearReserva'), {
+      description:
+        'Prepara una reserva a nombre de la clienta que escribe, con su número de WhatsApp, en la fecha y servicios indicados. NO reserva: ella la confirma con un botón. Hace falta su nombre.',
+      extra: { nombre: NOMBRE },
+    }).definition,
+    deps,
+  );
+  const paquete = new ProposeBookingTool(
+    'reservarPaquete',
+    conDefinicion(de('reservarPaquete'), {
+      description:
+        'Prepara la reserva de un paquete ya compuesto a nombre de la clienta que escribe: UNA reserva con todos sus servicios. NO reserva: ella la confirma con un botón. Hace falta su nombre.',
+      extra: { nombre: NOMBRE },
+    }).definition,
+    deps,
+  );
+  const cancelar = new ProposeCancelTool(
+    conDefinicion(de('cancelarReserva'), {
+      description:
+        'Prepara la cancelación de una cita por su id. NO cancela: se confirma con un botón, y el sistema comprueba entonces su estado y su plazo.',
+    }).definition,
+  );
+  const reprogramar = new ProposeRescheduleTool(
+    conDefinicion(de('reprogramarReserva'), {
+      description: sustituir(
+        de('reprogramarReserva').definition.description ?? '',
+        'Cambia la fecha y hora de una reserva de la clienta con sesión iniciada',
+        'Prepara el cambio de fecha y hora de una cita por su id (NO la mueve: se confirma con un botón)',
+      ),
+    }).definition,
+  );
 
   // Las citas de ESE número: las activas y no vencidas, proyectadas a la misma
   // forma que «mis reservas» de la web, para que el modelo las lea igual.

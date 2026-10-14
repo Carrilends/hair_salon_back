@@ -24,6 +24,10 @@ import { TypeSafeJudgeAdapter } from './infrastructure/judgment/typesafe-judge.a
 import { NoopJudgeAdapter } from './infrastructure/judgment/noop-judge.adapter';
 import { AssistantController } from './infrastructure/http/assistant.controller';
 import { IpLimiterPruneScheduler } from './infrastructure/scheduling/ip-limiter-prune.scheduler';
+import { PendingBookingPurgeScheduler } from './infrastructure/scheduling/pending-booking-purge.scheduler';
+import { PendingBookingOrmEntity } from './infrastructure/pending/pending-booking.orm-entity';
+import { TypeOrmPendingBookingRepository } from './infrastructure/pending/typeorm-pending-booking.repository';
+import { ConfirmPendingBookingUseCase } from './application/confirm-pending-booking.use-case';
 import { SlidingWindowRateLimiter } from 'src/common/rate-limit/sliding-window-rate-limiter';
 import { enteroDeEntorno } from 'src/common/config/entero-de-entorno';
 
@@ -48,6 +52,7 @@ import {
   JUDGMENT,
   JUDGMENT_SETTINGS,
   LLM,
+  PENDING_BOOKINGS,
 } from './application/tokens';
 import { ajustesDeJuicioDeEntorno } from './application/judgment-settings';
 import { TelemetriaDeJuicios } from './application/judgment-telemetry';
@@ -103,6 +108,8 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
       ConversationOrmEntity,
       AssistantMessageOrmEntity,
       Service,
+      // Propuestas de reserva de WhatsApp (plan 06, F4).
+      PendingBookingOrmEntity,
     ]),
     AuthModule, // estrategia JWT para el guard de auth opcional
     WorkersModule, // WorkersService (disponibilidad)
@@ -113,6 +120,10 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
     SendMessageUseCase,
     GetAssistantUsageUseCase,
     IpLimiterPruneScheduler,
+    // Plan 06, F4: propuestas de reserva de WhatsApp y su botón «Confirmar».
+    PendingBookingPurgeScheduler,
+    ConfirmPendingBookingUseCase,
+    { provide: PENDING_BOOKINGS, useClass: TypeOrmPendingBookingRepository },
     SummarizeConversationUseCase,
     ServiceCatalogQueryAdapter,
     AvailabilityQueryAdapter,
@@ -262,6 +273,8 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
         FindActionableReservationsUseCase,
         ListActiveReservationsUseCase,
         ConfirmReservationUseCase,
+        PENDING_BOOKINGS,
+        ServiceCatalogQueryAdapter,
       ],
     },
   ],
@@ -269,6 +282,8 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
   // **los mismos objetos**, no copias (Fase 7, M8). El bucle sale desde el plan
   // 06 (F3a) para que el webhook de WhatsApp converse con el MISMO asistente
   // (F5); el presupuesto y la telemetria siguen siendo asunto de este modulo.
-  exports: [ASSISTANT_TOOLS, SendMessageUseCase],
+  // El botón «Confirmar» de las propuestas (F4) lo atiende el webhook, así que
+  // su caso de uso sale también.
+  exports: [ASSISTANT_TOOLS, SendMessageUseCase, ConfirmPendingBookingUseCase],
 })
 export class AssistantModule {}

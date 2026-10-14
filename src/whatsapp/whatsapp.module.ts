@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ReservationsModule } from 'src/reservations/reservations.module';
 import { NotificationsModule } from 'src/notifications/notifications.module';
 import { WorkersModule } from 'src/workers/workers.module';
+import { AssistantModule } from 'src/assistant/assistant.module';
 
 import {
   CLOCK,
@@ -11,7 +12,9 @@ import {
   RATE_LIMITER,
   RESERVATION_ACTIONS,
   WHATSAPP_CHANNEL_CONFIG,
+  PENDING_BOOKING_ACTIONS,
 } from './application/tokens';
+import { PendingBookingActionsAdapter } from './infrastructure/assistant/pending-booking-actions.adapter';
 import {
   HandleInboundMessageUseCase,
   WhatsAppChannelConfig,
@@ -46,6 +49,8 @@ const VENTANA_MS = 60_000;
     ReservationsModule,
     NotificationsModule,
     WorkersModule,
+    // Plan 06, F4: el botón «Confirmar» de las propuestas del asistente.
+    AssistantModule,
   ],
   controllers: [WhatsAppWebhookController],
   providers: [
@@ -56,6 +61,10 @@ const VENTANA_MS = 60_000;
     // adaptador, la del token y la de la clase.
     ReservationActionsAdapter,
     { provide: RESERVATION_ACTIONS, useExisting: ReservationActionsAdapter },
+    {
+      provide: PENDING_BOOKING_ACTIONS,
+      useClass: PendingBookingActionsAdapter,
+    },
     { provide: INBOUND_MESSAGE_LOG, useClass: TypeOrmInboundMessageLog },
     {
       // Quién es la peluquería para este canal. Un mensaje que venga de ese

@@ -61,3 +61,6 @@ export const ASSISTANT_IP_LIMITER = Symbol('AssistantIpRateLimiter');
  * cuenta y el techo valdría lo que valga multiplicado por el número de réplicas.
  */
 export const ASSISTANT_DAILY_LEDGER = Symbol('AssistantDailyTokenLedger');
+
+/** Propuestas de reserva de WhatsApp (`PendingBookingRepositoryPort`, plan 06, F4). */
+export const PENDING_BOOKINGS = Symbol('PendingBookingRepositoryPort');

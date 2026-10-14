@@ -26,6 +26,11 @@ export type ButtonPayload =
     }
   | { action: 'reschedule_at'; reservationId: string; whenYmdHm: string }
   | { action: 'reservation'; reservationId: string }
+  // Plan 06, F4 (D4): confirmar o descartar una PROPUESTA de reserva del
+  // asistente. El id es el de la propuesta, no el de una reserva: la reserva
+  // aún no existe.
+  | { action: 'book_ok'; bookingId: string }
+  | { action: 'book_no'; bookingId: string }
   | { action: 'noop' };
 
 /**
@@ -45,6 +50,8 @@ const CODIGOS = {
   reschedule_day: 'RSDAY',
   reschedule_at: 'RSAT',
   reservation: 'RESV',
+  book_ok: 'BOOK_OK',
+  book_no: 'BOOK_NO',
   noop: 'NOOP',
 } as const;
 
@@ -71,6 +78,9 @@ export function encodeButtonPayload(payload: ButtonPayload): string {
       ].join(SEPARADOR);
     case 'reschedule_at':
       return [codigo, payload.reservationId, payload.whenYmdHm].join(SEPARADOR);
+    case 'book_ok':
+    case 'book_no':
+      return [codigo, payload.bookingId].join(SEPARADOR);
     default:
       return [codigo, payload.reservationId].join(SEPARADOR);
   }
@@ -98,6 +108,12 @@ export function parseButtonPayload(raw: unknown): ButtonPayload | null {
 
   const reservationId = partes[1];
   if (!reservationId || !UUID_RE.test(reservationId)) return null;
+
+  if (accion === 'book_ok' || accion === 'book_no') {
+    return partes.length === 2
+      ? { action: accion, bookingId: reservationId }
+      : null;
+  }
 
   switch (accion) {
     case 'reschedule_day': {

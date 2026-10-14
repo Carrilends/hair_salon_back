@@ -93,6 +93,13 @@ export class CreateReservationTool implements AssistantTool {
   ): Promise<unknown> {
     // A3: sin sesión no se reserva. Se devuelve como resultado (no excepción)
     // para que el modelo lo explique con sus palabras e invite a iniciar sesión.
+    // En WhatsApp el modelo no escribe (plan 06, D4): allí esta herramienta
+    // se sustituye por una que propone y deja la escritura a un botón. Si
+    // algún día se cablease por error, se niega igual.
+    if (context.canal === 'whatsapp') {
+      return { ok: false, motivo: 'requiere_boton' };
+    }
+
     // Identidad: en la web, la sesión; en WhatsApp, el número firmado más el
     // nombre que dio la clienta (plan 06, D3/D5). `nombre` se aparta antes de
     // validar: solo existe en la definición de WhatsApp, y en la web sigue

@@ -22,6 +22,9 @@ function montar() {
     { execute: async () => [] } as never,
     {} as never,
     {} as never,
+    // F4: propuestas y catálogo, para las herramientas que proponen.
+    {} as never,
+    {} as never,
   );
   return { base, juegos, definicionesAntes };
 }
@@ -102,7 +105,28 @@ describe('buildWhatsAppTools (D6)', () => {
         {} as never,
         {} as never,
         {} as never,
+        {} as never,
+        {} as never,
       ),
     ).toThrow(/listarServicios/);
+  });
+});
+
+describe('buildWhatsAppTools · D4 (plan 06, F4)', () => {
+  it('las cuatro que escribían ahora proponen: no son las instancias de la web', () => {
+    const { base, juegos } = montar();
+    for (const n of [
+      'crearReserva',
+      'reservarPaquete',
+      'cancelarReserva',
+      'reprogramarReserva',
+    ]) {
+      for (const juego of [juegos.clienta, juegos.duena]) {
+        const t = juego.find((x) => x.name === n);
+        if (!t) continue;
+        expect(t).not.toBe(base.find((x) => x.name === n));
+        expect(t.constructor.name).toMatch(/^Propose/);
+      }
+    }
   });
 });

@@ -49,6 +49,13 @@ export class ReservePackageTool implements AssistantTool {
     args: Record<string, unknown>,
     context: AssistantContext,
   ): Promise<unknown> {
+    // En WhatsApp el modelo no escribe (plan 06, D4): allí esta herramienta
+    // se sustituye por una que propone y deja la escritura a un botón. Si
+    // algún día se cablease por error, se niega igual.
+    if (context.canal === 'whatsapp') {
+      return { ok: false, motivo: 'requiere_boton' };
+    }
+
     // Misma identidad que `crearReserva` (plan 06, F3b).
     const identidad = identidadParaCrear(args, context);
     if ('motivo' in identidad) return { ok: false, ...identidad };

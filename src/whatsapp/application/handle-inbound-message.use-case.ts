@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { normalizeCoPhoneToE164 } from 'src/common/phone';
 import {
   WhatsAppMessage,
@@ -30,7 +30,13 @@ import {
   ReservationSummary,
 } from '../domain/ports/reservation-actions.port';
 import { formatHumanTime } from './slot-options';
-import { RESERVATION_ACTIONS, WHATSAPP_CHANNEL_CONFIG, CLOCK } from './tokens';
+import {
+  RESERVATION_ACTIONS,
+  WHATSAPP_CHANNEL_CONFIG,
+  CLOCK,
+  PENDING_BOOKING_ACTIONS,
+} from './tokens';
+import { PendingBookingActionsPort } from '../domain/ports/pending-booking-actions.port';
 
 export interface WhatsAppChannelConfig {
   /** Móvil de la peluquería. Un mensaje desde aquí actúa como administración. */
@@ -49,6 +55,26 @@ const SOLO_TEXTO =
  */
 const BOTON_DESCONOCIDO =
   'Ese botón ya no está disponible. Escríbeme lo que necesitas y te ayudo.';
+
+/**
+ * Por qué no se pudo confirmar una propuesta, dicho para la clienta. Una
+ * propuesta ajena y una inexistente se dicen igual: no se revela si existe.
+ */
+function explicarPropuesta(motivo: string): string {
+  switch (motivo) {
+    case 'hora_ocupada':
+      return 'Esa hora se acaba de ocupar. Dime otro día u hora y te propongo de nuevo.';
+    case 'vencida':
+      return 'Esa propuesta caducó (duran 15 minutos). Escríbeme y la armamos de nuevo.';
+    case 'usada':
+      return 'Esa propuesta ya se usó. Si quieres otra cita, escríbeme.';
+    case 'otro_numero':
+    case 'no_encontrada':
+      return 'No encuentro esa propuesta. Escríbeme y la armamos de nuevo.';
+    default:
+      return 'No pude registrar la reserva con esos datos. Escríbeme y lo intentamos de nuevo.';
+  }
+}
 
 /** Tope de filas de una lista de WhatsApp. */
 const MAX_FILAS = 10;
@@ -83,6 +109,11 @@ export class HandleInboundMessageUseCase {
     private readonly config: WhatsAppChannelConfig,
     @Inject(CLOCK)
     private readonly clock: ClockPort,
+    // Propuestas del asistente (plan 06, F4). Opcional: sin él, sus botones se
+    // tratan como desconocidos.
+    @Optional()
+    @Inject(PENDING_BOOKING_ACTIONS)
+    private readonly propuestas?: PendingBookingActionsPort,
   ) {}
 
   async handle(mensaje: InboundMessage): Promise<void> {
@@ -175,7 +206,52 @@ export class HandleInboundMessageUseCase {
           payload.whenYmdHm,
           actor,
         );
+
+      case 'book_ok':
+        return this.confirmarPropuesta(payload.bookingId, from);
+
+      case 'book_no':
+        return this.descartarPropuesta(payload.bookingId, from);
     }
+  }
+
+  // ----------------------------------------------- propuestas (plan 06, F4)
+
+  /**
+   * «Confirmar» una propuesta del asistente: la ÚNICA vía por la que una
+   * reserva pedida por chat llega a la agenda (D4). Con el número firmado de
+   * quien pulsa: la propuesta de otro número no se confirma.
+   */
+  private async confirmarPropuesta(id: string, from: string): Promise<void> {
+    if (!this.propuestas) {
+      await this.texto(from, BOTON_DESCONOCIDO);
+      return;
+    }
+    const r = await this.propuestas.confirm(id, from);
+    if (r.ok === true) {
+      await this.texto(
+        from,
+        `¡Listo! Tu reserva quedó registrada para el ${this.fechaLarga(r.scheduledAt)}. ` +
+          'Ahora te llega el aviso, con botones para cambiarla o cancelarla.',
+      );
+      return;
+    }
+    await this.texto(from, explicarPropuesta(r.motivo));
+  }
+
+  /** «Cambiar»: la propuesta se gasta y se le pregunta qué quiere cambiar. */
+  private async descartarPropuesta(id: string, from: string): Promise<void> {
+    if (!this.propuestas) {
+      await this.texto(from, BOTON_DESCONOCIDO);
+      return;
+    }
+    const r = await this.propuestas.discard(id, from);
+    await this.texto(
+      from,
+      r.ok === true
+        ? 'Vale, no la reservo. Dime qué quieres cambiar.'
+        : explicarPropuesta(r.motivo),
+    );
   }
 
   // ---------------------------------------------------------------- consultar
