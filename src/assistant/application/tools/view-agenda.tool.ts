@@ -1,6 +1,6 @@
 import { AssistantContext, AssistantTool } from './assistant-tool';
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
-import { fechaDelSalon } from '../salon-day';
+import { fechaDelSalon, fechaYHoraEnPalabras } from '../salon-day';
 import { nombreParaElModelo } from './identidad';
 
 /**
@@ -82,7 +82,10 @@ export class ViewAgendaTool implements AssistantTool {
       ok: true,
       citas: delDia.slice(0, MAX_CITAS).map((r) => ({
         id: r.id,
-        cuando: r.scheduledAt,
+        // Fecha y hora del salón, no el instante en UTC: el modelo las repite
+        // tal cual, y con el ISO le decía a la dueña «15:00» por una cita de
+        // las 10:00 (prueba de humo de F5).
+        ...fechaYHoraEnPalabras(r.scheduledAt.toISOString()),
         estado: r.status,
         // Filtrado: un nombre con forma de orden no llega al modelo, que en
         // este turno puede cancelar y mover cualquier cita (revisión de F3b).

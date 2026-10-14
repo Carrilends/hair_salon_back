@@ -56,7 +56,9 @@ describe('misReservas por WhatsApp', () => {
     expect(r).toEqual([
       {
         id: RID,
-        cuando: new Date('2026-10-20T15:00:00Z'),
+        // Hora del salón, no UTC (hallazgo de la prueba de humo de F5).
+        fecha: 'martes, 20 de octubre de 2026',
+        hora: '10:00',
         estado: 'pendiente',
         servicios: ['Corte'],
         minutos: 30,
