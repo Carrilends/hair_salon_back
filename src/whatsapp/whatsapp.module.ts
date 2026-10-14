@@ -13,7 +13,10 @@ import {
   RESERVATION_ACTIONS,
   WHATSAPP_CHANNEL_CONFIG,
   PENDING_BOOKING_ACTIONS,
+  ASSISTANT_CHAT,
 } from './application/tokens';
+import { AssistantChatAdapter } from './infrastructure/assistant/assistant-chat.adapter';
+import { asistenteActivado, configDelCanal } from './whatsapp-config';
 import { PendingBookingActionsAdapter } from './infrastructure/assistant/pending-booking-actions.adapter';
 import {
   HandleInboundMessageUseCase,
@@ -49,7 +52,8 @@ const VENTANA_MS = 60_000;
     ReservationsModule,
     NotificationsModule,
     WorkersModule,
-    // Plan 06, F4: el botón «Confirmar» de las propuestas del asistente.
+    // Plan 06: el botón «Confirmar» de las propuestas (F4) y la conversación
+    // (F5).
     AssistantModule,
   ],
   controllers: [WhatsAppWebhookController],
@@ -71,10 +75,16 @@ const VENTANA_MS = 60_000;
       // número actúa como administración; cualquier otro, como el teléfono que
       // sea. Sin él configurado, nadie es administración: es el estado seguro.
       provide: WHATSAPP_CHANNEL_CONFIG,
-      useFactory: (): WhatsAppChannelConfig => ({
-        ownerPhone: process.env.SALON_OWNER_WHATSAPP ?? '',
-        timeZone: process.env.SALON_TZ ?? 'America/Bogota',
-      }),
+      useFactory: (): WhatsAppChannelConfig => configDelCanal(process.env),
+    },
+    // Plan 06, F5: el texto libre conversa con el asistente. Apagado ⇒ `null`,
+    // y el manejador vuelve a ofrecer las citas como antes (D13).
+    AssistantChatAdapter,
+    {
+      provide: ASSISTANT_CHAT,
+      useFactory: (adaptador: AssistantChatAdapter) =>
+        asistenteActivado(process.env) ? adaptador : null,
+      inject: [AssistantChatAdapter],
     },
     {
       provide: RATE_LIMITER,
