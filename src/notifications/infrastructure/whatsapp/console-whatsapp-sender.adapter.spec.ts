@@ -97,4 +97,21 @@ describe('ConsoleWhatsAppSender', () => {
 
     log.mockRestore();
   });
+  it('imprime la URL y el pie de una imagen (plan 06, F5)', async () => {
+    const log = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+
+    await new ConsoleWhatsAppSender().send({
+      kind: 'image',
+      to: '573001234567',
+      imageUrl: 'https://res.cloudinary.com/x/a.jpg',
+      caption: 'Corte',
+    });
+
+    const impreso = String(log.mock.calls[0][0]);
+    expect(impreso).toContain('Imagen: https://res.cloudinary.com/x/a.jpg');
+    expect(impreso).toContain('Pie: Corte');
+    log.mockRestore();
+  });
 });

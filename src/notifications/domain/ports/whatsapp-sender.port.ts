@@ -67,6 +67,18 @@ export type WhatsAppMessage =
       footer?: string;
       rows: WhatsAppListRow[];
     }
+  | {
+      /**
+       * Foto con pie, dentro de la ventana de 24 h (plan 06, F5): la del
+       * servicio del que se está hablando. Meta descarga `imageUrl` ella misma:
+       * tiene que ser https y JPEG/PNG (ver `toWhatsAppImageUrl`).
+       */
+      kind: 'image';
+      to: string;
+      imageUrl: string;
+      /** Máximo 1024 caracteres (límite de Meta). */
+      caption?: string;
+    }
   | { kind: 'text'; to: string; body: string };
 
 export interface WhatsAppSenderPort {

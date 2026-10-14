@@ -130,6 +130,15 @@ export class CloudApiWhatsAppSender implements WhatsAppSenderPort {
       case 'text':
         return { type: 'text', text: { body: message.body } };
 
+      case 'image':
+        return {
+          type: 'image',
+          image: {
+            link: message.imageUrl,
+            ...(message.caption ? { caption: message.caption } : {}),
+          },
+        };
+
       case 'interactive-buttons':
         return {
           type: 'interactive',

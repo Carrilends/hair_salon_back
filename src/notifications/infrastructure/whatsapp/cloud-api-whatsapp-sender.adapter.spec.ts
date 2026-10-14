@@ -347,4 +347,47 @@ describe('CloudApiWhatsAppSender', () => {
     ).rejects.toThrow(/10 filas/);
     expect(captured.url).toBeUndefined();
   });
+  it('envía una imagen por enlace, con su pie (plan 06, F5)', async () => {
+    const captured: Captured = {};
+    const sender = new CloudApiWhatsAppSender(
+      baseConfig,
+      fakeFetch(captured, { ok: true, status: 200 }),
+    );
+
+    await sender.send({
+      kind: 'image',
+      to: '573001234567',
+      imageUrl:
+        'https://res.cloudinary.com/x/image/upload/f_jpg,w_800,c_limit/v1/a.jpg',
+      caption: 'Corte: $ 35.000 (45 min)',
+    });
+
+    const body = JSON.parse(captured.init?.body ?? '{}');
+    expect(body).toEqual({
+      messaging_product: 'whatsapp',
+      to: '573001234567',
+      type: 'image',
+      image: {
+        link: 'https://res.cloudinary.com/x/image/upload/f_jpg,w_800,c_limit/v1/a.jpg',
+        caption: 'Corte: $ 35.000 (45 min)',
+      },
+    });
+  });
+
+  it('una imagen sin pie no manda caption', async () => {
+    const captured: Captured = {};
+    const sender = new CloudApiWhatsAppSender(
+      baseConfig,
+      fakeFetch(captured, { ok: true, status: 200 }),
+    );
+
+    await sender.send({
+      kind: 'image',
+      to: '573001234567',
+      imageUrl: 'https://res.cloudinary.com/x/a.jpg',
+    });
+
+    const body = JSON.parse(captured.init?.body ?? '{}');
+    expect(body.image).toEqual({ link: 'https://res.cloudinary.com/x/a.jpg' });
+  });
 });
