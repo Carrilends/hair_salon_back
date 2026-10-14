@@ -20,6 +20,12 @@ export const ASSISTANT_TOOLS = Symbol('AssistantTools');
  */
 export const ASSISTANT_WHATSAPP_TOOLS = Symbol('AssistantWhatsAppTools');
 /**
+ * Número de la dueña (`SALON_OWNER_WHATSAPP`), para que el bucle compruebe por
+ * su cuenta que quien llega como administración por WhatsApp lo es de verdad
+ * (revisión de seguridad de F3b). Cadena tal cual del entorno.
+ */
+export const ASSISTANT_OWNER_WHATSAPP = Symbol('AssistantOwnerWhatsApp');
+/**
  * Proveedor de juicios (`JudgmentPort`). Se llama así y no por el nombre del
  * servicio que lo implementa: el núcleo no conoce al proveedor. Sin clave
  * configurada se inyecta el adaptador nulo y todo pasa igual que hoy.

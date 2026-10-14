@@ -1,6 +1,7 @@
 import { AssistantContext, AssistantTool } from './assistant-tool';
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
 import { fechaDelSalon } from '../salon-day';
+import { nombreParaElModelo } from './identidad';
 
 /**
  * Forma mínima de una cita de la agenda. El read model real de Reservas
@@ -83,7 +84,9 @@ export class ViewAgendaTool implements AssistantTool {
         id: r.id,
         cuando: r.scheduledAt,
         estado: r.status,
-        clienta: r.contact?.name ?? 'Cliente registrado',
+        // Filtrado: un nombre con forma de orden no llega al modelo, que en
+        // este turno puede cancelar y mover cualquier cita (revisión de F3b).
+        clienta: nombreParaElModelo(r.contact?.name),
         servicios: r.services.map((s) => s.name),
         estilista: r.worker.name,
       })),

@@ -139,6 +139,9 @@ function montar(opts: {
     // Desde F3b, WhatsApp exige sus juegos: aquí los dos con la herramienta
     // espía, que es lo único que estas pruebas observan.
     { clienta: [herramienta], duena: [herramienta] },
+    // La dueña de estas pruebas (revisión de F3b: isAdmin exige su número).
+    // Aquí es el mismo NUMERO: lo que se prueba son los topes, no quién es.
+    NUMERO,
   );
   return { useCase, repo, llm, herramienta };
 }

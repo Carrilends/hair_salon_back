@@ -42,6 +42,7 @@ import {
   ASSISTANT_SUMMARIZER,
   ASSISTANT_TOOLS,
   ASSISTANT_WHATSAPP_TOOLS,
+  ASSISTANT_OWNER_WHATSAPP,
   CONVERSATION_PHONE_REPOSITORY,
   CONVERSATION_REPOSITORY,
   JUDGMENT,
@@ -242,6 +243,12 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
         JUDGMENT,
         JUDGMENT_SETTINGS,
       ],
+    },
+    {
+      // Número de la dueña, para la segunda comprobación de `isAdmin` en
+      // WhatsApp (revisión de seguridad de F3b). El mismo que lee el canal.
+      provide: ASSISTANT_OWNER_WHATSAPP,
+      useFactory: () => process.env.SALON_OWNER_WHATSAPP ?? '',
     },
     {
       // Plan 06, F3b: los juegos de WhatsApp, clienta y dueña. Parten de

@@ -71,9 +71,8 @@ export function buildWhatsAppTools(
       'Cancela una cita por su id, si su estado y su plazo lo permiten.',
   });
   const reprogramar = conDefinicion(de('reprogramarReserva'), {
-    description: (
-      de('reprogramarReserva').definition.description ?? ''
-    ).replace(
+    description: sustituir(
+      de('reprogramarReserva').definition.description ?? '',
       'una reserva de la clienta con sesión iniciada',
       'una cita por su id',
     ),
@@ -114,6 +113,20 @@ export function buildWhatsAppTools(
       reprogramar,
     ],
   };
+}
+
+/**
+ * Reemplazo que **falla** si no encuentra el texto: si alguien cambia la
+ * descripción de la web, WhatsApp no debe quedarse en silencio con «sesión
+ * iniciada» (revisión de F3b).
+ */
+function sustituir(texto: string, buscado: string, nuevo: string): string {
+  if (!texto.includes(buscado)) {
+    throw new Error(
+      `La descripción de la web cambió y ya no contiene «${buscado}»: revisa la de WhatsApp.`,
+    );
+  }
+  return texto.replace(buscado, nuevo);
 }
 
 /**

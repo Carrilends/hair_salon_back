@@ -9,7 +9,7 @@ import { CreateReservationArgsDto } from './create-reservation-args.dto';
 import { ModoDeJuicio } from '../judgment-settings';
 import { fechaYHoraEnPalabras } from '../salon-day';
 import { verificarReservaPropuesta } from '../screening/verify-reservation';
-import { contactoDeWhatsApp } from './identidad';
+import { contactoDeWhatsApp, numeroReservable } from './identidad';
 import {
   DomainError,
   DuplicateServicesError,
@@ -242,7 +242,6 @@ function preguntaDeConfirmacion({
   }?`;
 }
 
-/** Traduce los errores de dominio de Reservas a motivos cortos y legibles. */
 /**
  * Quién crea y con qué argumentos se valida (plan 06, F3b). Compartido por
  * `crearReserva` y `reservarPaquete`.
@@ -268,17 +267,20 @@ export function identidadParaCrear(
     return { quien: { userId: context.userId }, resto: args };
   }
   if (context.isAdmin) return { motivo: 'solo_clientas' };
+  if (!numeroReservable(context)) return { motivo: 'numero_no_soportado' };
   const { nombre, ...resto } = args;
   const contacto = contactoDeWhatsApp(context, nombre);
   if (!contacto) {
     return {
       motivo: 'nombre_requerido',
-      pregunta: '¿A nombre de quién dejo la reserva?',
+      pregunta:
+        '¿A nombre de quién dejo la reserva? Solo el nombre, sin números ni signos.',
     };
   }
   return { quien: { userId: null, contact: contacto }, resto };
 }
 
+/** Traduce los errores de dominio de Reservas a motivos cortos y legibles. */
 export function mapDomainErrorToReason(error: unknown): string {
   if (error instanceof WorkerOverlapError) return 'hora_ocupada';
   if (error instanceof OutOfBusinessHoursError) return 'fuera_de_horario';

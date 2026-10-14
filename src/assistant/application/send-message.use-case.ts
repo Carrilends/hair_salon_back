@@ -33,6 +33,7 @@ import {
   ASSISTANT_SUMMARIZER,
   ASSISTANT_TOOLS,
   ASSISTANT_WHATSAPP_TOOLS,
+  ASSISTANT_OWNER_WHATSAPP,
   ASSISTANT_JUDGMENT_TELEMETRY,
   CONVERSATION_PHONE_REPOSITORY,
   CONVERSATION_REPOSITORY,
@@ -52,6 +53,7 @@ import {
 } from './screening/turn-screen';
 import { preguntarConSeguridad } from './screening/preguntar-con-seguridad';
 import { TelemetriaDeJuicios } from './judgment-telemetry';
+import { normalizeCoPhoneToE164 } from 'src/common/phone';
 
 const WINDOW_SIZE = 8;
 const SUMMARY_EVERY = 10;
@@ -165,6 +167,11 @@ export class SendMessageUseCase {
     @Optional()
     @Inject(ASSISTANT_WHATSAPP_TOOLS)
     private readonly herramientasWhatsApp?: WhatsAppToolSets,
+    // Número de la dueña: segunda barrera para `isAdmin` en WhatsApp. Sin él,
+    // nadie es administración por ese canal (falla cerrado).
+    @Optional()
+    @Inject(ASSISTANT_OWNER_WHATSAPP)
+    private readonly numeroDeLaDuena?: string,
   ) {
     this.toolsByName = new Map(this.tools.map((t) => [t.name, t]));
   }
@@ -173,6 +180,7 @@ export class SendMessageUseCase {
     // Antes que nada, ni siquiera el techo: una entrada incoherente es un fallo
     // del adaptador que llama, y no debe costar ni una consulta.
     validarIdentidad(input);
+    this.validarQueEsLaDuena(input);
     if (input.canal === 'whatsapp' && !this.porTelefono) {
       throw new Error(
         'El canal WhatsApp necesita el repositorio por teléfono (CONVERSATION_PHONE_REPOSITORY).',
@@ -669,6 +677,24 @@ export class SendMessageUseCase {
       }
     }
     return Conversation.start({ userId: input.userId });
+  }
+
+  /**
+   * `isAdmin` en WhatsApp lo decide el webhook comparando el remitente con
+   * `SALON_OWNER_WHATSAPP`. Aquí se vuelve a comprobar (revisión de seguridad
+   * de F3b): si el adaptador se equivocara, cualquier número tendría las
+   * herramientas de la dueña. Sin número configurado, nadie las tiene.
+   */
+  private validarQueEsLaDuena(input: SendMessageInput): void {
+    if (input.canal !== 'whatsapp' || input.isAdmin !== true) return;
+    const duena = this.numeroDeLaDuena
+      ? normalizeCoPhoneToE164(this.numeroDeLaDuena)
+      : null;
+    if (!duena || normalizeCoPhoneToE164(input.phoneE164 ?? null) !== duena) {
+      throw new Error(
+        'Solo el número de la dueña (SALON_OWNER_WHATSAPP) actúa como administración por WhatsApp.',
+      );
+    }
   }
 
   /**

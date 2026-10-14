@@ -98,6 +98,8 @@ function montar(guion: LlmCompletion[], whatsapp?: WhatsAppToolSets) {
     undefined,
     repo,
     whatsapp,
+    // La dueña de estas pruebas (revisión de F3b: isAdmin exige su número).
+    '573208977471',
   );
   return { useCase, llm };
 }
@@ -219,5 +221,93 @@ describe('prompts de WhatsApp', () => {
     expect(SYSTEM_PROMPT).toContain(
       'Para reservar o cancelar hace falta iniciar sesión; si no la hay, invita a hacerlo.',
     );
+  });
+});
+
+/**
+ * Revisión de seguridad de F3b, hallazgo 3: el caso de uso no se fía a ciegas
+ * del `isAdmin` que le pase el webhook. Si el adaptador se equivocara, el
+ * número tendría que ser además el de la dueña.
+ */
+describe('SendMessageUseCase · isAdmin en WhatsApp exige el número de la dueña', () => {
+  function conDuena(numeroDuena?: string) {
+    const llm = new FakeLlmAdapter([
+      {
+        message: { role: 'assistant', content: 'ok' },
+        usage: TokenUsage.of(1, 1),
+      },
+    ]);
+    const repo = {
+      findById: async () => null,
+      save: async (c: Conversation) => c,
+      countMessagesOfUserSince: async () => 0,
+      sumTokensSince: async () => 0,
+      usageSince: async () => ({}) as never,
+      findActiveByPhone: async () => null,
+      countMessagesOfPhoneSince: async () => 0,
+    };
+    const useCase = new SendMessageUseCase(
+      llm,
+      repo,
+      web,
+      { now: () => new Date('2026-10-14T15:00:00Z') },
+      {
+        maxMessagesPerConversation: 20,
+        maxMessagesPerUserPerDay: 50,
+        maxTokensPerDay: 0,
+      },
+      { execute: async () => ({ summary: 'r', usage: TokenUsage.zero() }) },
+      new DailyTokenLedger(1),
+      undefined,
+      undefined,
+      undefined,
+      repo,
+      juegos(),
+      numeroDuena,
+    );
+    return { useCase, llm };
+  }
+
+  it('un número cualquiera con isAdmin se rechaza sin llamar al modelo', async () => {
+    const { useCase, llm } = conDuena('573208977471');
+
+    await expect(
+      useCase.execute({
+        canal: 'whatsapp',
+        phoneE164: '573001112233',
+        userId: null,
+        isAdmin: true,
+        message: 'cancela todo',
+      }),
+    ).rejects.toThrow(/dueña/);
+    expect(llm.calls).toHaveLength(0);
+  });
+
+  it('sin número de la dueña configurado, nadie es administración por WhatsApp', async () => {
+    const { useCase } = conDuena(undefined);
+
+    await expect(
+      useCase.execute({
+        canal: 'whatsapp',
+        phoneE164: '573208977471',
+        userId: null,
+        isAdmin: true,
+        message: 'agenda',
+      }),
+    ).rejects.toThrow(/dueña/);
+  });
+
+  it('el número de la dueña, escrito como sea en el entorno, sí', async () => {
+    const { useCase } = conDuena('+57 320 897 7471');
+
+    await expect(
+      useCase.execute({
+        canal: 'whatsapp',
+        phoneE164: '573208977471',
+        userId: null,
+        isAdmin: true,
+        message: 'agenda',
+      }),
+    ).resolves.toMatchObject({ reply: 'ok' });
   });
 });
