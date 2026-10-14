@@ -73,6 +73,10 @@ describe('avisoLegal', () => {
     );
   });
 
+  it('advierte de que el mensaje se procesa fuera del país, como promete la política', () => {
+    expect(avisoLegal(undefined)).toMatch(/fuera del país/);
+  });
+
   it('sin URL no deja un enlace roto', () => {
     expect(avisoLegal(undefined)).not.toMatch(/undefined|http/);
   });

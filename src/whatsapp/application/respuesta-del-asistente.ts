@@ -64,8 +64,9 @@ export function partirTexto(texto: string, max = MAX_TEXTO): string[] {
 export function avisoLegal(politicaUrl?: string): string {
   return (
     'Hola, soy el asistente virtual de la Peluquería Marlene. Te respondo con ' +
-    'inteligencia artificial (Gemini, de Google) y puedo equivocarme: ninguna ' +
-    'cita queda hecha ni cambiada hasta que pulses el botón «Confirmar».' +
+    'inteligencia artificial (Gemini, de Google): tus mensajes se procesan con ' +
+    'ese proveedor, fuera del país, y puedo equivocarme. Ninguna cita queda ' +
+    'hecha ni cambiada hasta que pulses el botón «Confirmar».' +
     (politicaUrl
       ? ` Lo que escribes aquí se trata según nuestra política de datos: ${politicaUrl}`
       : '')
