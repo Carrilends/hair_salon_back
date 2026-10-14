@@ -59,6 +59,16 @@ export class TypeOrmPendingBookingRepository
     return { ok: false, motivo: 'vencida' };
   }
 
+  async supersedeActiveFor(phoneE164: string, now: Date): Promise<void> {
+    await this.repo
+      .createQueryBuilder()
+      .update(PendingBookingOrmEntity)
+      .set({ usedAt: now, outcome: 'reemplazada' })
+      .where('phone_e164 = :phoneE164', { phoneE164 })
+      .andWhere('used_at IS NULL')
+      .execute();
+  }
+
   async purgeExpiredBefore(before: Date): Promise<number> {
     const r = await this.repo.delete({ expiresAt: LessThan(before) });
     return r.affected ?? 0;

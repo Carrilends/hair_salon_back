@@ -1,5 +1,8 @@
 import { WhatsAppMessage } from 'src/notifications/domain/ports/whatsapp-sender.port';
-import { AssistantPresentation } from 'src/assistant/application/tools/assistant-presentation';
+import {
+  AssistantPresentation,
+  CitaAConfirmar,
+} from 'src/assistant/application/tools/assistant-presentation';
 import { encodeButtonPayload } from '../domain/button-payload';
 
 /**
@@ -53,7 +56,9 @@ export function mensajeDeConfirmacion(
       return {
         kind: 'interactive-buttons',
         to,
-        body: '¿Seguro que quieres cancelar esta cita?',
+        body: recortar(
+          `¿Cancelo la cita del ${citaEnTexto(presentacion.cita)}?`,
+        ),
         buttons: [
           {
             id: encodeButtonPayload({
@@ -71,7 +76,8 @@ export function mensajeDeConfirmacion(
         kind: 'interactive-buttons',
         to,
         body: recortar(
-          `¿Cambio la cita al ${presentacion.fecha} a las ${presentacion.hora}?`,
+          `¿Cambio la cita del ${citaEnTexto(presentacion.cita)} ` +
+            `al ${presentacion.fecha} a las ${presentacion.hora}?`,
         ),
         buttons: [
           {
@@ -94,4 +100,16 @@ export function mensajeDeConfirmacion(
 /** El cuerpo de un mensaje con botones admite 1024 caracteres (límite de Meta). */
 function recortar(texto: string): string {
   return texto.length > 1024 ? `${texto.slice(0, 1023)}…` : texto;
+}
+
+/**
+ * La cita, tal como está en la base: lo que la persona ve antes de pulsar
+ * (revisión de F4). «lunes 20 de octubre a las 10:00 a. m. (Corte), de Ana».
+ */
+function citaEnTexto(cita: CitaAConfirmar): string {
+  const servicios = cita.servicios.length
+    ? ` (${cita.servicios.join(', ')})`
+    : '';
+  const deQuien = cita.clienta ? `, de ${cita.clienta}` : '';
+  return `${cita.fecha} a las ${cita.hora}${servicios}${deQuien}`;
 }

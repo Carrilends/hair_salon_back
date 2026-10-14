@@ -84,5 +84,9 @@ export function contactoDeWhatsApp(
   if (typeof nombre !== 'string') return null;
   const limpio = nombre.trim();
   if (!esNombreValido(limpio)) return null;
-  return { name: limpio, phone: context.phoneE164 };
+  // Normalizado, como lo compara el manejador del botón: así una diferencia de
+  // formato nunca deja una propuesta sin poder confirmarse (revisión de F4).
+  const telefono = normalizeCoPhoneToE164(context.phoneE164);
+  if (!telefono) return null;
+  return { name: limpio, phone: telefono };
 }

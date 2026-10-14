@@ -9,6 +9,8 @@ import { CancelReservationTool } from './cancel-reservation.tool';
 import { RescheduleReservationTool } from './reschedule-reservation.tool';
 import { AssistantContext } from './assistant-tool';
 import { PendingBooking } from '../../domain/pending-booking';
+import { Reservation } from 'src/reservations/domain/reservation';
+import { ReservationStatus } from 'src/reservations/domain/reservation-status';
 
 /**
  * Plan 06, F4 (D4): en WhatsApp el modelo no escribe en la agenda. Propone, y
@@ -50,16 +52,20 @@ function proponerReserva(
   ]),
 ) {
   const guardadas: Omit<PendingBooking, 'id'>[] = [];
+  const reemplazos: string[] = [];
   const tool = new ProposeBookingTool('crearReserva', DEF, {
     pendientes: {
       save: async (b) => {
         guardadas.push(b);
         return { ...b, id: 'p-1' };
       },
+      supersedeActiveFor: async (phone) => {
+        reemplazos.push(phone);
+      },
     },
     catalog: { findNamesByIds: async () => nombres },
   });
-  return { tool, guardadas };
+  return { tool, guardadas, reemplazos };
 }
 
 const argsValidos = {
@@ -88,6 +94,14 @@ describe('crearReserva / reservarPaquete en WhatsApp: proponen, no reservan', ()
       estado: 'pendiente_de_confirmar',
       propuestaId: 'p-1',
     });
+  });
+
+  it('una propuesta nueva anula las anteriores del mismo número (revisión de F4)', async () => {
+    const { tool, reemplazos } = proponerReserva();
+
+    await tool.execute(argsValidos, clienta);
+
+    expect(reemplazos).toEqual([NUMERO]);
   });
 
   it('presenta el resumen con el id de la propuesta, para los botones', async () => {
@@ -151,26 +165,81 @@ describe('crearReserva / reservarPaquete en WhatsApp: proponen, no reservan', ()
   });
 });
 
-describe('cancelarReserva en WhatsApp: propone el botón de cancelar', () => {
-  const tool = new ProposeCancelTool({ ...DEF, name: 'cancelarReserva' });
+/** Citas de prueba: una de la clienta y una de otro número. */
+function cita(id: string, telefono: string, nombre = 'Ana') {
+  return Reservation.fromPersistence({
+    id,
+    userId: null,
+    contact: { name: nombre, phone: telefono, email: null },
+    // 15:00Z = 10:00 en Bogotá
+    scheduledAt: new Date('2026-10-20T15:00:00Z'),
+    endedAt: new Date('2026-10-20T15:30:00Z'),
+    workerId: 'w-1',
+    status: ReservationStatus.Pendiente,
+    lines: [{ serviceId: S1, name: 'Corte', price: 1, durationMinutes: 30 }],
+  });
+}
+const OTRA = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
+const citas = {
+  execute: async (id: string) =>
+    id === RID
+      ? cita(RID, '3001112233')
+      : id === OTRA
+        ? cita(OTRA, '3009998888', 'Lucía')
+        : null,
+};
 
-  it.each([
-    ['la clienta', clienta],
-    ['la dueña', duena],
-  ])('%s recibe la propuesta, no la cancelación', async (_n, ctx) => {
-    const r = await tool.execute({ reservaId: RID }, ctx);
+describe('cancelarReserva en WhatsApp: propone el botón de cancelar', () => {
+  const tool = new ProposeCancelTool(
+    { ...DEF, name: 'cancelarReserva' },
+    { citas },
+  );
+
+  it('la clienta, sobre SU cita: propuesta con los datos de la base, no del modelo', async () => {
+    const r = await tool.execute({ reservaId: RID }, clienta);
 
     expect(r).toMatchObject({ ok: true, estado: 'requiere_boton' });
     expect(tool.presentar(r)).toEqual({
       tipo: 'confirmar-cancelacion',
       reservaId: RID,
+      cita: {
+        fecha: expect.any(String),
+        hora: expect.any(String),
+        servicios: ['Corte'],
+      },
     });
   });
 
-  it('sin id, argumentos inválidos; fuera de WhatsApp, nada', async () => {
-    await expect(tool.execute({}, clienta)).resolves.toMatchObject({
-      motivo: 'argumentos_invalidos',
+  it('la clienta, sobre la cita de OTRO número: ni botón ni datos', async () => {
+    const r = await tool.execute({ reservaId: OTRA }, clienta);
+
+    expect(r).toEqual({ ok: false, motivo: 'no_es_tu_reserva' });
+    expect(JSON.stringify(r)).not.toContain('Lucía');
+  });
+
+  it('la dueña ve también de quién es la cita que va a cancelar', async () => {
+    const r = await tool.execute({ reservaId: OTRA }, duena);
+
+    expect(tool.presentar(r)).toMatchObject({
+      cita: { clienta: 'Lucía', servicios: ['Corte'] },
     });
+  });
+
+  it.each([
+    [{}, 'argumentos_invalidos'],
+    [{ reservaId: 'no-es-uuid' }, 'argumentos_invalidos'],
+    [
+      { reservaId: '5e4f9a8b-7c6d-4a3b-8c2d-1e0f9a8b7c6d' },
+      'reserva_no_encontrada',
+    ],
+  ])('%p → %s', async (args, motivo) => {
+    await expect(tool.execute(args, clienta)).resolves.toMatchObject({
+      ok: false,
+      motivo,
+    });
+  });
+
+  it('fuera de WhatsApp, nada', async () => {
     await expect(tool.execute({ reservaId: RID }, web)).resolves.toMatchObject({
       motivo: 'solo_whatsapp',
     });
@@ -178,12 +247,12 @@ describe('cancelarReserva en WhatsApp: propone el botón de cancelar', () => {
 });
 
 describe('reprogramarReserva en WhatsApp: propone el botón de mover', () => {
-  const tool = new ProposeRescheduleTool({
-    ...DEF,
-    name: 'reprogramarReserva',
-  });
+  const tool = new ProposeRescheduleTool(
+    { ...DEF, name: 'reprogramarReserva' },
+    { citas },
+  );
 
-  it('pasa la hora nueva a la del salón, que es lo que lleva el botón RSAT', async () => {
+  it('pasa la hora nueva a la del salón y muestra también la cita actual', async () => {
     const r = await tool.execute(
       { reservaId: RID, nuevaFecha: '2026-10-20T20:30:00.000Z' },
       clienta,
@@ -196,7 +265,21 @@ describe('reprogramarReserva en WhatsApp: propone el botón de mover', () => {
       cuandoLocal: '2026-10-20T15:30',
       fecha: expect.any(String),
       hora: expect.any(String),
+      cita: {
+        fecha: expect.any(String),
+        hora: expect.any(String),
+        servicios: ['Corte'],
+      },
     });
+  });
+
+  it('no propone mover la cita de otro número', async () => {
+    await expect(
+      tool.execute(
+        { reservaId: OTRA, nuevaFecha: '2026-10-20T20:30:00.000Z' },
+        clienta,
+      ),
+    ).resolves.toEqual({ ok: false, motivo: 'no_es_tu_reserva' });
   });
 
   it('rechaza una fecha que no se entiende', async () => {

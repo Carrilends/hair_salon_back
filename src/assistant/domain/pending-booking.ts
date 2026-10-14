@@ -14,7 +14,7 @@ export interface PendingBooking {
 }
 
 /** Cómo terminó una propuesta al consumirse. */
-export type PendingBookingOutcome = 'confirmada' | 'descartada';
+export type PendingBookingOutcome = 'confirmada' | 'descartada' | 'reemplazada';
 
 /**
  * Resultado de intentar consumir una propuesta. `otro_numero` y

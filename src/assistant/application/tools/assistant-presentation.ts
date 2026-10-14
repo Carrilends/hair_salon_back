@@ -72,9 +72,23 @@ export interface ConfirmBookingPresentation {
   hora: string;
 }
 
+/**
+ * La cita sobre la que se pide confirmación, **leída de la base** y no del
+ * modelo (revisión de F4): es lo que la persona ve antes de pulsar, así que no
+ * puede depender de que el modelo haya copiado bien el id.
+ */
+export interface CitaAConfirmar {
+  fecha: string;
+  hora: string;
+  servicios: string[];
+  /** Solo para la dueña: de quién es la cita (nombre ya filtrado). */
+  clienta?: string;
+}
+
 export interface ConfirmCancelPresentation {
   tipo: 'confirmar-cancelacion';
   reservaId: string;
+  cita: CitaAConfirmar;
 }
 
 export interface ConfirmReschedulePresentation {
@@ -84,4 +98,6 @@ export interface ConfirmReschedulePresentation {
   cuandoLocal: string;
   fecha: string;
   hora: string;
+  /** La cita tal como está ahora. */
+  cita: CitaAConfirmar;
 }

@@ -22,7 +22,8 @@ function montar() {
     { execute: async () => [] } as never,
     {} as never,
     {} as never,
-    // F4: propuestas y catálogo, para las herramientas que proponen.
+    // F4: propuestas, catálogo y lectura de citas, para las que proponen.
+    {} as never,
     {} as never,
     {} as never,
   );
@@ -101,6 +102,7 @@ describe('buildWhatsAppTools (D6)', () => {
     expect(() =>
       buildWhatsAppTools(
         [],
+        {} as never,
         {} as never,
         {} as never,
         {} as never,

@@ -2,6 +2,7 @@ import { GetMyReservationsUseCase } from 'src/reservations/application/get-my-re
 import { FindActionableReservationsUseCase } from 'src/reservations/application/find-actionable-reservations.use-case';
 import { ListActiveReservationsUseCase } from 'src/reservations/application/list-active-reservations.use-case';
 import { ConfirmReservationUseCase } from 'src/reservations/application/confirm-reservation.use-case';
+import { GetReservationUseCase } from 'src/reservations/application/get-reservation.use-case';
 
 import {
   AssistantTool,
@@ -51,6 +52,7 @@ export function buildWhatsAppTools(
   confirm: ConfirmReservationUseCase,
   pendientes: PendingBookingRepositoryPort,
   catalog: Pick<ServiceCatalogQueryPort, 'findNamesByIds'>,
+  getReservation: GetReservationUseCase,
 ): WhatsAppToolSets {
   const de = (nombre: string): AssistantTool => {
     const tool = base.find((t) => t.name === nombre);
@@ -86,11 +88,13 @@ export function buildWhatsAppTools(
     }).definition,
     deps,
   );
+  const citas = { citas: getReservation };
   const cancelar = new ProposeCancelTool(
     conDefinicion(de('cancelarReserva'), {
       description:
         'Prepara la cancelación de una cita por su id. NO cancela: se confirma con un botón, y el sistema comprueba entonces su estado y su plazo.',
     }).definition,
+    citas,
   );
   const reprogramar = new ProposeRescheduleTool(
     conDefinicion(de('reprogramarReserva'), {
@@ -100,6 +104,7 @@ export function buildWhatsAppTools(
         'Prepara el cambio de fecha y hora de una cita por su id (NO la mueve: se confirma con un botón)',
       ),
     }).definition,
+    citas,
   );
 
   // Las citas de ESE número: las activas y no vencidas, proyectadas a la misma

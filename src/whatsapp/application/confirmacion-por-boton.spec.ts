@@ -13,6 +13,11 @@ const PID = '7c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f';
 const RID = '4d2f0e4e-6f1b-4a3e-9a2f-2b1c3d4e5f60';
 const CLIENTA = '573001112233';
 const DUENA = '573208977471';
+const CITA = {
+  fecha: 'martes, 20 de octubre de 2026',
+  hora: '10:00 a. m.',
+  servicios: ['Corte'],
+};
 
 describe('BOOK_OK / BOOK_NO', () => {
   it('ida y vuelta con el id de la propuesta', () => {
@@ -107,6 +112,18 @@ describe('HandleInboundMessage · botones de la propuesta', () => {
     expect(texto(enviados[0])).toMatch(esperado);
   });
 
+  it('la dueña pulsando el «Confirmar» de una clienta: se confirma con SU número y no pasa', async () => {
+    const { sut, enviados, llamadas } = montar({
+      ok: false,
+      motivo: 'otro_numero',
+    });
+
+    await sut.handle(pulsar('book_ok', DUENA));
+
+    expect(llamadas).toEqual([['confirm', PID, DUENA]]);
+    expect(texto(enviados[0])).toMatch(/No encuentro esa propuesta/);
+  });
+
   it('«Cambiar» descarta la propuesta y le pregunta qué cambiar', async () => {
     const { sut, enviados, llamadas } = montar({ ok: true });
 
@@ -162,7 +179,7 @@ describe('mensajeDeConfirmacion (lo que enviará F5)', () => {
     expect(
       ids(
         mensajeDeConfirmacion(
-          { tipo: 'confirmar-cancelacion', reservaId: RID },
+          { tipo: 'confirmar-cancelacion', reservaId: RID, cita: CITA },
           CLIENTA,
         ),
       ).map(parseButtonPayload),
@@ -182,6 +199,7 @@ describe('mensajeDeConfirmacion (lo que enviará F5)', () => {
             cuandoLocal: '2026-10-20T15:30',
             fecha: 'martes, 20 de octubre',
             hora: '3:30 p. m.',
+            cita: CITA,
           },
           CLIENTA,
         ),
@@ -194,6 +212,35 @@ describe('mensajeDeConfirmacion (lo que enviará F5)', () => {
       },
       { action: 'noop' },
     ]);
+  });
+
+  it('cancelar y mover dicen QUÉ cita, con los datos de la base (revisión de F4)', () => {
+    const cancelar = mensajeDeConfirmacion(
+      {
+        tipo: 'confirmar-cancelacion',
+        reservaId: RID,
+        cita: { ...CITA, clienta: 'Lucía' },
+      },
+      DUENA,
+    );
+    const mover = mensajeDeConfirmacion(
+      {
+        tipo: 'confirmar-cambio',
+        reservaId: RID,
+        cuandoLocal: '2026-10-21T09:00',
+        fecha: 'miércoles, 21 de octubre de 2026',
+        hora: '9:00 a. m.',
+        cita: CITA,
+      },
+      CLIENTA,
+    );
+
+    expect(cancelar?.kind === 'interactive-buttons' && cancelar.body).toBe(
+      '¿Cancelo la cita del martes, 20 de octubre de 2026 a las 10:00 a. m. (Corte), de Lucía?',
+    );
+    expect(mover?.kind === 'interactive-buttons' && mover.body).toBe(
+      '¿Cambio la cita del martes, 20 de octubre de 2026 a las 10:00 a. m. (Corte) al miércoles, 21 de octubre de 2026 a las 9:00 a. m.?',
+    );
   });
 
   it('las presentaciones de la web no se convierten en botones', () => {
@@ -216,7 +263,7 @@ describe('mensajeDeConfirmacion (lo que enviará F5)', () => {
         CLIENTA,
       ),
       mensajeDeConfirmacion(
-        { tipo: 'confirmar-cancelacion', reservaId: RID },
+        { tipo: 'confirmar-cancelacion', reservaId: RID, cita: CITA },
         CLIENTA,
       ),
       mensajeDeConfirmacion(
@@ -226,6 +273,7 @@ describe('mensajeDeConfirmacion (lo que enviará F5)', () => {
           cuandoLocal: '2026-10-20T15:30',
           fecha: '',
           hora: '',
+          cita: CITA,
         },
         CLIENTA,
       ),

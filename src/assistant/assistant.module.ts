@@ -10,6 +10,7 @@ import { RescheduleReservationUseCase } from 'src/reservations/application/resch
 import { FindActionableReservationsUseCase } from 'src/reservations/application/find-actionable-reservations.use-case';
 import { ListActiveReservationsUseCase } from 'src/reservations/application/list-active-reservations.use-case';
 import { ConfirmReservationUseCase } from 'src/reservations/application/confirm-reservation.use-case';
+import { GetReservationUseCase } from 'src/reservations/application/get-reservation.use-case';
 import { Service } from 'src/service/entities/service.entity';
 
 import { ConversationOrmEntity } from './infrastructure/persistence/conversation.orm-entity';
@@ -275,6 +276,7 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
         ConfirmReservationUseCase,
         PENDING_BOOKINGS,
         ServiceCatalogQueryAdapter,
+        GetReservationUseCase,
       ],
     },
   ],

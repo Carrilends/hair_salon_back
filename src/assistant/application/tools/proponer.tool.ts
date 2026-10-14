@@ -5,10 +5,14 @@ import { LlmToolDefinition } from '../../domain/ports/llm.port';
 import { CreateReservationArgsDto } from './create-reservation-args.dto';
 import { identidadParaCrear } from './create-reservation.tool';
 import {
+  CitaAConfirmar,
   ConfirmBookingPresentation,
   ConfirmCancelPresentation,
   ConfirmReschedulePresentation,
 } from './assistant-presentation';
+import { actorDelContexto, nombreParaElModelo } from './identidad';
+import { Reservation } from 'src/reservations/domain/reservation';
+import { assertCanActOn } from 'src/reservations/domain/reservation-authorization';
 import { fechaYHoraEnPalabras } from '../salon-day';
 import { ServiceCatalogQueryPort } from '../../domain/ports/service-catalog-query.port';
 import { PendingBookingRepositoryPort } from '../../domain/ports/pending-booking-repository.port';
@@ -27,10 +31,51 @@ import { getDatePartsInTz } from 'src/reservations/salon-time';
 
 const SOLO_WHATSAPP = { ok: false, motivo: 'solo_whatsapp' } as const;
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function idDeReserva(args: Record<string, unknown>): string | null {
-  return typeof args.reservaId === 'string' && args.reservaId.trim()
-    ? args.reservaId.trim()
-    : null;
+  const id = typeof args.reservaId === 'string' ? args.reservaId.trim() : '';
+  return UUID.test(id) ? id : null;
+}
+
+/** Lectura de una cita por id (`GetReservationUseCase`). */
+export interface CitaPorId {
+  execute(id: string): Promise<Reservation | null>;
+}
+
+/**
+ * Carga la cita y comprueba que quien escribe puede actuar sobre ella (revisión
+ * de F4): el id lo escribió el modelo, así que antes de enseñar un botón se
+ * mira qué cita es de verdad y de quién. El dominio lo vuelve a comprobar al
+ * pulsar; esto evita enseñar un botón —y datos— que no le corresponden.
+ */
+async function citaParaConfirmar(
+  citas: CitaPorId,
+  id: string,
+  context: AssistantContext,
+): Promise<{ cita: CitaAConfirmar } | { motivo: string }> {
+  const actor = actorDelContexto(context);
+  if (!actor) return { motivo: 'sesion_requerida' };
+  const reserva = await citas.execute(id);
+  if (!reserva) return { motivo: 'reserva_no_encontrada' };
+  try {
+    assertCanActOn(reserva, actor);
+  } catch {
+    return { motivo: 'no_es_tu_reserva' };
+  }
+  const { fecha, hora } = fechaYHoraEnPalabras(
+    reserva.scheduledAt.toISOString(),
+  );
+  return {
+    cita: {
+      fecha,
+      hora,
+      servicios: reserva.lines.map((l) => l.name),
+      ...(context.isAdmin
+        ? { clienta: nombreParaElModelo(reserva.contact?.name) }
+        : {}),
+    },
+  };
 }
 
 /** `crearReserva` y `reservarPaquete` en WhatsApp. */
@@ -39,7 +84,10 @@ export class ProposeBookingTool implements AssistantTool {
     readonly name: string,
     readonly definition: LlmToolDefinition,
     private readonly deps: {
-      pendientes: Pick<PendingBookingRepositoryPort, 'save'>;
+      pendientes: Pick<
+        PendingBookingRepositoryPort,
+        'save' | 'supersedeActiveFor'
+      >;
       catalog: Pick<ServiceCatalogQueryPort, 'findNamesByIds'>;
     },
   ) {}
@@ -73,6 +121,9 @@ export class ProposeBookingTool implements AssistantTool {
       return { ok: false, motivo: 'servicio_invalido' };
     }
 
+    // Una sola propuesta viva por número: la nueva anula las anteriores, así
+    // que «Confirmar» en un mensaje viejo ya no crea una segunda reserva.
+    await this.deps.pendientes.supersedeActiveFor(contacto.phone, context.now);
     const propuesta = await this.deps.pendientes.save({
       phoneE164: contacto.phone,
       customerName: contacto.name,
@@ -118,7 +169,10 @@ export class ProposeBookingTool implements AssistantTool {
 export class ProposeCancelTool implements AssistantTool {
   readonly name: string;
 
-  constructor(readonly definition: LlmToolDefinition) {
+  constructor(
+    readonly definition: LlmToolDefinition,
+    private readonly deps: { citas: CitaPorId },
+  ) {
     this.name = definition.name;
   }
 
@@ -129,21 +183,31 @@ export class ProposeCancelTool implements AssistantTool {
     if (context.canal !== 'whatsapp') return SOLO_WHATSAPP;
     const reservaId = idDeReserva(args);
     if (!reservaId) return { ok: false, motivo: 'argumentos_invalidos' };
-    // Quién puede cancelar qué lo decide el dominio al pulsar el botón, con
-    // el número firmado del que pulsa: aquí no se cancela nada.
+
+    const r = await citaParaConfirmar(this.deps.citas, reservaId, context);
+    if ('motivo' in r) return { ok: false, motivo: r.motivo };
     return {
       ok: true,
       estado: 'requiere_boton',
       reservaId,
+      cita: r.cita,
       instruccion:
         'Todavía NO se canceló. Dile en una frase que confirme con el botón «Sí, cancelar».',
     };
   }
 
   presentar(result: unknown): ConfirmCancelPresentation | null {
-    const r = result as { ok?: boolean; reservaId?: string };
-    if (r?.ok !== true || !r.reservaId) return null;
-    return { tipo: 'confirmar-cancelacion', reservaId: r.reservaId };
+    const r = result as {
+      ok?: boolean;
+      reservaId?: string;
+      cita?: CitaAConfirmar;
+    };
+    if (r?.ok !== true || !r.reservaId || !r.cita) return null;
+    return {
+      tipo: 'confirmar-cancelacion',
+      reservaId: r.reservaId,
+      cita: r.cita,
+    };
   }
 }
 
@@ -151,7 +215,10 @@ export class ProposeCancelTool implements AssistantTool {
 export class ProposeRescheduleTool implements AssistantTool {
   readonly name: string;
 
-  constructor(readonly definition: LlmToolDefinition) {
+  constructor(
+    readonly definition: LlmToolDefinition,
+    private readonly deps: { citas: CitaPorId },
+  ) {
     this.name = definition.name;
   }
 
@@ -167,6 +234,9 @@ export class ProposeRescheduleTool implements AssistantTool {
       return { ok: false, motivo: 'argumentos_invalidos' };
     }
 
+    const actual = await citaParaConfirmar(this.deps.citas, reservaId, context);
+    if ('motivo' in actual) return { ok: false, motivo: actual.motivo };
+
     // El botón `RSAT` lleva la hora del salón (`YYYY-MM-DDTHH:mm`), como el
     // flujo de mover que ya existía: el manejador la vuelve a pasar a UTC.
     const p = getDatePartsInTz(nueva, process.env.SALON_TZ ?? 'America/Bogota');
@@ -181,6 +251,7 @@ export class ProposeRescheduleTool implements AssistantTool {
       cuandoLocal,
       fecha,
       hora,
+      cita: actual.cita,
       instruccion:
         'Todavía NO se movió. Dile en una frase que confirme con el botón «Sí, cambiar».',
     };
@@ -193,14 +264,18 @@ export class ProposeRescheduleTool implements AssistantTool {
       cuandoLocal?: string;
       fecha?: string;
       hora?: string;
+      cita?: CitaAConfirmar;
     };
-    if (r?.ok !== true || !r.reservaId || !r.cuandoLocal) return null;
+    if (r?.ok !== true || !r.reservaId || !r.cuandoLocal || !r.cita) {
+      return null;
+    }
     return {
       tipo: 'confirmar-cambio',
       reservaId: r.reservaId,
       cuandoLocal: r.cuandoLocal,
       fecha: r.fecha ?? '',
       hora: r.hora ?? '',
+      cita: r.cita,
     };
   }
 }

@@ -67,7 +67,7 @@ function explicarPropuesta(motivo: string): string {
     case 'vencida':
       return 'Esa propuesta caducó (duran 15 minutos). Escríbeme y la armamos de nuevo.';
     case 'usada':
-      return 'Esa propuesta ya se usó. Si quieres otra cita, escríbeme.';
+      return 'Esa propuesta ya se usó o la reemplazó una más nueva. Si quieres otra cita, escríbeme.';
     case 'otro_numero':
     case 'no_encontrada':
       return 'No encuentro esa propuesta. Escríbeme y la armamos de nuevo.';

@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { CreateReservationUseCase } from 'src/reservations/application/create-reservation.use-case';
 import { PendingBookingRepositoryPort } from '../domain/ports/pending-booking-repository.port';
 import { ClockPort } from '../domain/ports/clock.port';
@@ -22,6 +22,8 @@ export type ConfirmPendingResult =
  */
 @Injectable()
 export class ConfirmPendingBookingUseCase {
+  private readonly logger = new Logger(ConfirmPendingBookingUseCase.name);
+
   constructor(
     @Inject(PENDING_BOOKINGS)
     private readonly pendientes: PendingBookingRepositoryPort,
@@ -51,7 +53,16 @@ export class ConfirmPendingBookingUseCase {
       });
       return { ok: true, reservaId: reserva.id, scheduledAt: p.scheduledAt };
     } catch (error) {
-      return { ok: false, motivo: mapDomainErrorToReason(error) };
+      const motivo = mapDomainErrorToReason(error);
+      // La propuesta queda gastada a propósito: liberarla podría duplicar la
+      // reserva si la creación sí llegó a guardarse. Lo inesperado se registra.
+      if (motivo === 'error_desconocido') {
+        this.logger.error(
+          `No se pudo crear la reserva de la propuesta ${p.id}`,
+          error as Error,
+        );
+      }
+      return { ok: false, motivo };
     }
   }
 
