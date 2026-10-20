@@ -398,4 +398,20 @@ describe('CreateReservationTool con verificación previa (plan 04, T5)', () => {
     expect(res).toMatchObject({ ok: true });
     expect(juez.peticiones).toHaveLength(0);
   });
+
+  it('una hora sin zona es hora del salón, no la del servidor (UTC)', async () => {
+    let received: unknown;
+    const create = new FakeCreateReservation((cmd) => {
+      received = cmd;
+      return { id: 'r1', status: 'pendiente' };
+    });
+    const tool = new CreateReservationTool(create as never);
+    await tool.execute(
+      { fechaHoraIso: '2026-08-20T09:00:00', serviciosIds: [UUID] },
+      ctx('u1'),
+    );
+    expect(received).toMatchObject({
+      scheduledAt: '2026-08-20T14:00:00.000Z',
+    });
+  });
 });

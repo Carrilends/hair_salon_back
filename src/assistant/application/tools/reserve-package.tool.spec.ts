@@ -112,4 +112,16 @@ describe('ReservePackageTool', () => {
 
     expect(res).toEqual({ ok: false, motivo: 'fuera_de_horario' });
   });
+
+  it('una hora sin zona es hora del salón, no la del servidor (UTC)', async () => {
+    const create = new FakeCreate(() => ({ id: 'res1', status: 'pendiente' }));
+    const tool = new ReservePackageTool(create as never);
+    await tool.execute(
+      { serviciosIds: [UUID_A], fechaHoraIso: '2026-08-20T09:00' },
+      ctx('u1'),
+    );
+    expect(create.calls[0]).toMatchObject({
+      scheduledAt: '2026-08-20T14:00:00.000Z',
+    });
+  });
 });

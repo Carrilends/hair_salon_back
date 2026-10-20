@@ -3,6 +3,7 @@ import { validate } from 'class-validator';
 import { AssistantContext, AssistantTool } from './assistant-tool';
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
 import { CreateReservationArgsDto } from './create-reservation-args.dto';
+import { instanteDelSalon } from '../salon-day';
 import {
   CreateReservationExecutor,
   identidadParaCrear,
@@ -35,7 +36,8 @@ export class ReservePackageTool implements AssistantTool {
         },
         fechaHoraIso: {
           type: 'string',
-          description: 'Fecha y hora de inicio en ISO 8601',
+          description:
+            'Fecha y hora de inicio en hora de Colombia, ISO 8601 sin zona (p. ej. 2026-10-23T08:00:00)',
         },
       },
       required: ['serviciosIds', 'fechaHoraIso'],
@@ -71,6 +73,11 @@ export class ReservePackageTool implements AssistantTool {
     if (errors.length > 0) {
       return { ok: false, motivo: 'argumentos_invalidos' };
     }
+    // La hora que escribe el modelo, pasada a instante: sin zona es la del salón
+    // (`instanteDelSalon`). De aquí en adelante `fechaHoraIso` va en UTC.
+    const inicio = instanteDelSalon(dto.fechaHoraIso);
+    if (!inicio) return { ok: false, motivo: 'argumentos_invalidos' };
+    dto.fechaHoraIso = inicio.toISOString();
 
     try {
       // A6: el paquete es UNA reserva con varias líneas. El asistente no es una vía

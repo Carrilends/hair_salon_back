@@ -13,7 +13,7 @@ import {
 import { actorDelContexto, nombreParaElModelo } from './identidad';
 import { Reservation } from 'src/reservations/domain/reservation';
 import { assertCanActOn } from 'src/reservations/domain/reservation-authorization';
-import { fechaYHoraEnPalabras } from '../salon-day';
+import { fechaYHoraEnPalabras, instanteDelSalon } from '../salon-day';
 import { ServiceCatalogQueryPort } from '../../domain/ports/service-catalog-query.port';
 import { PendingBookingRepositoryPort } from '../../domain/ports/pending-booking-repository.port';
 import { PENDING_BOOKING_TTL_MINUTES } from '../../domain/pending-booking';
@@ -112,6 +112,11 @@ export class ProposeBookingTool implements AssistantTool {
     });
     if (errores.length > 0)
       return { ok: false, motivo: 'argumentos_invalidos' };
+    // La hora que escribe el modelo, pasada a instante: sin zona es la del salón
+    // (`instanteDelSalon`). De aquí en adelante `fechaHoraIso` va en UTC.
+    const inicio = instanteDelSalon(dto.fechaHoraIso);
+    if (!inicio) return { ok: false, motivo: 'argumentos_invalidos' };
+    dto.fechaHoraIso = inicio.toISOString();
 
     // Servicios que no existen se rechazan ya: el resumen que verá la clienta
     // tiene que nombrar lo que de verdad se va a reservar.
@@ -128,7 +133,7 @@ export class ProposeBookingTool implements AssistantTool {
       phoneE164: contacto.phone,
       customerName: contacto.name,
       serviceIds: dto.serviciosIds,
-      scheduledAt: new Date(dto.fechaHoraIso),
+      scheduledAt: inicio,
       expiresAt: new Date(
         context.now.getTime() + PENDING_BOOKING_TTL_MINUTES * 60_000,
       ),
@@ -229,8 +234,10 @@ export class ProposeRescheduleTool implements AssistantTool {
     if (context.canal !== 'whatsapp') return SOLO_WHATSAPP;
     const reservaId = idDeReserva(args);
     const nueva =
-      typeof args.nuevaFecha === 'string' ? new Date(args.nuevaFecha) : null;
-    if (!reservaId || !nueva || Number.isNaN(nueva.getTime())) {
+      typeof args.nuevaFecha === 'string'
+        ? instanteDelSalon(args.nuevaFecha)
+        : null;
+    if (!reservaId || !nueva) {
       return { ok: false, motivo: 'argumentos_invalidos' };
     }
 

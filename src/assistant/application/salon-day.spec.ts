@@ -1,4 +1,4 @@
-import { fechaYHoraEnPalabras } from './salon-day';
+import { fechaYHoraEnPalabras, instanteDelSalon } from './salon-day';
 
 describe('fechaYHoraEnPalabras', () => {
   it('dice el día y la hora del salón como se dirían en voz alta', () => {
@@ -29,5 +29,36 @@ describe('fechaYHoraEnPalabras', () => {
       fecha: '',
       hora: '',
     });
+  });
+});
+
+describe('instanteDelSalon', () => {
+  // La suite corre en UTC (`test/jest-zona-utc.js`): un `new Date` sobre una
+  // hora sin zona daría las 08:00 UTC, las 03:00 en el salón, que es el fallo
+  // visto en la prueba con móvil.
+  it('una hora sin zona es hora del salón, no la del servidor', () => {
+    expect(instanteDelSalon('2026-10-23T08:00:00')?.toISOString()).toBe(
+      '2026-10-23T13:00:00.000Z',
+    );
+  });
+
+  it('acepta la hora sin segundos', () => {
+    expect(instanteDelSalon('2026-10-23T08:00')?.toISOString()).toBe(
+      '2026-10-23T13:00:00.000Z',
+    );
+  });
+
+  it('respeta la zona cuando viene escrita', () => {
+    expect(instanteDelSalon('2026-10-23T08:00:00-05:00')?.toISOString()).toBe(
+      '2026-10-23T13:00:00.000Z',
+    );
+    expect(instanteDelSalon('2026-10-23T13:00:00Z')?.toISOString()).toBe(
+      '2026-10-23T13:00:00.000Z',
+    );
+  });
+
+  it('una fecha ilegible da null', () => {
+    expect(instanteDelSalon('el viernes')).toBeNull();
+    expect(instanteDelSalon('2026-10-23T25:00')).toBeNull();
   });
 });

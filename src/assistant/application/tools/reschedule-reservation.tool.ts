@@ -13,6 +13,7 @@ import {
 } from 'src/reservations/domain/errors';
 import { ReservationActor } from 'src/reservations/domain/reservation-actor';
 import { actorDelContexto } from './identidad';
+import { instanteDelSalon } from '../salon-day';
 
 /**
  * Contrato mínimo del caso de uso real de reprogramación. Como en la
@@ -68,7 +69,7 @@ export class RescheduleReservationTool implements AssistantTool {
         nuevaFecha: {
           type: 'string',
           description:
-            'Nueva fecha y hora en formato ISO 8601 (hora de Colombia)',
+            'Nueva fecha y hora en hora de Colombia, ISO 8601 sin zona (p. ej. 2026-10-23T08:00:00)',
         },
       },
       required: ['reservaId', 'nuevaFecha'],
@@ -93,7 +94,12 @@ export class RescheduleReservationTool implements AssistantTool {
     if (!actor) return { ok: false, motivo: 'sesion_requerida' };
 
     const id = typeof args.reservaId === 'string' ? args.reservaId : null;
-    const fecha = typeof args.nuevaFecha === 'string' ? args.nuevaFecha : null;
+    // Sin zona, la hora es la del salón (`instanteDelSalon`), no la del servidor.
+    const instante =
+      typeof args.nuevaFecha === 'string'
+        ? instanteDelSalon(args.nuevaFecha)
+        : null;
+    const fecha = instante?.toISOString() ?? null;
     if (!id || !fecha) return { ok: false, motivo: 'argumentos_invalidos' };
 
     try {

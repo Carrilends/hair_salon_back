@@ -236,4 +236,14 @@ describe('mapRescheduleErrorToReason', () => {
       'hora_ocupada',
     );
   });
+
+  it('una hora nueva sin zona es hora del salón, no la del servidor (UTC)', async () => {
+    const uc = new FakeReschedule(() => ({ status: 'pendiente' }));
+    const tool = new RescheduleReservationTool(uc as never);
+    await tool.execute(
+      { reservaId: 'r1', nuevaFecha: '2026-04-21T11:00:00' },
+      ctx('u1'),
+    );
+    expect(uc.calls[0].scheduledAt).toBe('2026-04-21T16:00:00.000Z');
+  });
 });

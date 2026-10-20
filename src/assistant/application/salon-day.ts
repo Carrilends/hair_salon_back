@@ -37,6 +37,31 @@ export function inicioDelDiaDelSalon(now: Date): Date {
   return iso ? new Date(iso) : new Date(now.getTime() - DAY_MS);
 }
 
+const SIN_ZONA = /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/;
+
+/**
+ * El instante de una fecha y hora que escribe el modelo.
+ *
+ * El modelo piensa en la hora de la clienta y a menudo la escribe **sin zona**
+ * (`2026-10-23T08:00:00`). Un `new Date` la leería en la zona del servidor, que
+ * en el contenedor y en Railway es UTC: las 08:00 pedidas se volvían las 03:00
+ * del salón y la reserva fallaba por estar cerrado (prueba con móvil del
+ * 2026-10-20). Sin zona es hora del salón; con zona (`Z`, `-05:00`) se respeta.
+ */
+export function instanteDelSalon(iso: string): Date | null {
+  const sinZona = SIN_ZONA.exec(iso);
+  if (sinZona) {
+    const utc = salonLocalToUtcIso(
+      sinZona[1],
+      `${sinZona[2]}:${sinZona[3]}`,
+      zona(),
+    );
+    return utc ? new Date(utc) : null;
+  }
+  const instante = new Date(iso);
+  return Number.isNaN(instante.getTime()) ? null : instante;
+}
+
 /**
  * El día y la hora de una reserva **tal como se dirían en voz alta**, en la zona
  * del salón: `«viernes, 3 de octubre de 2026»` y `«15:00»`.

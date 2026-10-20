@@ -7,7 +7,7 @@ import { JudgmentPort } from '../../domain/ports/judgment.port';
 import { ServiceCatalogQueryPort } from '../../domain/ports/service-catalog-query.port';
 import { CreateReservationArgsDto } from './create-reservation-args.dto';
 import { ModoDeJuicio } from '../judgment-settings';
-import { fechaYHoraEnPalabras } from '../salon-day';
+import { fechaYHoraEnPalabras, instanteDelSalon } from '../salon-day';
 import { verificarReservaPropuesta } from '../screening/verify-reservation';
 import { contactoDeWhatsApp, numeroReservable } from './identidad';
 import {
@@ -67,7 +67,8 @@ export class CreateReservationTool implements AssistantTool {
       properties: {
         fechaHoraIso: {
           type: 'string',
-          description: 'Fecha y hora de inicio en ISO 8601',
+          description:
+            'Fecha y hora de inicio en hora de Colombia, ISO 8601 sin zona (p. ej. 2026-10-23T08:00:00)',
         },
         serviciosIds: {
           type: 'array',
@@ -119,6 +120,17 @@ export class CreateReservationTool implements AssistantTool {
         detalle: errors.map((e) => e.property),
       };
     }
+    // La hora que escribe el modelo, pasada a instante: sin zona es la del salón
+    // (`instanteDelSalon`). De aquí en adelante `fechaHoraIso` va en UTC.
+    const inicio = instanteDelSalon(dto.fechaHoraIso);
+    if (!inicio) {
+      return {
+        ok: false,
+        motivo: 'argumentos_invalidos',
+        detalle: ['fechaHoraIso'],
+      };
+    }
+    dto.fechaHoraIso = inicio.toISOString();
 
     // Verificación de correspondencia (plan 04, T5), DESPUÉS de los dos
     // rechazos que el código resuelve solo: no se paga un juicio —ni la
