@@ -16,6 +16,7 @@ import {
   ReservationOwnershipError,
   WorkerOverlapError,
   ChosenWorkerBusyError,
+  InvalidStatusTransitionError,
 } from 'src/reservations/domain/errors';
 import { salonLocalToUtcIso } from 'src/reservations/salon-time';
 import { ClockPort } from 'src/reservations/domain/ports/clock.port';
@@ -486,6 +487,19 @@ export class HandleInboundMessageUseCase {
       await this.reservas.confirm(id);
       await this.texto(from, 'Cita confirmada.');
     } catch (error) {
+      // El aviso de «hora cambiada» vuelve a ofrecer «Confirmar» sobre una cita
+      // que sigue confirmada (prueba con móvil del 2026-10-20): el dominio
+      // rechaza la transición y la dueña leía un error genérico.
+      if (error instanceof InvalidStatusTransitionError) {
+        const cita = await this.reservas.findById(id);
+        await this.texto(
+          from,
+          cita?.status === 'confirmada'
+            ? 'Esa cita ya estaba confirmada.'
+            : 'Esa cita ya no se puede confirmar.',
+        );
+        return;
+      }
       await this.texto(from, this.explicar(error));
     }
   }

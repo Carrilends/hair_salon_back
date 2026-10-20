@@ -5,6 +5,7 @@ import {
   ReservationOwnershipError,
   WorkerOverlapError,
   ChosenWorkerBusyError,
+  InvalidStatusTransitionError,
 } from 'src/reservations/domain/errors';
 import { HandleInboundMessageUseCase } from './handle-inbound-message.use-case';
 import { ReservationSummary } from '../domain/ports/reservation-actions.port';
@@ -219,6 +220,36 @@ describe('HandleInboundMessage · confirmar (solo la peluquería)', () => {
     await sut.handle(mensaje({ from: DUENA, payload: `CONFIRM|${RID}` }));
 
     expect(llamadas.some((l) => l.accion === 'confirm')).toBe(true);
+  });
+
+  it('confirmar una cita que ya estaba confirmada lo dice, sin error (E2E 2026-10-20)', async () => {
+    // El aviso de «hora cambiada por la clienta» vuelve a ofrecer «Confirmar»,
+    // pero la cita sigue confirmada: el dominio rechaza confirmada → confirmada.
+    const { sut, enviados } = montar({
+      citas: [cita({ status: 'confirmada' })],
+      alConfirmar: () => {
+        throw new InvalidStatusTransitionError('confirmada', 'confirmada');
+      },
+    });
+
+    await sut.handle(mensaje({ from: DUENA, payload: `CONFIRM|${RID}` }));
+
+    expect(comoTexto(enviados[0]).body).toBe('Esa cita ya estaba confirmada.');
+  });
+
+  it('confirmar una cita cancelada dice que ya no se puede', async () => {
+    const { sut, enviados } = montar({
+      citas: [cita({ status: 'cancelada' })],
+      alConfirmar: () => {
+        throw new InvalidStatusTransitionError('cancelada', 'confirmada');
+      },
+    });
+
+    await sut.handle(mensaje({ from: DUENA, payload: `CONFIRM|${RID}` }));
+
+    expect(comoTexto(enviados[0]).body).toBe(
+      'Esa cita ya no se puede confirmar.',
+    );
   });
 
   it('una clienta NO puede confirmar aunque fabrique el payload', async () => {
