@@ -36,6 +36,8 @@ function cita(over: Partial<ReservationSummary> = {}): ReservationSummary {
 
 interface Escenario {
   citas?: ReservationSummary[];
+  /** Las que `findActionableByPhone` da como del remitente; por defecto, todas. */
+  suyas?: ReservationSummary[];
   dias?: string[];
   horas?: string[];
   alCancelar?: () => never;
@@ -51,7 +53,7 @@ function montar(escenario: Escenario = {}) {
   const reservas = {
     findActionableByPhone: async (phone: string) => {
       llamadas.push({ accion: 'findActionableByPhone', args: [phone] });
-      return citas;
+      return escenario.suyas ?? citas;
     },
     findById: async (id: string) => citas.find((c) => c.id === id) ?? null,
     cancel: async (id: string, actor: ReservationActor) => {
@@ -491,6 +493,48 @@ describe('HandleInboundMessage · no filtra citas ajenas', () => {
 
     expect(comoTexto(enviados[0]).body).toContain('No encuentro esa cita');
   });
+});
+
+describe('HandleInboundMessage · cancelar y cambiar fecha no enseñan citas ajenas', () => {
+  // La cita existe (findById la encuentra), pero no está entre las del número.
+  // Sin comprobar la propiedad, «Cancelar» mostraba su fecha y «Cambiar fecha»
+  // sus servicios, su duración y los huecos del día (hallazgo de la F4).
+  const ajena = () =>
+    montar({
+      citas: [cita({ serviceNames: ['Secreto'] })],
+      suyas: [],
+    });
+
+  it.each([
+    ['Cancelar', `CANCEL|${RID}`],
+    ['Cambiar fecha', `RESCHED|${RID}`],
+    ['elegir día', `RSDAY|${RID}|2026-09-12`],
+  ])(
+    '%s con una cita de otro número solo dice que no la encuentra',
+    async (_, payload) => {
+      const { sut, enviados } = ajena();
+
+      await sut.handle(mensaje({ payload }));
+
+      expect(enviados).toHaveLength(1);
+      expect(comoTexto(enviados[0]).body).toBe('No encuentro esa cita.');
+    },
+  );
+
+  it.each([
+    ['Cancelar', `CANCEL|${RID}`, 'interactive-buttons'],
+    ['Cambiar fecha', `RESCHED|${RID}`, 'interactive-list'],
+    ['elegir día', `RSDAY|${RID}|2026-09-12`, 'interactive-list'],
+  ])(
+    '%s sigue funcionando para la peluquería con cualquier cita',
+    async (_, payload, kind) => {
+      const { sut, enviados } = ajena();
+
+      await sut.handle(mensaje({ from: DUENA, payload }));
+
+      expect(enviados[0].kind).toBe(kind);
+    },
+  );
 });
 
 describe('HandleInboundMessage · nunca lanza', () => {

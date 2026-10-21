@@ -214,7 +214,11 @@ export class HandleInboundMessageUseCase {
         return this.mostrarOpciones(payload.reservationId, from, esDuena);
 
       case 'cancel':
-        return this.pedirConfirmacionDeCancelar(payload.reservationId, from);
+        return this.pedirConfirmacionDeCancelar(
+          payload.reservationId,
+          from,
+          esDuena,
+        );
 
       case 'cancel_ok':
         return this.cancelar(payload.reservationId, from, actor);
@@ -223,12 +227,13 @@ export class HandleInboundMessageUseCase {
         return this.confirmar(payload.reservationId, from, esDuena);
 
       case 'reschedule':
-        return this.ofrecerDias(payload.reservationId, from);
+        return this.ofrecerDias(payload.reservationId, from, esDuena);
 
       case 'reschedule_day':
         return this.ofrecerHoras(
           payload.reservationId,
           from,
+          esDuena,
           payload.dateYmd,
           payload.offset ?? 0,
         );
@@ -433,13 +438,11 @@ export class HandleInboundMessageUseCase {
   private async pedirConfirmacionDeCancelar(
     id: string,
     from: string,
+    esDuena: boolean,
   ): Promise<void> {
     // Dos pulsaciones a propósito: un toque accidental no borra una cita.
-    const cita = await this.reservas.findById(id);
-    if (!cita) {
-      await this.texto(from, 'No encuentro esa cita.');
-      return;
-    }
+    const cita = await this.citaVisible(id, from, esDuena);
+    if (!cita) return;
 
     await this.enviar({
       kind: 'interactive-buttons',
@@ -506,12 +509,13 @@ export class HandleInboundMessageUseCase {
 
   // --------------------------------------------------------------- reprogramar
 
-  private async ofrecerDias(id: string, from: string): Promise<void> {
-    const cita = await this.reservas.findById(id);
-    if (!cita) {
-      await this.texto(from, 'No encuentro esa cita.');
-      return;
-    }
+  private async ofrecerDias(
+    id: string,
+    from: string,
+    esDuena: boolean,
+  ): Promise<void> {
+    const cita = await this.citaVisible(id, from, esDuena);
+    if (!cita) return;
 
     const dias = await this.reservas.daysWithAvailability(
       cita.workerId,
@@ -551,14 +555,12 @@ export class HandleInboundMessageUseCase {
   private async ofrecerHoras(
     id: string,
     from: string,
+    esDuena: boolean,
     dateYmd: string,
     offset: number,
   ): Promise<void> {
-    const cita = await this.reservas.findById(id);
-    if (!cita) {
-      await this.texto(from, 'No encuentro esa cita.');
-      return;
-    }
+    const cita = await this.citaVisible(id, from, esDuena);
+    if (!cita) return;
 
     const todas = await this.reservas.slotsFor(
       dateYmd,
@@ -653,7 +655,7 @@ export class HandleInboundMessageUseCase {
           from,
           'Tu estilista no tiene libre esa hora. Mira las que sí.',
         );
-        await this.ofrecerHoras(id, from, dateYmd, 0);
+        await this.ofrecerHoras(id, from, actor.kind === 'admin', dateYmd, 0);
         return;
       }
       if (error instanceof WorkerOverlapError) {
@@ -661,7 +663,7 @@ export class HandleInboundMessageUseCase {
           from,
           'Esa hora acaba de ocuparse. Mira las que quedan.',
         );
-        await this.ofrecerHoras(id, from, dateYmd, 0);
+        await this.ofrecerHoras(id, from, actor.kind === 'admin', dateYmd, 0);
         return;
       }
       await this.texto(from, this.explicar(error));
@@ -674,6 +676,25 @@ export class HandleInboundMessageUseCase {
    * ¿Puede este número siquiera ver esta cita? Evita filtrar los datos de una
    * cita ajena en el mensaje antes de que el caso de uso rechace la acción.
    */
+  /**
+   * La cita, si este número puede verla; si no, responde «No encuentro esa
+   * cita.» —lo mismo que si no existiera— y devuelve `null`. Las respuestas
+   * que solo leen (pedir confirmación, ofrecer días u horas) también enseñan
+   * datos de la cita, así que pasan por aquí antes de escribir nada.
+   */
+  private async citaVisible(
+    id: string,
+    from: string,
+    esDuena: boolean,
+  ): Promise<ReservationSummary | null> {
+    const cita = await this.reservas.findById(id);
+    if (!cita || !(await this.puedeVerla(cita, from, esDuena))) {
+      await this.texto(from, 'No encuentro esa cita.');
+      return null;
+    }
+    return cita;
+  }
+
   private async puedeVerla(
     cita: ReservationSummary,
     from: string,
