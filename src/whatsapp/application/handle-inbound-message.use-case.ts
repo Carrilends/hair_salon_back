@@ -673,10 +673,6 @@ export class HandleInboundMessageUseCase {
   // ------------------------------------------------------------------ apoyos
 
   /**
-   * ¿Puede este número siquiera ver esta cita? Evita filtrar los datos de una
-   * cita ajena en el mensaje antes de que el caso de uso rechace la acción.
-   */
-  /**
    * La cita, si este número puede verla; si no, responde «No encuentro esa
    * cita.» —lo mismo que si no existiera— y devuelve `null`. Las respuestas
    * que solo leen (pedir confirmación, ofrecer días u horas) también enseñan
@@ -695,6 +691,10 @@ export class HandleInboundMessageUseCase {
     return cita;
   }
 
+  /**
+   * ¿Puede este número siquiera ver esta cita? Evita filtrar los datos de una
+   * cita ajena en el mensaje antes de que el caso de uso rechace la acción.
+   */
   private async puedeVerla(
     cita: ReservationSummary,
     from: string,
