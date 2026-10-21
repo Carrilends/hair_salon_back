@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ServiceService } from './service.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -10,16 +11,32 @@ import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 describe('ServiceService', () => {
   let service: ServiceService;
+  let serviceRepo: Record<string, jest.Mock>;
+  let imagesRepo: Record<string, jest.Mock>;
+  let tags: { findByIds: jest.Mock };
+  let images: { removeByExternalId: jest.Mock };
 
   beforeEach(async () => {
+    serviceRepo = {
+      preload: jest.fn(async (x) => x),
+      save: jest.fn(async (x) => x),
+      findOne: jest.fn(),
+      delete: jest.fn(),
+    };
+    imagesRepo = { find: jest.fn(async () => []) };
+    tags = { findByIds: jest.fn(async () => []) };
+    images = { removeByExternalId: jest.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ServiceService,
-        { provide: getRepositoryToken(Service), useValue: {} },
-        { provide: getRepositoryToken(Detail), useValue: {} },
-        { provide: getRepositoryToken(ImageManager), useValue: {} },
-        { provide: TagsService, useValue: { findByIds: jest.fn() } },
-        { provide: ImagesService, useValue: { removeByExternalId: jest.fn() } },
+        { provide: getRepositoryToken(Service), useValue: serviceRepo },
+        {
+          provide: getRepositoryToken(Detail),
+          useValue: { delete: jest.fn() },
+        },
+        { provide: getRepositoryToken(ImageManager), useValue: imagesRepo },
+        { provide: TagsService, useValue: tags },
+        { provide: ImagesService, useValue: images },
         { provide: CloudinaryService, useValue: { deleteAssets: jest.fn() } },
       ],
     }).compile();
@@ -29,6 +46,46 @@ describe('ServiceService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('editar', () => {
+    // Antes reventaba con 500: `images.filter` sobre `undefined`.
+    it('sin imágenes ni etiquetas no toca ninguna de las dos', async () => {
+      await service.update('s-1', { name: 'Corte nuevo' });
+
+      expect(images.removeByExternalId).not.toHaveBeenCalled();
+      const preload = serviceRepo.preload.mock.calls[0][0];
+      expect(preload).toEqual({ id: 's-1', name: 'Corte nuevo' });
+      expect(preload).not.toHaveProperty('images');
+      expect(preload).not.toHaveProperty('tags');
+    });
+
+    it('con imágenes conserva la principal que ya había', async () => {
+      imagesRepo.find.mockResolvedValue([
+        { id: 'a', isPrincipal: false },
+        { id: 'b', isPrincipal: true },
+      ]);
+
+      await service.update('s-1', {
+        images: [{ id: 'a' }, { id: 'b' }] as never,
+      });
+
+      const guardadas = serviceRepo.preload.mock.calls[0][0].images;
+      expect(guardadas.filter((i) => i.isPrincipal).map((i) => i.id)).toEqual([
+        'b',
+      ]);
+    });
+  });
+
+  describe('borrar', () => {
+    it('uno que no existe responde «no encontrado», no 500', async () => {
+      serviceRepo.findOne.mockResolvedValue(null);
+
+      await expect(service.remove('no-existe')).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(serviceRepo.delete).not.toHaveBeenCalled();
+    });
   });
 
   describe('filtro de precio', () => {

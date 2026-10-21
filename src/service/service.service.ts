@@ -8,7 +8,11 @@ import {
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { /* In, */ Repository, type SelectQueryBuilder } from 'typeorm';
+import {
+  DeepPartial,
+  /* In, */ Repository,
+  type SelectQueryBuilder,
+} from 'typeorm';
 import { Service } from './entities/service.entity';
 import { isUUID } from 'class-validator';
 import { Detail } from 'src/detail/entities/detail.entity';
@@ -46,7 +50,7 @@ export class ServiceService {
 
       const product = this.serviceRepository.create({
         ...rest,
-        images: selectPrincipalImage(images),
+        images: selectPrincipalImage(images ?? []),
         tags: tagsEntities,
       });
 
@@ -109,38 +113,17 @@ export class ServiceService {
     try {
       const { images, tags, ...rest } = updateServiceDto;
 
-      const tagsEntities = await this.tagService.findByIds(tags);
-      const imagesFromDb = await this.imagesRepository.find({
-        where: { service: { id } },
-      });
-
-      // Imagenes existentes DTO / Base de datos
-      const idsFromImagesDto = images.filter((img) => img.id).map((i) => i.id);
-
-      const newImages = images.filter((img) => !img.id);
-      const imagesToKeep = imagesFromDb.filter((img) =>
-        idsFromImagesDto.includes(img.id),
-      );
-
-      // Eliminacion de imagenes
-      const imagesToDelete = imagesFromDb.filter(
-        (img) => !idsFromImagesDto.includes(img.id),
-      );
-      if (imagesToDelete.length > 0) {
-        await this.imageService.removeByExternalId(
-          imagesToDelete.map((i) => i.id),
-          imagesToDelete.map((i) => i.publicId),
-        );
+      // Lo que no llega no se toca: sin `tags` no se vacían las etiquetas, y
+      // sin `images` no se borra ninguna imagen.
+      const cambios: DeepPartial<Service> = { ...rest };
+      if (tags !== undefined) {
+        cambios.tags = await this.tagService.findByIds(tags);
+      }
+      if (images !== undefined) {
+        cambios.images = await this.imagenesActualizadas(id, images);
       }
 
-      // Creacion de nuevas imagenes
-      const imagesToSafe = selectPrincipalImage(imagesToKeep.concat(newImages));
-      const service = await this.serviceRepository.preload({
-        id: id,
-        tags: tagsEntities,
-        images: imagesToSafe,
-        ...rest,
-      });
+      const service = await this.serviceRepository.preload({ id, ...cambios });
 
       await this.serviceRepository.save(service);
       return service;
@@ -149,15 +132,51 @@ export class ServiceService {
     }
   }
 
+  private async imagenesActualizadas(
+    id: string,
+    images: ImageManager[],
+  ): Promise<ImageManager[]> {
+    const imagesFromDb = await this.imagesRepository.find({
+      where: { service: { id } },
+    });
+
+    // Imagenes existentes DTO / Base de datos
+    const idsFromImagesDto = images.filter((img) => img.id).map((i) => i.id);
+
+    const newImages = images.filter((img) => !img.id);
+    const imagesToKeep = imagesFromDb.filter((img) =>
+      idsFromImagesDto.includes(img.id),
+    );
+
+    // Eliminacion de imagenes
+    const imagesToDelete = imagesFromDb.filter(
+      (img) => !idsFromImagesDto.includes(img.id),
+    );
+    if (imagesToDelete.length > 0) {
+      await this.imageService.removeByExternalId(
+        imagesToDelete.map((i) => i.id),
+        imagesToDelete.map((i) => i.publicId),
+      );
+    }
+
+    // Creacion de nuevas imagenes
+    return selectPrincipalImage(imagesToKeep.concat(newImages));
+  }
+
   async remove(id: string) {
     const serviceWithRelations = await this.serviceRepository.findOne({
       where: { id },
       relations: ['detail', 'images'],
     });
+    if (!serviceWithRelations) {
+      throw new NotFoundException(`Service with id ${id} not found`);
+    }
     const images = serviceWithRelations.images.map((img) => img.publicId);
     await this.cloudinaryService.deleteAssets(images);
     await this.serviceRepository.delete(id);
-    await this.detailRepository.delete(serviceWithRelations.detail.id);
+    if (serviceWithRelations.detail) {
+      await this.detailRepository.delete(serviceWithRelations.detail.id);
+    }
     return 'deleted';
   }
 
