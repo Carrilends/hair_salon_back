@@ -1,13 +1,10 @@
 import { Module } from '@nestjs/common';
-import { DetailService } from './detail.service';
-import { DetailController } from './detail.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Detail } from './entities/detail.entity';
-import { AuthModule } from 'src/auth/auth.module';
 
+// Solo registra la entidad: el detalle se crea y se edita con su servicio; el
+// controlador propio respondía texto fijo y se quitó.
 @Module({
-  controllers: [DetailController],
-  providers: [DetailService],
-  imports: [TypeOrmModule.forFeature([Detail]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Detail])],
 })
 export class DetailModule {}

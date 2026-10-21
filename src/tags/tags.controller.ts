@@ -53,6 +53,7 @@ export class TagsController {
     return this.tagsService.remove(id);
   }
 
+  @Auth(ValidRoles.admin)
   @Post('seed')
   async seedTags() {
     // 🔐 Protege el seed

@@ -8,7 +8,6 @@ import { DetailModule } from './detail/detail.module';
 import { PlannesModule } from './plannes/plannes.module';
 import { CommonModule } from './common/common.module';
 import { ImagesModule } from './images/images.module';
-import { FilesModule } from './files/files.module';
 import { AuthModule } from './auth/auth.module';
 import { TagsModule } from './tags/tags.module';
 import { SharedInfoModule } from './shared/shared-info.module';
@@ -76,7 +75,6 @@ function parseBool(value: string | undefined): boolean | undefined {
     PlannesModule,
     CommonModule,
     ImagesModule,
-    FilesModule,
     AuthModule,
     TagsModule,
     SharedInfoModule,

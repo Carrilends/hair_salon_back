@@ -1,13 +1,10 @@
 import { Module } from '@nestjs/common';
-import { PlannesService } from './plannes.service';
-import { PlannesController } from './plannes.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Planne } from './entities/planne.entity';
-import { AuthModule } from 'src/auth/auth.module';
 
+// Solo registra la entidad (fuera del alcance del proyecto): su controlador
+// respondía texto fijo y se quitó.
 @Module({
-  controllers: [PlannesController],
-  providers: [PlannesService],
-  imports: [TypeOrmModule.forFeature([Planne]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Planne])],
 })
 export class PlannesModule {}

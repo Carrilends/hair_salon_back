@@ -17,12 +17,12 @@ export interface OwnerNotificationConfig {
 
 /**
  * Canal durable (N2): redacta el aviso que corresponda a cada evento de la
- * reserva —nueva, cancelada o movida de hora— y lo entrega al `EmailSenderPort`;
- * no sabe qué proveedor hay detrás. La hora se expresa siempre en la zona del
- * salón, no en la del servidor (Railway corre en UTC), para no enviar avisos con
- * la hora corrida cinco horas.
+ * reserva —nueva, cancelada, movida de hora o confirmada— y lo entrega al
+ * `EmailSenderPort`; no sabe qué proveedor hay detrás. La hora se expresa
+ * siempre en la zona del salón, no en la del servidor (Railway corre en UTC),
+ * para no enviar avisos con la hora corrida cinco horas.
  *
- * La peluquería recibe **los tres**, incluidos los cambios que hace ella misma:
+ * La peluquería recibe **los cuatro**, incluidos los cambios que hace ella misma:
  * su bandeja es el registro de lo que pasa con la agenda.
  */
 @Injectable()

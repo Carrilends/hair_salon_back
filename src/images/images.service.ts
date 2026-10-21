@@ -1,8 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import {
-  CreateImageDto,
-  CreateImageDtoByService,
-} from './dto/create-image.dto';
+import { CreateImageDtoByService } from './dto/create-image.dto';
 import { UpdateImagelDto } from './dto/update-image.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ImageManager } from './images.entity';
@@ -28,15 +25,6 @@ export class ImagesService {
     await this.imageRepository.save(image);
   }
 
-  async create(createImageDto: CreateImageDto) {
-    void createImageDto;
-    return 'HOLA';
-  }
-
-  findAll() {
-    return `This action returns all detail`;
-  }
-
   async findByExternalId(externalId: string) {
     return await this.imageRepository
       .createQueryBuilder('i')
@@ -44,10 +32,6 @@ export class ImagesService {
         id: externalId,
       })
       .getMany();
-  }
-
-  findOne(id: number) {
-    return `This action returns a #${id} detail`;
   }
 
   async update(id: string, updateImagelDto: UpdateImagelDto) {

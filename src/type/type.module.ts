@@ -1,14 +1,9 @@
 import { Module } from '@nestjs/common';
-import { TypeService } from './type.service';
-import { TypeController } from './type.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Type } from './entities/type.entity';
-import { AuthModule } from 'src/auth/auth.module';
 
+// Solo registra la entidad: su controlador respondía texto fijo y se quitó.
 @Module({
-  controllers: [TypeController],
-  providers: [TypeService],
-  // AuthModule es necesario para que @Auth(admin) resuelva el guard JWT.
-  imports: [TypeOrmModule.forFeature([Type]), AuthModule],
+  imports: [TypeOrmModule.forFeature([Type])],
 })
 export class TypeModule {}
