@@ -13,28 +13,6 @@ import { ImageManager } from 'src/images/images.entity';
 // import { ImagesService } from 'src/images/images.service';
 import { Repository } from 'typeorm';
 
-export function AtLeastOnePrincipalImage(
-  validationOptions?: ValidationOptions,
-) {
-  return function (object: object, propertyName: string) {
-    registerDecorator({
-      name: 'AtLeastOnePrincipalImage',
-      target: object.constructor,
-      propertyName: propertyName,
-      constraints: [],
-      options: validationOptions,
-      validator: {
-        validate(value: any) {
-          // Probablemente haya que traer las imagenes del serivicio y validar que al menos una sea principal (update)
-          const images = value;
-          if (!images) return true;
-          return images.some((image: any) => image.isPrincipal);
-        },
-      },
-    });
-  };
-}
-
 @Injectable()
 @ValidatorConstraint({ async: true })
 export class AlreadyExistOnePrincipalConstraint
