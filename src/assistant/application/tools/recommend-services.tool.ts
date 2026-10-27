@@ -14,11 +14,20 @@ export interface RecommendCatalogPort {
     limitPerTag: number,
   ): Promise<Map<string, AssistantServiceSummary[]>>;
 
+  /**
+   * Familia (etiqueta raíz, `parent` nulo) de cada etiqueta pedida: Manicure →
+   * «Uñas». Una etiqueta que no existe no aparece en el mapa.
+   */
+  findTagFamilies(tagNames: string[]): Promise<Map<string, string>>;
+
   /** Imagen principal por servicio, solo para la tarjeta (nunca para el modelo). */
   findPrincipalImages(ids: string[]): Promise<Map<string, string>>;
 }
 
-const MAX_POR_CATEGORIA = 3;
+/** Tope de recomendaciones por familia del catálogo (no por etiqueta). */
+const MAX_POR_FAMILIA = 3;
+/** Candidatos por etiqueta: de sobra para que el presupuesto filtre antes del tope. */
+const CANDIDATOS_POR_ETIQUETA = 10;
 
 /**
  * `recomendarServicios`: aplica P5. Sugiere **servicios del catálogo** a partir de
@@ -70,42 +79,48 @@ export class RecommendServicesTool implements AssistantTool {
 
     const presupuesto = coerceOptionalNumber(args.presupuestoMaximo);
 
-    const byTag = await this.catalog.findByTagNames(
-      categorias,
-      MAX_POR_CATEGORIA,
-    );
+    const [byTag, familias] = await Promise.all([
+      this.catalog.findByTagNames(categorias, CANDIDATOS_POR_ETIQUETA),
+      this.catalog.findTagFamilies(categorias),
+    ]);
 
-    const recomendaciones: {
-      categoria: string;
-      servicios: {
-        id: string;
-        nombre: string;
-        precio: number;
-        minutos: number;
-      }[];
-    }[] = [];
     const categoriasDesconocidas: string[] = [];
+    // Familia → candidatos de todas sus subcategorías pedidas (Map conserva el
+    // orden de aparición).
+    const porFamilia = new Map<string, AssistantServiceSummary[]>();
 
     for (const categoria of categorias) {
       const candidatos = byTag.get(categoria) ?? [];
       // Vacío del catálogo ⇒ la categoría no existe (o no tiene servicios): se
-      // reporta, no se falla. Presupuesto insuficiente es distinto: la categoría
+      // reporta, no se falla. Presupuesto insuficiente es distinto: la familia
       // se conoce y vuelve con lista vacía.
       if (candidatos.length === 0) {
         categoriasDesconocidas.push(categoria);
         continue;
       }
+      const familia = familias.get(categoria) ?? categoria;
+      porFamilia.set(familia, [
+        ...(porFamilia.get(familia) ?? []),
+        ...candidatos,
+      ]);
+    }
+
+    // Orden: presupuesto, sin repetidos, precio ascendente y, al final, el tope.
+    const recomendaciones = [...porFamilia].map(([categoria, candidatos]) => {
+      const vistos = new Set<string>();
       const servicios = candidatos
         .filter((c) => presupuesto === undefined || c.price <= presupuesto)
-        .slice(0, MAX_POR_CATEGORIA)
+        .filter((c) => !vistos.has(c.id) && !!vistos.add(c.id))
+        .sort((a, b) => a.price - b.price)
+        .slice(0, MAX_POR_FAMILIA)
         .map((c) => ({
           id: c.id,
           nombre: c.name,
           precio: c.price,
           minutos: c.durationMinutes,
         }));
-      recomendaciones.push({ categoria, servicios });
-    }
+      return { categoria, servicios };
+    });
 
     return { recomendaciones, categoriasDesconocidas };
   }

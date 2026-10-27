@@ -63,6 +63,19 @@ describe('ServiceCatalogQueryAdapter#findByTagNames (integración, BD sembrada)'
     expect(map.has('NoExisteEstaEtiqueta')).toBe(true);
     expect(map.get('NoExisteEstaEtiqueta')).toEqual([]);
   });
+
+  it('Manicure resuelve a la familia Uñas, una raíz es su propia familia y lo inexistente no aparece', async () => {
+    const familias = await adapter.findTagFamilies([
+      'Manicure',
+      'Pedicure',
+      'Uñas',
+      'NoExisteEstaEtiqueta',
+    ]);
+    expect(familias.get('Manicure')).toBe('Uñas');
+    expect(familias.get('Pedicure')).toBe('Uñas');
+    expect(familias.get('Uñas')).toBe('Uñas');
+    expect(familias.has('NoExisteEstaEtiqueta')).toBe(false);
+  });
 });
 
 /**

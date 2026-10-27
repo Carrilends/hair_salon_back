@@ -8,7 +8,15 @@ class FakeCatalog {
   constructor(
     private readonly map: Map<string, AssistantServiceSummary[]>,
     private readonly imagenes: Record<string, string> = {},
+    private readonly familias: Record<string, string> = {},
   ) {}
+  async findTagFamilies(tagNames: string[]): Promise<Map<string, string>> {
+    return new Map(
+      tagNames.flatMap((n) =>
+        this.familias[n] ? [[n, this.familias[n]]] : [],
+      ),
+    );
+  }
   async findPrincipalImages(ids: string[]): Promise<Map<string, string>> {
     this.idsDeImagenesPedidas = ids;
     return new Map(
@@ -114,11 +122,108 @@ describe('RecommendServicesTool', () => {
     });
   });
 
-  it('pide al catálogo un máximo de 3 candidatos por etiqueta', async () => {
+  it('pide al catálogo diez candidatos por etiqueta, para que el presupuesto se aplique antes del tope', async () => {
     const catalog = new FakeCatalog(new Map([['Novia', [svc('n1', 90000)]]]));
     const tool = new RecommendServicesTool(catalog as never);
     await tool.execute({ categorias: ['Novia'] });
-    expect(catalog.lastLimit).toBe(3);
+    expect(catalog.lastLimit).toBe(10);
+  });
+
+  const cuatro = (p: string) =>
+    [1, 2, 3, 4].map((i) => svc(`${p}${i}`, i * 10000));
+  const familiaUnas = {
+    Manicure: 'Uñas',
+    Pedicure: 'Uñas',
+    'Diseños y nail art': 'Uñas',
+  };
+
+  it('varias subcategorías de la misma familia suman como mucho tres', async () => {
+    const catalog = new FakeCatalog(
+      new Map([
+        ['Manicure', cuatro('m')],
+        ['Pedicure', cuatro('p')],
+        ['Diseños y nail art', cuatro('d')],
+      ]),
+      {},
+      familiaUnas,
+    );
+    const tool = new RecommendServicesTool(catalog as never);
+
+    const res = (await tool.execute({
+      categorias: ['Manicure', 'Pedicure', 'Diseños y nail art'],
+    })) as {
+      recomendaciones: { categoria: string; servicios: { id: string }[] }[];
+    };
+
+    expect(res.recomendaciones).toHaveLength(1);
+    expect(res.recomendaciones[0].categoria).toBe('Uñas');
+    expect(res.recomendaciones[0].servicios).toHaveLength(3);
+  });
+
+  it('familias distintas conservan cada una sus tres', async () => {
+    const catalog = new FakeCatalog(
+      new Map([
+        ['Manicure', cuatro('m')],
+        ['Cejas', cuatro('c')],
+      ]),
+      {},
+      { Manicure: 'Uñas', Cejas: 'Cejas y pestañas' },
+    );
+    const tool = new RecommendServicesTool(catalog as never);
+    const res = (await tool.execute({
+      categorias: ['Manicure', 'Cejas'],
+    })) as { recomendaciones: { servicios: unknown[] }[] };
+    expect(res.recomendaciones.map((r) => r.servicios.length)).toEqual([3, 3]);
+  });
+
+  it('el tope se aplica después del presupuesto', async () => {
+    const catalog = new FakeCatalog(
+      new Map([
+        [
+          'Manicure',
+          [
+            svc('a', 60000),
+            svc('b', 70000),
+            svc('c', 10000),
+            svc('d', 20000),
+            svc('e', 30000),
+          ],
+        ],
+      ]),
+      {},
+      familiaUnas,
+    );
+    const tool = new RecommendServicesTool(catalog as never);
+    const res = (await tool.execute({
+      categorias: ['Manicure'],
+      presupuestoMaximo: 50000,
+    })) as { recomendaciones: { servicios: { id: string }[] }[] };
+    expect(res.recomendaciones[0].servicios.map((s) => s.id)).toEqual([
+      'c',
+      'd',
+      'e',
+    ]);
+  });
+
+  it('un servicio etiquetado en dos subcategorías de la familia aparece una sola vez', async () => {
+    const compartido = svc('x', 5000);
+    const catalog = new FakeCatalog(
+      new Map([
+        ['Manicure', [compartido, svc('m1', 20000)]],
+        ['Pedicure', [compartido, svc('p1', 30000)]],
+      ]),
+      {},
+      familiaUnas,
+    );
+    const tool = new RecommendServicesTool(catalog as never);
+    const res = (await tool.execute({
+      categorias: ['Manicure', 'Pedicure'],
+    })) as { recomendaciones: { servicios: { id: string }[] }[] };
+    expect(res.recomendaciones[0].servicios.map((s) => s.id)).toEqual([
+      'x',
+      'm1',
+      'p1',
+    ]);
   });
 
   it('acepta el presupuesto como cadena numérica', async () => {
@@ -136,6 +241,25 @@ describe('RecommendServicesTool', () => {
   });
 
   describe('presentar', () => {
+    it('presentar muestra como mucho tres por familia', async () => {
+      const catalog = new FakeCatalog(
+        new Map([
+          ['Manicure', cuatro('m')],
+          ['Pedicure', cuatro('p')],
+        ]),
+        {},
+        familiaUnas,
+      );
+      const tool = new RecommendServicesTool(catalog as never);
+      const result = await tool.execute({
+        categorias: ['Manicure', 'Pedicure'],
+      });
+      const presentacion = (await tool.presentar(result)) as {
+        servicios: unknown[];
+      };
+      expect(presentacion.servicios).toHaveLength(3);
+    });
+
     it('presenta los servicios recomendados con su imagen, sin repetir los que caen en dos categorías', async () => {
       // El mismo servicio puede estar etiquetado en dos categorías pedidas; la
       // tarjeta es una lista plana, así que se enseña una sola vez.

@@ -354,6 +354,26 @@ export class ServiceCatalogQueryAdapter implements ServiceCatalogQueryPort {
     return groupCandidatesByTag(rows, tagNames, limitPerTag);
   }
 
+  async findTagFamilies(tagNames: string[]): Promise<Map<string, string>> {
+    if (tagNames.length === 0) return new Map();
+
+    // Sube por `parentId` hasta la etiqueta raíz (parent nulo). Una raíz es su
+    // propia familia. Solo lee; el significado de «familia» vive en la
+    // herramienta, aquí únicamente se resuelve la jerarquía.
+    const rows: { name: string; family: string }[] = await this.repo.query(
+      `WITH RECURSIVE arriba AS (
+         SELECT t.id, t.name AS origen, t."parentId", t.name AS raiz
+         FROM tag t WHERE t.name = ANY($1)
+         UNION ALL
+         SELECT a.id, a.origen, p."parentId", p.name
+         FROM arriba a JOIN tag p ON p.id = a."parentId"
+       )
+       SELECT origen AS name, raiz AS family FROM arriba WHERE "parentId" IS NULL`,
+      [tagNames],
+    );
+    return new Map(rows.map((r) => [r.name, r.family]));
+  }
+
   async findPrincipalImages(ids: string[]): Promise<Map<string, string>> {
     // Sin ids no hay nada que consultar (y `IN ()` sería SQL inválido).
     if (ids.length === 0) return new Map();
