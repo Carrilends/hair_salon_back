@@ -48,7 +48,7 @@ describe('MyReservationsTool', () => {
     expect(getMine.calls).toEqual(['cliente-real']);
   });
 
-  it('proyecta compacto (id, cuando, estado, servicios, minutos) y limita a 10', async () => {
+  it('proyecta compacto (id, fecha, hora, estado, servicios, minutos) y limita a 10', async () => {
     const muchas = Array.from({ length: 12 }, (_, i) =>
       reserva({ id: `r${i}` }),
     );
@@ -66,13 +66,35 @@ describe('MyReservationsTool', () => {
     // siendo un sí/no —el chat no nombra estilistas—.
     expect(res[0]).toEqual({
       id: 'r0',
-      cuando: new Date('2026-08-20T14:00:00.000Z'),
+      fecha: 'jueves, 20 de agosto de 2026',
+      hora: '09:00',
       estado: 'pendiente',
       servicios: ['Corte', 'Peinado'],
       minutos: 60,
       estilistaElegida: false,
     });
   });
+
+  it.each(['web', 'mcp'] as const)(
+    'en %s entrega fecha y hora del salón, no el instante en UTC',
+    async (canal) => {
+      const getMine = new FakeGetMine([
+        reserva({ scheduledAt: new Date('2026-11-06T16:00:00Z') }),
+      ]);
+      const tool = new MyReservationsTool(getMine as never);
+
+      const res = (await tool.execute({}, {
+        ...ctx('u1'),
+        canal,
+      } as AssistantContext)) as Array<Record<string, unknown>>;
+
+      expect(res[0]).toMatchObject({
+        hora: '11:00',
+        fecha: 'viernes, 6 de noviembre de 2026',
+      });
+      expect(res[0]).not.toHaveProperty('cuando');
+    },
+  );
 
   it('proyecta estilistaElegida en true cuando la clienta la eligió', async () => {
     const getMine = new FakeGetMine([reserva({ workerPinned: true })]);
@@ -96,9 +118,10 @@ describe('MyReservationsTool', () => {
     >;
 
     expect(Object.keys(res[0]).sort()).toEqual([
-      'cuando',
       'estado',
       'estilistaElegida',
+      'fecha',
+      'hora',
       'id',
       'minutos',
       'servicios',

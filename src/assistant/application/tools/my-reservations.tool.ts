@@ -72,15 +72,12 @@ export class MyReservationsTool implements AssistantTool {
 
     // Proyección compacta (§6.2): solo lo que hace falta para conversar. Se limita
     // a 10 para acotar los tokens de la siguiente llamada.
-    const porWhatsApp = context.canal === 'whatsapp';
     return reservations.slice(0, 10).map((r) => ({
       id: r.id,
-      // En WhatsApp, fecha y hora del salón: el modelo las repite tal cual y el
-      // instante en UTC salía cinco horas corrido (prueba de humo de F5). La
-      // web y MCP siguen recibiendo `cuando` como siempre.
-      ...(porWhatsApp
-        ? fechaYHoraEnPalabras(r.scheduledAt.toISOString())
-        : { cuando: r.scheduledAt }),
+      // Fecha y hora del salón en todos los canales: el modelo las repite tal
+      // cual. Con el instante en UTC la convertía mal y actuaba sobre la cita
+      // equivocada (TC-RF54-01; antes, la prueba de humo de F5 en WhatsApp).
+      ...fechaYHoraEnPalabras(r.scheduledAt.toISOString()),
       estado: r.status,
       servicios: r.services.map((s) => s.name),
       minutos: r.totalDurationMinutes,
