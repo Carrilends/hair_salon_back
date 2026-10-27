@@ -73,6 +73,29 @@ describe('LoginWithGoogleUseCase', () => {
     );
   });
 
+  it('rechaza un correo de Google sin verificar y no guarda ninguna cuenta', async () => {
+    const { uc, saved } = build({
+      profile: { ...GOOGLE_PROFILE, emailVerified: false },
+    });
+    await expect(
+      uc.execute({ idToken: 'x', dataPolicyAccepted: true }),
+    ).rejects.toThrow(GoogleAccountNotVerifiedError);
+    expect(saved).toHaveLength(0);
+  });
+
+  it('con un correo sin verificar tampoco vincula la cuenta local existente', async () => {
+    const existing = localAccount();
+    const { uc, saved } = build({
+      profile: { ...GOOGLE_PROFILE, emailVerified: false },
+      byEmail: existing,
+    });
+    await expect(
+      uc.execute({ idToken: 'x', dataPolicyAccepted: true }),
+    ).rejects.toThrow(GoogleAccountNotVerifiedError);
+    expect(saved).toHaveLength(0);
+    expect(existing.googleId).toBeNull();
+  });
+
   it('exige consentimiento al crear una cuenta nueva (S9)', async () => {
     const { uc } = build();
     await expect(uc.execute({ idToken: 'x' })).rejects.toThrow(

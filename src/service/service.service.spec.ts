@@ -15,9 +15,12 @@ describe('ServiceService', () => {
   let imagesRepo: Record<string, jest.Mock>;
   let tags: { findByIds: jest.Mock };
   let images: { removeByExternalId: jest.Mock };
+  let cloudinary: { deleteAssets: jest.Mock };
+  let detailRepo: { delete: jest.Mock };
 
   beforeEach(async () => {
     serviceRepo = {
+      create: jest.fn((x) => x),
       preload: jest.fn(async (x) => x),
       save: jest.fn(async (x) => x),
       findOne: jest.fn(),
@@ -26,18 +29,17 @@ describe('ServiceService', () => {
     imagesRepo = { find: jest.fn(async () => []) };
     tags = { findByIds: jest.fn(async () => []) };
     images = { removeByExternalId: jest.fn() };
+    cloudinary = { deleteAssets: jest.fn() };
+    detailRepo = { delete: jest.fn() };
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ServiceService,
         { provide: getRepositoryToken(Service), useValue: serviceRepo },
-        {
-          provide: getRepositoryToken(Detail),
-          useValue: { delete: jest.fn() },
-        },
+        { provide: getRepositoryToken(Detail), useValue: detailRepo },
         { provide: getRepositoryToken(ImageManager), useValue: imagesRepo },
         { provide: TagsService, useValue: tags },
         { provide: ImagesService, useValue: images },
-        { provide: CloudinaryService, useValue: { deleteAssets: jest.fn() } },
+        { provide: CloudinaryService, useValue: cloudinary },
       ],
     }).compile();
 
@@ -48,7 +50,37 @@ describe('ServiceService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('crear', () => {
+    it('crear con varias imágenes marca la primera como principal', async () => {
+      await service.create({
+        name: 'Corte',
+        tags: [],
+        images: [{ publicId: 'p1' }, { publicId: 'p2' }, { publicId: 'p3' }],
+      } as never);
+
+      const guardadas = serviceRepo.create.mock.calls[0][0].images;
+      expect(guardadas.map((i) => i.isPrincipal)).toEqual([true, false, false]);
+    });
+  });
+
   describe('editar', () => {
+    it('editar quitando la principal deja como principal una de las que quedan', async () => {
+      imagesRepo.find.mockResolvedValue([
+        { id: 'a', publicId: 'pa', isPrincipal: true },
+        { id: 'b', publicId: 'pb', isPrincipal: false },
+        { id: 'c', publicId: 'pc', isPrincipal: false },
+      ]);
+
+      await service.update('s-1', {
+        images: [{ id: 'b' }, { id: 'c' }] as never,
+      });
+
+      expect(images.removeByExternalId).toHaveBeenCalledWith(['a'], ['pa']);
+      const guardadas = serviceRepo.preload.mock.calls[0][0].images;
+      expect(guardadas.map((i) => i.id)).toEqual(['b', 'c']);
+      expect(guardadas.filter((i) => i.isPrincipal)).toHaveLength(1);
+    });
+
     // Antes reventaba con 500: `images.filter` sobre `undefined`.
     it('sin imágenes ni etiquetas no toca ninguna de las dos', async () => {
       await service.update('s-1', { name: 'Corte nuevo' });
@@ -78,6 +110,22 @@ describe('ServiceService', () => {
   });
 
   describe('borrar', () => {
+    it('borrar llama a deleteAssets con los publicId de sus imágenes y después borra el servicio', async () => {
+      serviceRepo.findOne.mockResolvedValue({
+        id: 's-1',
+        images: [{ publicId: 'pa' }, { publicId: 'pb' }],
+        detail: null,
+      });
+
+      await service.remove('s-1');
+
+      expect(cloudinary.deleteAssets).toHaveBeenCalledWith(['pa', 'pb']);
+      expect(serviceRepo.delete).toHaveBeenCalledWith('s-1');
+      expect(cloudinary.deleteAssets.mock.invocationCallOrder[0]).toBeLessThan(
+        serviceRepo.delete.mock.invocationCallOrder[0],
+      );
+    });
+
     it('uno que no existe responde «no encontrado», no 500', async () => {
       serviceRepo.findOne.mockResolvedValue(null);
 
