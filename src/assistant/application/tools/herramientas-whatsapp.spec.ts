@@ -1,4 +1,5 @@
 import { MyReservationsTool } from './my-reservations.tool';
+import { ViewAgendaTool } from './view-agenda.tool';
 import { CreateReservationTool } from './create-reservation.tool';
 import { AssistantContext } from './assistant-tool';
 
@@ -108,5 +109,59 @@ describe('crearReserva en la web', () => {
 
     expect(r).toMatchObject({ ok: false, motivo: 'argumentos_invalidos' });
     expect(comandos).toHaveLength(0);
+  });
+});
+
+/** RF59 c1: la agenda de la dueña llega cita por cita, sin pasar por el resumen del modelo. */
+describe('verAgenda · presentar', () => {
+  const duena: AssistantContext = {
+    userId: null,
+    isAdmin: true,
+    now: ahora,
+    canal: 'whatsapp',
+    phoneE164: '573208977471',
+  };
+  const cita = (i: number) => ({
+    id: `r-${i}`,
+    scheduledAt: new Date(
+      `2026-10-15T${String(13 + (i % 8)).padStart(2, '0')}:00:00Z`,
+    ),
+    status: 'pendiente',
+    contact: {
+      name: `Clienta ${'abcdefghijklmnopqrs'[i]}`,
+      phone: '3001112233',
+      email: 'x@y.co',
+    },
+    worker: { name: 'Monica' },
+    services: [{ name: 'Corte' }, { name: 'Tinte' }],
+  });
+
+  it('presentar entrega una línea por cita con clienta, servicios y estilista, sin teléfono ni correo', async () => {
+    const tool = new ViewAgendaTool({
+      execute: async () =>
+        Array.from({ length: 19 }, (_, i) => cita(i)) as never,
+    });
+    const r = await tool.execute({}, duena);
+    const p = await tool.presentar(r);
+
+    expect(p?.tipo).toBe('agenda');
+    if (p?.tipo !== 'agenda') throw new Error('no es agenda');
+    const deCita = p.lineas.filter((l) => l.includes(' · '));
+    expect(deCita).toHaveLength(15);
+    expect(deCita[0]).toBe('08:00 · Clienta a · Corte, Tinte · con Monica');
+    expect(p.hayMas).toBe(true);
+    expect(p.lineas[p.lineas.length - 1]).toBe(
+      'Hay más citas: pídeme un día concreto.',
+    );
+    const todo = p.lineas.join('\n');
+    expect(todo).not.toMatch(/3001112233|x@y\.co/);
+  });
+
+  it('no presenta nada si la herramienta falló o no hay citas', async () => {
+    const tool = new ViewAgendaTool({ execute: async () => [] });
+    expect(
+      await tool.presentar({ ok: false, motivo: 'solo_administracion' }),
+    ).toBeNull();
+    expect(await tool.presentar(await tool.execute({}, duena))).toBeNull();
   });
 });

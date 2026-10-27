@@ -58,6 +58,24 @@ export function partirTexto(texto: string, max = MAX_TEXTO): string[] {
 }
 
 /**
+ * Parte una lista de líneas en trozos que WhatsApp acepte sin cortar nunca una
+ * línea por la mitad (una cita no se reparte en dos mensajes).
+ */
+function partirLineas(lineas: string[], max = MAX_TEXTO): string[] {
+  const trozos: string[] = [];
+  let actual = '';
+  for (const linea of lineas.flatMap((l) => partirTexto(l, max))) {
+    if (actual && actual.length + 1 + linea.length > max) {
+      trozos.push(actual);
+      actual = '';
+    }
+    actual = actual ? `${actual}\n${linea}` : linea;
+  }
+  if (actual) trozos.push(actual);
+  return trozos;
+}
+
+/**
  * Primer mensaje de cada conversación nueva de una clienta (plan 06, D10):
  * quién responde, que nada queda hecho sin su botón y dónde leer la política.
  */
@@ -95,6 +113,16 @@ export function mensajesDeLaRespuesta(
     ? partes
     : [SIN_RESPUESTA]) {
     mensajes.push({ kind: 'text', to, body: parte });
+  }
+
+  // RF59 c1: la agenda de la dueña va tal cual, una línea por cita; el texto del
+  // modelo de arriba solo la introduce.
+  for (const p of respuesta.presentaciones) {
+    if (p.tipo === 'agenda') {
+      for (const parte of partirLineas(p.lineas)) {
+        mensajes.push({ kind: 'text', to, body: parte });
+      }
+    }
   }
 
   const foto = fotoDelServicio(respuesta.presentaciones, to);

@@ -1,6 +1,7 @@
 import { AssistantContext, AssistantTool } from './assistant-tool';
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
 import { fechaDelSalon, fechaYHoraEnPalabras } from '../salon-day';
+import { AssistantPresentation } from './assistant-presentation';
 import { nombreParaElModelo } from './identidad';
 
 /**
@@ -58,6 +59,36 @@ export class ViewAgendaTool implements AssistantTool {
 
   constructor(private readonly listActive: ListActiveReservationsExecutor) {}
 
+  /**
+   * RF59 c1: la agenda sale por el canal presentado, una línea por cita y
+   * agrupada por día, para que no dependa de cómo la resuma el modelo. Reusa lo
+   * que ya devolvió `execute` (sin teléfonos ni correos).
+   */
+  async presentar(result: unknown): Promise<AssistantPresentation | null> {
+    const r = result as {
+      ok?: boolean;
+      citas?: CitaDeLaAgenda[];
+      hayMas?: boolean;
+    };
+    if (r?.ok !== true || !Array.isArray(r.citas) || r.citas.length === 0) {
+      return null;
+    }
+    const lineas: string[] = [];
+    let dia: string | null = null;
+    for (const c of r.citas) {
+      if (c.fecha !== dia) {
+        dia = c.fecha;
+        lineas.push(`*${c.fecha}*`);
+      }
+      lineas.push(
+        `${c.hora} · ${c.clienta} · ${c.servicios.join(', ')} · con ${c.estilista}`,
+      );
+    }
+    const hayMas = r.hayMas === true;
+    if (hayMas) lineas.push(HAY_MAS);
+    return { tipo: 'agenda', lineas, hayMas };
+  }
+
   async execute(
     args: Record<string, unknown>,
     context: AssistantContext,
@@ -96,6 +127,20 @@ export class ViewAgendaTool implements AssistantTool {
       ...(delDia.length > MAX_CITAS ? { hayMas: true } : {}),
     };
   }
+}
+
+/** Línea final cuando el tope dejó citas fuera. */
+const HAY_MAS = 'Hay más citas: pídeme un día concreto.';
+
+/**
+ * Cita tal como la devuelve `execute`, para presentarla.
+ */
+interface CitaDeLaAgenda {
+  fecha: string;
+  hora: string;
+  clienta: string;
+  servicios: string[];
+  estilista: string;
 }
 
 /**

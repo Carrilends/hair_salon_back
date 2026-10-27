@@ -21,7 +21,8 @@ export type AssistantPresentation =
   | ServicesPresentation
   | ConfirmBookingPresentation
   | ConfirmCancelPresentation
-  | ConfirmReschedulePresentation;
+  | ConfirmReschedulePresentation
+  | AgendaPresentation;
 
 /** Propuesta de paquete de evento, tal como la compone `componerPaquete`. */
 export interface PackagePresentation {
@@ -100,4 +101,16 @@ export interface ConfirmReschedulePresentation {
   hora: string;
   /** La cita tal como está ahora. */
   cita: CitaAConfirmar;
+}
+
+/**
+ * RF59 c1: la agenda de la dueña por WhatsApp, una línea por cita. Se envía tal
+ * cual, sin pasar por el resumen del modelo (que perdía clienta y estilista).
+ * Solo la produce `verAgenda`; nunca llega a la web.
+ */
+export interface AgendaPresentation {
+  tipo: 'agenda';
+  /** Encabezado de cada día y, debajo, `10:00 · clienta · servicios · con estilista`. */
+  lineas: string[];
+  hayMas: boolean;
 }

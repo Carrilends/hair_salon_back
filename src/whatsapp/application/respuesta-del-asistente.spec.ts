@@ -263,3 +263,51 @@ describe('mensajesDeLaRespuesta', () => {
     expect(textos(ms)[0]).toMatch(/de otra forma/);
   });
 });
+
+describe('mensajesDeLaRespuesta · agenda de la dueña', () => {
+  const agenda = (lineas: string[]): AssistantPresentation => ({
+    tipo: 'agenda',
+    lineas,
+    hayMas: false,
+  });
+
+  it('con una presentación de agenda envía una línea por cita', () => {
+    const lineas = [
+      '*jueves, 15 de octubre*',
+      '10:00 · Ana · Corte · con Monica',
+      '11:00 · Luisa · Tinte · con Pedro',
+    ];
+    const ms = mensajesDeLaRespuesta(
+      { reply: 'Esta es la agenda.', presentaciones: [agenda(lineas)] },
+      TO,
+      null,
+    );
+    expect(textos(ms)).toEqual(['Esta es la agenda.', lineas.join('\n')]);
+  });
+
+  it('parte la agenda larga en trozos de 4096', () => {
+    const lineas = Array.from(
+      { length: 200 },
+      (_, i) =>
+        `10:00 · Clienta ${'x'.repeat((i % 7) + 1)} · ${'Corte, '.repeat(5)}Tinte · con Monica`,
+    );
+    const ms = mensajesDeLaRespuesta(
+      { reply: 'Agenda.', presentaciones: [agenda(lineas)] },
+      TO,
+      null,
+    );
+    const t = textos(ms).slice(1);
+    expect(t.length).toBeGreaterThan(1);
+    expect(t.every((x) => x.length <= 4096)).toBe(true);
+    expect(t.join('\n').split('\n')).toEqual(lineas);
+  });
+
+  it('los botones de confirmación ignoran la agenda', () => {
+    const ms = mensajesDeLaRespuesta(
+      { reply: 'Hola', presentaciones: [agenda(['10:00 · A · B · con C'])] },
+      TO,
+      null,
+    );
+    expect(ms.some((m) => m.kind === 'interactive-buttons')).toBe(false);
+  });
+});
