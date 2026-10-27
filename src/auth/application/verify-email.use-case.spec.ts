@@ -4,6 +4,7 @@ import { AuthTokenType } from '../domain/auth-token-type';
 import { UserAccount } from '../domain/user-account';
 import { Email } from '../domain/email';
 import {
+  AuthTokenAlreadyUsedError,
   AuthTokenNotFoundError,
   ExpiredAuthTokenError,
 } from '../domain/errors';
@@ -92,13 +93,29 @@ describe('VerifyEmailUseCase', () => {
     await expect(d.uc.execute('raw')).rejects.toThrow(ExpiredAuthTokenError);
   });
 
-  it('es idempotente ante un doble clic: token ya usado + cuenta ya verificada → éxito', async () => {
+  it('rechaza un token ya usado aunque la cuenta ya esté verificada', async () => {
     const d = deps({
       found: token({ usedAt: now }),
       user: account({ emailVerifiedAt: now }),
     });
-    await expect(d.uc.execute('raw')).resolves.toBeUndefined();
-    // No re-guarda al usuario ni re-consume el token: solo confirma el éxito.
+    await expect(d.uc.execute('raw')).rejects.toThrow(
+      AuthTokenAlreadyUsedError,
+    );
     expect(d.savedUsers).toHaveLength(0);
+  });
+
+  it('rechaza un token expirado aunque la cuenta ya esté verificada', async () => {
+    const d = deps({
+      found: token({ expiresAt: new Date(now.getTime() - 1000) }),
+      user: account({ emailVerifiedAt: now }),
+    });
+    await expect(d.uc.execute('raw')).rejects.toThrow(ExpiredAuthTokenError);
+  });
+
+  it('un token vigente de una cuenta ya verificada se consume sin error', async () => {
+    const d = deps({ user: account({ emailVerifiedAt: now }) });
+    await expect(d.uc.execute('raw')).resolves.toBeUndefined();
+    expect(d.savedUsers).toHaveLength(0);
+    expect(d.savedTokens[0].usedAt).toEqual(now);
   });
 });

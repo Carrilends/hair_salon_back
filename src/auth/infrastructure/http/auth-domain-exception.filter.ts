@@ -9,6 +9,9 @@ import {
 } from '@nestjs/common';
 import {
   AuthDomainError,
+  AuthTokenAlreadyUsedError,
+  AuthTokenNotFoundError,
+  ExpiredAuthTokenError,
   InactiveUserError,
   InvalidCredentialsError,
   InvalidRefreshTokenError,
@@ -46,6 +49,19 @@ export class AuthDomainExceptionFilter implements ExceptionFilter {
       http = new BadRequestException(error.message);
     }
     const res = host.switchToHttp().getResponse();
-    res.status(http.getStatus()).json(http.getResponse());
+    const code = this.tokenCode(error);
+    const body = http.getResponse();
+    // El estado sigue siendo 400; el `code` estable deja al portal decir por qué
+    // falló el enlace sin depender del texto del mensaje.
+    res
+      .status(http.getStatus())
+      .json(code && typeof body === 'object' ? { ...body, code } : body);
+  }
+
+  private tokenCode(error: AuthDomainError): string | undefined {
+    if (error instanceof AuthTokenAlreadyUsedError) return 'TOKEN_USADO';
+    if (error instanceof ExpiredAuthTokenError) return 'TOKEN_CADUCADO';
+    if (error instanceof AuthTokenNotFoundError) return 'TOKEN_INVALIDO';
+    return undefined;
   }
 }
