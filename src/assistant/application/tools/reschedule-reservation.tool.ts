@@ -14,6 +14,10 @@ import {
 import { ReservationActor } from 'src/reservations/domain/reservation-actor';
 import { actorDelContexto } from './identidad';
 import { instanteDelSalon } from '../salon-day';
+import { AssistantPresentation } from './assistant-presentation';
+
+/** Id de la nueva estilista por objeto-respuesta: no viaja al modelo. */
+const nuevaEstilista = new WeakMap<object, string>();
 
 /**
  * Contrato mínimo del caso de uso real de reprogramación. Como en la
@@ -25,7 +29,10 @@ export interface RescheduleReservationExecutor {
     id: string,
     scheduledAt: string,
     actor: ReservationActor,
-  ): Promise<{ reservation: { status: string }; workerChanged: boolean }>;
+  ): Promise<{
+    reservation: { status: string; workerId?: string };
+    workerChanged: boolean;
+  }>;
 }
 
 /**
@@ -56,9 +63,10 @@ export class RescheduleReservationTool implements AssistantTool {
       // condición la da `misReservas` en `estilistaElegida`. Avisar a quien
       // eligió sería preocuparla por algo que no puede pasarle.
       'Antes de llamarla, si la reserva viene con estilistaElegida en false, avisa a la clienta de que cambiar la hora puede significar que la atienda otra estilista y espera su confirmación. ' +
-      // Y el aviso posterior, solo si de verdad cambió. Genérico a propósito: el
-      // asistente no nombra estilistas (no tiene esa capacidad ni ese permiso).
-      'Si la respuesta trae estilistaCambio en true, dile que le reasignamos estilista; nunca digas nombres de estilistas.',
+      // Y el aviso posterior: la frase con la nueva estilista la presenta el
+      // sistema, aparte, solo si de verdad cambió (TC-RF54-01). El modelo no la
+      // repite ni la contradice ni habla de «posible» cambio ya hecho.
+      'Si la respuesta trae estilistaCambio en true, el sistema mostrará aparte quién la atenderá: no lo repitas ni nombres estilistas. Si trae false, no menciones otra estilista.',
     parameters: {
       type: 'object',
       properties: {
@@ -77,7 +85,39 @@ export class RescheduleReservationTool implements AssistantTool {
     },
   };
 
-  constructor(private readonly reschedule: RescheduleReservationExecutor) {}
+  constructor(
+    private readonly reschedule: RescheduleReservationExecutor,
+    // Nombre de la estilista por id, solo para la frase presentada. Opcional:
+    // sin él la frase dice «otra estilista».
+    private readonly nombreDeEstilista?: (id: string) => Promise<string | null>,
+  ) {}
+
+  /**
+   * TC-RF54-01: si la estilista cambió, la clienta lee una frase fija con su
+   * nombre; si no cambió, nada. El nombre no pasa por el resultado del modelo.
+   */
+  async presentar(result: unknown): Promise<AssistantPresentation | null> {
+    if (typeof result !== 'object' || result === null) return null;
+    const r = result as { ok?: boolean; estilistaCambio?: boolean };
+    if (r.ok !== true || r.estilistaCambio !== true) return null;
+    let nombre: string | null = null;
+    const id = nuevaEstilista.get(result);
+    if (id && this.nombreDeEstilista) {
+      try {
+        nombre = await this.nombreDeEstilista(id);
+      } catch {
+        nombre = null;
+      }
+    }
+    return {
+      tipo: 'texto',
+      lineas: [
+        nombre
+          ? `Te atenderá ${nombre}, otra estilista.`
+          : 'Te atenderá otra estilista.',
+      ],
+    };
+  }
 
   async execute(
     args: Record<string, unknown>,
@@ -111,11 +151,15 @@ export class RescheduleReservationTool implements AssistantTool {
       // Un sí/no, nunca un nombre: el chat no nombra estilistas. Sin este campo
       // el modelo no tendría cómo enterarse —`misReservas` tampoco proyecta
       // estilista— y la clienta lo sabría el día de la cita.
-      return {
+      const respuesta = {
         ok: true,
         estado: reservation.status,
         estilistaCambio: workerChanged,
       };
+      if (workerChanged && reservation.workerId) {
+        nuevaEstilista.set(respuesta, reservation.workerId);
+      }
+      return respuesta;
     } catch (error) {
       return { ok: false, motivo: mapRescheduleErrorToReason(error) };
     }

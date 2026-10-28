@@ -707,6 +707,44 @@ describe('SendMessageUseCase', () => {
     expect(res.presentaciones).toEqual([{ tipo: 'paquete', ...propuesta }]);
   });
 
+  it('en la web, el texto presentado va debajo de la respuesta, tal cual (TC-RF54-01)', async () => {
+    const tool = new FakePresentingTool('misReservas', {
+      lineas: ['1. Corte', '2. Tinte'],
+    });
+    const llm = new FakeLlmAdapter([
+      {
+        message: {
+          role: 'assistant',
+          content: '',
+          toolCalls: [{ id: 't1', name: 'misReservas', arguments: {} }],
+        },
+        usage: TokenUsage.of(10, 5),
+      },
+      {
+        message: { role: 'assistant', content: 'Estas son tus reservas.' },
+        usage: TokenUsage.of(10, 5),
+      },
+    ]);
+    const tool2 = Object.assign(tool, {
+      presentar: (r: any): AssistantPresentation => ({
+        tipo: 'texto',
+        lineas: r.lineas,
+      }),
+    });
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [tool2],
+    });
+
+    const res = await useCase.execute({
+      message: 'mis reservas',
+      userId: 'u1',
+    });
+
+    expect(res.reply).toBe('Estas son tus reservas.\n\n1. Corte\n2. Tinte');
+  });
+
   it('no surfacea nada si la herramienta devuelve un error', async () => {
     const tool = new FakePresentingTool('componerPaquete', {
       ok: false,

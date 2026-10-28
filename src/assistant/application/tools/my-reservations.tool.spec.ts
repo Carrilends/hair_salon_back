@@ -128,3 +128,77 @@ describe('MyReservationsTool', () => {
     ]);
   });
 });
+
+describe('MyReservationsTool · presentar (TC-RF54-01)', () => {
+  // 12 citas futuras, desordenadas, de la 1 (más próxima) a la 12.
+  const doce = Array.from({ length: 12 }, (_, i) =>
+    reserva({
+      id: `r${i + 1}`,
+      scheduledAt: new Date(Date.UTC(2026, 8, 1 + i, 15, 0)),
+      worker: { name: 'Monica' },
+    }),
+  ).reverse();
+
+  it('lista las diez más próximas, de la más cercana a la más lejana', async () => {
+    const tool = new MyReservationsTool(new FakeGetMine(doce) as never);
+
+    const res = (await tool.execute({}, ctx('u1'))) as Array<{ id: string }>;
+
+    expect(res.map((r) => r.id)).toEqual(
+      Array.from({ length: 10 }, (_, i) => `r${i + 1}`),
+    );
+  });
+
+  it('presenta una línea por cita y avisa de que hay más', async () => {
+    const tool = new MyReservationsTool(new FakeGetMine(doce) as never);
+    const p = await tool.presentar(await tool.execute({}, ctx('u1')));
+
+    if (p?.tipo !== 'texto') throw new Error('no es texto');
+    const citas = p.lineas.filter((l) => l.includes(' · '));
+    expect(citas).toHaveLength(10);
+    expect(citas[0]).toBe(
+      '1. martes, 1 de septiembre de 2026 · 10:00 · Corte, Peinado · con Monica',
+    );
+    expect(p.lineas[p.lineas.length - 1]).toBe(
+      'Tienes 2 reservas más: pídeme un día concreto.',
+    );
+  });
+
+  it('con diez o menos no dice que hay más, y sin estilista no inventa «con»', async () => {
+    const tool = new MyReservationsTool(
+      new FakeGetMine([
+        reserva({ scheduledAt: new Date('2026-08-20T14:00:00Z') }),
+      ]) as never,
+    );
+    const p = await tool.presentar(await tool.execute({}, ctx('u1')));
+
+    if (p?.tipo !== 'texto') throw new Error('no es texto');
+    expect(p.lineas.join('\n')).not.toMatch(/más|con /);
+  });
+
+  it('no cuenta las canceladas ni las pasadas, y no presenta errores ni vacíos', async () => {
+    const tool = new MyReservationsTool(
+      new FakeGetMine([
+        reserva({ status: 'cancelada' }),
+        reserva({ scheduledAt: new Date('2026-08-01T14:00:00Z') }),
+      ]) as never,
+    );
+    expect(await tool.presentar(await tool.execute({}, ctx('u1')))).toBeNull();
+    expect(
+      await tool.presentar({ ok: false, motivo: 'sesion_requerida' }),
+    ).toBeNull();
+  });
+
+  it('no filtra teléfonos ni correos', async () => {
+    const tool = new MyReservationsTool(
+      new FakeGetMine([
+        reserva({
+          contact: { phone: '3001112233', email: 'a@b.co' },
+          worker: { name: 'Monica' },
+        }),
+      ]) as never,
+    );
+    const p = await tool.presentar(await tool.execute({}, ctx('u1')));
+    expect(JSON.stringify(p)).not.toMatch(/3001112233|a@b\.co/);
+  });
+});

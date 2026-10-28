@@ -311,3 +311,20 @@ describe('mensajesDeLaRespuesta · agenda de la dueña', () => {
     expect(ms.some((m) => m.kind === 'interactive-buttons')).toBe(false);
   });
 });
+
+describe('mensajesDeLaRespuesta · texto presentado', () => {
+  it('envía las líneas de una presentación de texto, partidas en 4096', () => {
+    const lineas = Array.from(
+      { length: 200 },
+      (_, i) => `${i + 1}. ${'x'.repeat(40)} · Corte · con Monica`,
+    );
+    const ms = mensajesDeLaRespuesta(
+      { reply: 'Estas son.', presentaciones: [{ tipo: 'texto', lineas }] },
+      TO,
+      null,
+    );
+    const t = textos(ms).slice(1);
+    expect(t.every((x) => x.length <= 4096)).toBe(true);
+    expect(t.join('\n').split('\n')).toEqual(lineas);
+  });
+});

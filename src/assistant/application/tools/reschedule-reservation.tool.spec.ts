@@ -247,3 +247,58 @@ describe('mapRescheduleErrorToReason', () => {
     expect(uc.calls[0].scheduledAt).toBe('2026-04-21T16:00:00.000Z');
   });
 });
+
+describe('RescheduleReservationTool · frase de la nueva estilista (TC-RF54-01)', () => {
+  const args = { reservaId: 'r1', nuevaFecha: '2026-04-21T16:00:00.000Z' };
+  const montar = (workerChanged: boolean) => {
+    const uc = {
+      execute: async () => ({
+        reservation: { status: 'pendiente', workerId: 'w-2' },
+        workerChanged,
+      }),
+    };
+    return new RescheduleReservationTool(uc as never, async (id: string) =>
+      id === 'w-2' ? 'Alejandra' : null,
+    );
+  };
+
+  it('si cambió la estilista presenta una frase fija con su nombre', async () => {
+    const tool = montar(true);
+    const res = await tool.execute(args, ctx('u1'));
+    const p = await tool.presentar(res);
+
+    if (p?.tipo !== 'texto') throw new Error('no es texto');
+    expect(p.lineas).toEqual(['Te atenderá Alejandra, otra estilista.']);
+    // el resultado para el modelo sigue sin nombres
+    expect(JSON.stringify(res)).not.toMatch(/Alejandra/);
+  });
+
+  it('si no cambió no presenta nada sobre otra estilista', async () => {
+    const tool = montar(false);
+    expect(
+      await tool.presentar(await tool.execute(args, ctx('u1'))),
+    ).toBeNull();
+  });
+
+  it('sin nombre disponible, la frase sigue siendo cierta', async () => {
+    const uc = {
+      execute: async () => ({
+        reservation: { status: 'pendiente', workerId: 'w-9' },
+        workerChanged: true,
+      }),
+    };
+    const tool = new RescheduleReservationTool(uc as never, async () => {
+      throw new Error('x');
+    });
+    const p = await tool.presentar(await tool.execute(args, ctx('u1')));
+    if (p?.tipo !== 'texto') throw new Error('no es texto');
+    expect(p.lineas).toEqual(['Te atenderá otra estilista.']);
+  });
+
+  it('un error no se presenta', async () => {
+    const tool = montar(true);
+    expect(
+      await tool.presentar({ ok: false, motivo: 'hora_ocupada' }),
+    ).toBeNull();
+  });
+});

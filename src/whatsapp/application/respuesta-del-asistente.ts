@@ -118,7 +118,7 @@ export function mensajesDeLaRespuesta(
   // RF59 c1: la agenda de la dueña va tal cual, una línea por cita; el texto del
   // modelo de arriba solo la introduce.
   for (const p of respuesta.presentaciones) {
-    if (p.tipo === 'agenda') {
+    if (p.tipo === 'agenda' || p.tipo === 'texto') {
       for (const parte of partirLineas(p.lineas)) {
         mensajes.push({ kind: 'text', to, body: parte });
       }

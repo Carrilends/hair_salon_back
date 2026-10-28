@@ -6,6 +6,7 @@ import { WHATSAPP_SENDER } from 'src/notifications/application/tokens';
 import { WhatsAppSenderPort } from 'src/notifications/domain/ports/whatsapp-sender.port';
 import { WhatsAppOwnerContactAdapter } from './infrastructure/whatsapp/owner-contact.adapter';
 import { WorkersModule } from 'src/workers/workers.module';
+import { WorkersService } from 'src/workers/workers.service';
 import { ReservationsModule } from 'src/reservations/reservations.module';
 import { CreateReservationUseCase } from 'src/reservations/application/create-reservation.use-case';
 import { GetMyReservationsUseCase } from 'src/reservations/application/get-my-reservations.use-case';
@@ -269,6 +270,7 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
         RescheduleReservationUseCase,
         JUDGMENT,
         JUDGMENT_SETTINGS,
+        WorkersService,
       ],
     },
     {

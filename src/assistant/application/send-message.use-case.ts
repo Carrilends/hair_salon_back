@@ -455,6 +455,17 @@ export class SendMessageUseCase {
       presentaciones = [];
     }
 
+    // TC-RF54-01: el texto presentado (lista de reservas, estilista nueva) va
+    // debajo de la respuesta tal cual. En WhatsApp lo envía el adaptador como
+    // mensaje aparte; en la web no hay otro lugar donde pintarlo.
+    if (!porWhatsApp) {
+      const aparte = presentaciones
+        .filter((p) => p.tipo === 'texto')
+        .map((p) => (p.tipo === 'texto' ? p.lineas.join('\n') : ''))
+        .join('\n\n');
+      if (aparte) reply = `${reply}\n\n${aparte}`;
+    }
+
     // Historia durable: el mensaje de la clienta y la respuesta final. El
     // consumo se imputa a la respuesta, que es la fila que lo causó; el mensaje
     // de la clienta se guarda sin nada que cobrar.

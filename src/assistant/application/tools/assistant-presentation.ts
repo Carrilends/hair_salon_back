@@ -22,7 +22,8 @@ export type AssistantPresentation =
   | ConfirmBookingPresentation
   | ConfirmCancelPresentation
   | ConfirmReschedulePresentation
-  | AgendaPresentation;
+  | AgendaPresentation
+  | TextoPresentation;
 
 /** Propuesta de paquete de evento, tal como la compone `componerPaquete`. */
 export interface PackagePresentation {
@@ -113,4 +114,15 @@ export interface AgendaPresentation {
   /** Encabezado de cada día y, debajo, `10:00 · clienta · servicios · con estilista`. */
   lineas: string[];
   hayMas: boolean;
+}
+
+/**
+ * Texto que la clienta debe leer **tal cual**, sin pasar por el resumen del
+ * modelo: la lista de sus reservas (TC-RF54-01) o la frase de la estilista que
+ * la atenderá. Una línea por elemento. En la web el caso de uso lo añade debajo
+ * de la respuesta; en WhatsApp se envía como mensaje aparte.
+ */
+export interface TextoPresentation {
+  tipo: 'texto';
+  lineas: string[];
 }
