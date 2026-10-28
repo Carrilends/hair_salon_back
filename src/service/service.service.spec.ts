@@ -126,6 +126,19 @@ describe('ServiceService', () => {
       );
     });
 
+    it('un servicio sin imágenes no llama a Cloudinary', async () => {
+      serviceRepo.findOne.mockResolvedValue({
+        id: 's-1',
+        images: [],
+        detail: null,
+      });
+
+      await service.remove('s-1');
+
+      expect(cloudinary.deleteAssets).not.toHaveBeenCalled();
+      expect(serviceRepo.delete).toHaveBeenCalledWith('s-1');
+    });
+
     it('uno que no existe responde «no encontrado», no 500', async () => {
       serviceRepo.findOne.mockResolvedValue(null);
 

@@ -172,7 +172,8 @@ export class ServiceService {
       throw new NotFoundException(`Service with id ${id} not found`);
     }
     const images = serviceWithRelations.images.map((img) => img.publicId);
-    await this.cloudinaryService.deleteAssets(images);
+    // Sin imágenes no hay nada que borrar: no se llama a Cloudinary con una lista vacía.
+    if (images.length) await this.cloudinaryService.deleteAssets(images);
     await this.serviceRepository.delete(id);
     if (serviceWithRelations.detail) {
       await this.detailRepository.delete(serviceWithRelations.detail.id);
