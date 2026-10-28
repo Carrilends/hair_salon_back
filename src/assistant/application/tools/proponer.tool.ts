@@ -64,7 +64,14 @@ async function citaParaConfirmar(
 ): Promise<{ cita: CitaAConfirmar } | { motivo: string }> {
   const actor = actorDelContexto(context);
   if (!actor) return { motivo: 'sesion_requerida' };
-  const reserva = await citas.execute(id);
+  // Si la base no responde, un motivo y no una excepción: la excepción subiría
+  // por el bucle del asistente y el turno entero se perdería (revisión final).
+  let reserva: Reservation | null;
+  try {
+    reserva = await citas.execute(id);
+  } catch {
+    return { motivo: 'error_desconocido' };
+  }
   if (!reserva) return { motivo: 'reserva_no_encontrada' };
   try {
     assertCanActOn(reserva, actor);

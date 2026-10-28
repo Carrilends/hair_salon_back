@@ -23,6 +23,22 @@ describe('SYSTEM_PROMPT', () => {
     expect(SYSTEM_PROMPT).not.toMatch(/\*\*|^\s*[*-]\s/m);
   });
 
+  it('no se dirige a la clienta por ningún nombre: el modelo no recibe el de la sesión', () => {
+    // Decía «solo por el nombre de su sesión», pero ese nombre no le llega
+    // nunca: la regla prometía un dato que no existe.
+    expect(SYSTEM_PROMPT).not.toMatch(/nombre de su sesión/i);
+    expect(SYSTEM_PROMPT).toMatch(
+      /no te dirijas a la clienta por ningún nombre/i,
+    );
+  });
+
+  it('dice que la confirmación de cancelar o mover la escribe el sistema, aparte', () => {
+    const regla = lineas.find((l) => /confirmación/i.test(l));
+    expect(regla).toBeDefined();
+    expect(regla).toMatch(/cancel/i);
+    expect(regla).toMatch(/no la contradigas/i);
+  });
+
   it('sigue siendo constante: ni fecha ni catálogo incrustados (NF12)', () => {
     // El prompt caching se pierde si el prefijo cambia entre llamadas. Las
     // categorías sí se incrustan, pero son una lista fija y corta.

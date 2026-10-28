@@ -50,6 +50,15 @@ export interface AssistantContext {
    * convierte en un `userId` (D1).
    */
   phoneE164?: string;
+  /**
+   * Citas que en ESTE turno recibieron `no_coincide_con_lo_pedido` (revisión
+   * final, M-203). Lo crea vacío **solo** el bucle del asistente, una vez por
+   * turno: cancelar o mover esa cita otra vez en el mismo turno responde
+   * `confirmar_con_la_clienta` sin escribir, porque el modelo ya sabe su hora
+   * real y la clienta todavía no ha dicho que sea esa. MCP no lo pone: allí
+   * cada llamada es una petición de quien conecta, sin conversación.
+   */
+  citasQueNoCoincidieron?: Set<string>;
 }
 
 /**

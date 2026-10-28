@@ -1719,3 +1719,290 @@ describe('SendMessageUseCase', () => {
     expect(messages[1].content).toContain('2026-08-19');
   });
 });
+
+/**
+ * Revisión final, puntos 1–3: lo que la clienta lee, lo que se guarda y lo que
+ * sobrevive a un turno que acaba mal.
+ */
+describe('SendMessageUseCase · texto del sistema e historial (revisión final)', () => {
+  /** Herramienta que devuelve un resultado distinto en cada llamada. */
+  class Guionada implements AssistantTool {
+    readonly definition: LlmToolDefinition;
+    contextos: AssistantContext[] = [];
+    private i = 0;
+    constructor(
+      readonly name: string,
+      private readonly resultados: unknown[],
+      private readonly presentarCon?: (
+        r: unknown,
+      ) => AssistantPresentation | null,
+    ) {
+      this.definition = {
+        name,
+        description: 'x',
+        parameters: {
+          type: 'object',
+          properties: {},
+          additionalProperties: false,
+        },
+      };
+    }
+    async execute(
+      _a: Record<string, unknown>,
+      context: AssistantContext,
+    ): Promise<unknown> {
+      this.contextos.push(context);
+      return this.resultados[Math.min(this.i++, this.resultados.length - 1)];
+    }
+    presentar(r: unknown): AssistantPresentation | null {
+      return this.presentarCon ? this.presentarCon(r) : null;
+    }
+  }
+  const lista = (r: unknown): AssistantPresentation => ({
+    tipo: 'texto',
+    lineas: (r as { lineas: string[] }).lineas,
+    clase: 'lista',
+  });
+  const escritura = (r: unknown): AssistantPresentation | null =>
+    (r as { ok?: boolean }).ok === true
+      ? {
+          tipo: 'texto',
+          lineas: [(r as { linea: string }).linea],
+          clase: 'escritura',
+          enElHistorial: (r as { historial: string }).historial,
+        }
+      : null;
+  const llamada = (
+    id: string,
+    name: string,
+    args: Record<string, unknown> = {},
+  ) => ({
+    message: {
+      role: 'assistant' as const,
+      content: '',
+      toolCalls: [{ id, name, arguments: args }],
+    },
+    usage: TokenUsage.of(10, 5),
+  });
+  const final = (content: string) => ({
+    message: { role: 'assistant' as const, content },
+    usage: TokenUsage.of(10, 5),
+  });
+  const guardada = (repo: FakeRepo) =>
+    repo.saved!.messages.filter((m) => m.role === 'assistant').pop()!.content;
+
+  it('una herramienta que lanza no tumba el turno: el modelo recibe error_desconocido', async () => {
+    const rota: AssistantTool = {
+      name: 'cancelarReserva',
+      definition: {
+        name: 'cancelarReserva',
+        description: 'x',
+        parameters: { type: 'object', properties: {} },
+      },
+      execute: async () => {
+        throw new Error('invalid input syntax for type uuid: "3"');
+      },
+    };
+    const llm = new FakeLlmAdapter([
+      llamada('t1', 'cancelarReserva', { reservaId: '3' }),
+      final('No encontré esa cita.'),
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [rota] });
+
+    const res = await useCase.execute({
+      message: 'cancela la 3',
+      userId: 'u1',
+    });
+
+    expect(res.reply).toBe('No encontré esa cita.');
+    const herramienta = llm.calls[1].messages.find((m) => m.role === 'tool');
+    expect(JSON.parse(herramienta!.content)).toEqual({
+      ok: false,
+      motivo: 'error_desconocido',
+    });
+    expect(JSON.stringify(llm.calls[1].messages)).not.toMatch(/uuid/);
+  });
+
+  it('la lista se muestra a la clienta pero NO se guarda en el historial: solo una marca', async () => {
+    const tool = new Guionada(
+      'misReservas',
+      [{ lineas: ['1. a', '2. b'] }],
+      lista,
+    );
+    const llm = new FakeLlmAdapter([
+      llamada('t1', 'misReservas'),
+      final('Estas son tus reservas.'),
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [tool] });
+
+    const res = await useCase.execute({
+      message: 'mis reservas',
+      userId: 'u1',
+    });
+
+    expect(res.reply).toBe('Estas son tus reservas.\n\n1. a\n2. b');
+    expect(guardada(repo)).toBe(
+      'Estas son tus reservas.\n\n[Se le mostró aparte la lista de sus reservas.]',
+    );
+  });
+
+  it('dos listas en un turno: solo se muestra la última', async () => {
+    const tool = new Guionada(
+      'misReservas',
+      [{ lineas: ['1. diez próximas'] }, { lineas: ['1. las del día'] }],
+      lista,
+    );
+    const llm = new FakeLlmAdapter([
+      llamada('t1', 'misReservas'),
+      llamada('t2', 'misReservas', { fecha: '2026-11-05' }),
+      final('Aquí están.'),
+    ]);
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [tool],
+    });
+
+    const res = await useCase.execute({
+      message: 'mis reservas',
+      userId: 'u1',
+    });
+
+    expect(res.reply).toBe('Aquí están.\n\n1. las del día');
+    expect(res.presentaciones).toHaveLength(1);
+  });
+
+  it('si en el turno se canceló algo, la lista (ya vieja) no se muestra y la confirmación sí', async () => {
+    const mis = new Guionada(
+      'misReservas',
+      [{ lineas: ['1. a las 11'] }],
+      lista,
+    );
+    const cancelar = new Guionada(
+      'cancelarReserva',
+      [
+        {
+          ok: true,
+          linea: 'Cancelé tu cita de las 11.',
+          historial: 'Cancelé tu cita de las 11.',
+        },
+      ],
+      escritura,
+    );
+    const llm = new FakeLlmAdapter([
+      llamada('t1', 'misReservas'),
+      llamada('t2', 'cancelarReserva'),
+      final('Listo.'),
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [mis, cancelar] });
+
+    const res = await useCase.execute({
+      message: 'cancela la de las 11',
+      userId: 'u1',
+    });
+
+    expect(res.reply).toBe('Listo.\n\nCancelé tu cita de las 11.');
+    expect(res.presentaciones).toEqual([
+      {
+        tipo: 'texto',
+        lineas: ['Cancelé tu cita de las 11.'],
+        clase: 'escritura',
+      },
+    ]);
+    // lo que se guarda es lo del sistema, sin la lista
+    expect(guardada(repo)).toBe(
+      'Listo.\n\n[Mostrado aparte: Cancelé tu cita de las 11.]',
+    );
+  });
+
+  it('el historial guarda la confirmación sin el nombre de la estilista', async () => {
+    const mover = new Guionada(
+      'reprogramarReserva',
+      [
+        {
+          ok: true,
+          linea:
+            'Tu cita quedó a las 15:00; te atenderá Estilista Uno, otra estilista.',
+          historial: 'Tu cita quedó a las 15:00; te atenderá otra estilista.',
+        },
+      ],
+      escritura,
+    );
+    const llm = new FakeLlmAdapter([
+      llamada('t1', 'reprogramarReserva'),
+      final('Hecho.'),
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [mover] });
+
+    const res = await useCase.execute({ message: 'muévela', userId: 'u1' });
+
+    expect(res.reply).toContain('Estilista Uno');
+    expect(guardada(repo)).not.toContain('Estilista Uno');
+    expect(guardada(repo)).toContain('te atenderá otra estilista');
+  });
+
+  it('si el turno acaba en cortesía, la confirmación de lo que sí se escribió se conserva', async () => {
+    const cancelar = new Guionada(
+      'cancelarReserva',
+      [
+        {
+          ok: true,
+          linea: 'Cancelé tu cita de las 11.',
+          historial: 'Cancelé tu cita de las 11.',
+        },
+      ],
+      escritura,
+    );
+    const otra = new FakeTool('listarServicios', [{ id: 's1' }]);
+    // cancela y luego se queda pidiendo lo mismo hasta que el bucle corta
+    const script: LlmCompletion[] = [
+      llamada('t1', 'cancelarReserva'),
+      ...Array.from({ length: 5 }, () => llamada('t', 'listarServicios')),
+    ];
+    const llm = new FakeLlmAdapter(script);
+    const useCase = makeUseCase({
+      llm,
+      repo: new FakeRepo(null),
+      tools: [cancelar, otra],
+    });
+
+    const res = await useCase.execute({
+      message: 'cancela y dime precios',
+      userId: 'u1',
+    });
+
+    expect(res.reply).toContain('Cancelé tu cita de las 11.');
+    expect(res.reply).not.toMatch(/^Disculpa, no logré completar la solicitud/);
+    expect(res.presentaciones).toEqual([
+      {
+        tipo: 'texto',
+        lineas: ['Cancelé tu cita de las 11.'],
+        clase: 'escritura',
+      },
+    ]);
+  });
+
+  it('cada turno trae su propio registro de citas rechazadas, vacío', async () => {
+    const tool = new Guionada('cancelarReserva', [{ ok: false }]);
+    const llm = new FakeLlmAdapter([
+      llamada('t1', 'cancelarReserva'),
+      final('¿Cuál?'),
+      llamada('t2', 'cancelarReserva'),
+      final('¿Cuál?'),
+    ]);
+    const repo = new FakeRepo(null);
+    const useCase = makeUseCase({ llm, repo, tools: [tool] });
+
+    await useCase.execute({ message: 'cancela', userId: 'u1' });
+    tool.contextos[0].citasQueNoCoincidieron!.add('r1');
+    await useCase.execute({ message: 'cancela', userId: 'u1' });
+
+    expect(tool.contextos[0].citasQueNoCoincidieron).toBeInstanceOf(Set);
+    expect(tool.contextos[1].citasQueNoCoincidieron).toBeInstanceOf(Set);
+    expect(tool.contextos[1].citasQueNoCoincidieron!.size).toBe(0);
+  });
+});

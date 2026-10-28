@@ -292,6 +292,37 @@ describe('cancelarReserva en WhatsApp: propone el botón de cancelar', () => {
   });
 });
 
+describe('si la lectura de la cita falla, no se pierde el turno (revisión final)', () => {
+  const caida = {
+    execute: async () => {
+      throw new Error('conexión perdida');
+    },
+  };
+
+  it('cancelar responde un motivo en vez de lanzar', async () => {
+    const tool = new ProposeCancelTool(
+      { ...DEF, name: 'cancelarReserva' },
+      { citas: caida },
+    );
+    await expect(
+      tool.execute({ reservaId: RID, ...LA_CITA }, clienta),
+    ).resolves.toEqual({ ok: false, motivo: 'error_desconocido' });
+  });
+
+  it('mover responde un motivo en vez de lanzar', async () => {
+    const tool = new ProposeRescheduleTool(
+      { ...DEF, name: 'reprogramarReserva' },
+      { citas: caida },
+    );
+    await expect(
+      tool.execute(
+        { reservaId: RID, nuevaFecha: '2026-10-21T10:00:00', ...LA_CITA },
+        clienta,
+      ),
+    ).resolves.toEqual({ ok: false, motivo: 'error_desconocido' });
+  });
+});
+
 describe('reprogramarReserva en WhatsApp: propone el botón de mover', () => {
   const tool = new ProposeRescheduleTool(
     { ...DEF, name: 'reprogramarReserva' },

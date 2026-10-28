@@ -27,6 +27,11 @@ export interface ListActiveReservationsExecutor {
 /** Tope de citas por respuesta: lo que se devuelve se paga en tokens (§6.2). */
 const MAX_CITAS = 15;
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
+/**
+ * Citas que el tope dejó fuera de un día pedido. Viaja por identidad de objeto,
+ * solo para la línea presentada: el modelo no la necesita.
+ */
+const fueraDelDia = new WeakMap<object, number>();
 
 /**
  * `verAgenda` (plan 06, F3b): la agenda de la peluquería, **solo para la dueña
@@ -87,7 +92,10 @@ export class ViewAgendaTool implements AssistantTool {
       );
     }
     const hayMas = r.hayMas === true;
-    if (hayMas) lineas.push(HAY_MAS);
+    if (hayMas) {
+      const restantes = fueraDelDia.get(result as object);
+      lineas.push(restantes === undefined ? HAY_MAS : hayMasEseDia(restantes));
+    }
     return { tipo: 'agenda', lineas, hayMas };
   }
 
@@ -111,7 +119,7 @@ export class ViewAgendaTool implements AssistantTool {
       ? todas.filter((r) => fechaDelSalon(r.scheduledAt) === fecha)
       : todas;
 
-    return {
+    const respuesta = {
       ok: true,
       citas: delDia.slice(0, MAX_CITAS).map((r) => ({
         id: r.id,
@@ -128,11 +136,25 @@ export class ViewAgendaTool implements AssistantTool {
       })),
       ...(delDia.length > MAX_CITAS ? { hayMas: true } : {}),
     };
+    // Con un día ya pedido, «pídeme un día» no lleva a ninguna parte: el tope
+    // se queda (RF59) y la línea manda a la bandeja del portal, que las lista
+    // todas.
+    if (fecha && delDia.length > MAX_CITAS) {
+      fueraDelDia.set(respuesta, delDia.length - MAX_CITAS);
+    }
+    return respuesta;
   }
 }
 
-/** Línea final cuando el tope dejó citas fuera. */
+/** Línea final cuando el tope dejó citas fuera y no se pidió un día. */
 const HAY_MAS = 'Hay más citas: pídeme un día concreto.';
+
+/** Línea final cuando el tope dejó fuera citas del día pedido. */
+function hayMasEseDia(n: number): string {
+  return n === 1
+    ? 'Ese día hay 1 cita más; la ves en la bandeja del portal.'
+    : `Ese día hay ${n} citas más; las ves todas en la bandeja del portal.`;
+}
 
 /**
  * Cita tal como la devuelve `execute`, para presentarla.

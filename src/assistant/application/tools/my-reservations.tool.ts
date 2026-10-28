@@ -11,6 +11,10 @@ interface MiLinea {
 const estilistas = new WeakMap<object, string>();
 const totales = new WeakMap<object, number>();
 const porWhatsApp = new WeakSet<object>();
+/** Listas de un día pedido (`fecha`): el modelo las recibe enteras. */
+const deUnDia = new WeakSet<object>();
+/** RF54 c1: la clienta lee como mucho diez líneas, se pida un día o no. */
+const MAX_LINEAS = 10;
 
 /**
  * Forma mínima de reserva que la herramienta proyecta. El read model real de
@@ -96,15 +100,29 @@ export class MyReservationsTool implements AssistantTool {
     const lista = result as Array<MiLinea> | { ok?: boolean };
     if (!Array.isArray(lista) || lista.length === 0) return null;
     const enTotal = totales.get(lista) ?? lista.length;
-    const lineas = lista.map((r, i) => {
+    // Con día pedido el modelo tiene todas las del día (para encontrar la que
+    // la clienta nombra), pero lo que ella lee sigue acotado a diez.
+    const visibles = lista.slice(0, MAX_LINEAS);
+    const lineas = visibles.map((r, i) => {
       const estilista = estilistas.get(r);
       return (
         `${i + 1}. ${r.fecha} · ${r.hora} · ${r.servicios.join(', ')}` +
         (estilista ? ` · con ${estilista}` : '')
       );
     });
-    if (enTotal > lista.length) {
-      const mas = enTotal - lista.length;
+    if (enTotal > visibles.length && deUnDia.has(lista)) {
+      const mas = enTotal - visibles.length;
+      lineas.push(
+        `Ese día tienes ${mas} ${mas === 1 ? 'reserva más' : 'reservas más'}` +
+          // Lo que existe: en la web, «Mis reservas» las lista todas; por
+          // WhatsApp no hay portal para un número, pero el modelo recibió las
+          // de ese día enteras y puede responder por la que busca.
+          (porWhatsApp.has(lista)
+            ? '; pregúntame por la que buscas.'
+            : '; puedes verlas todas en «Mis reservas» del portal.'),
+      );
+    } else if (enTotal > visibles.length) {
+      const mas = enTotal - visibles.length;
       lineas.push(
         `Tienes ${mas} ${mas === 1 ? 'reserva más' : 'reservas más'}` +
           // Solo lo que existe: la web lista todas en «Mis reservas»; por
@@ -115,7 +133,7 @@ export class MyReservationsTool implements AssistantTool {
             : '; puedes verlas todas en «Mis reservas» del portal.'),
       );
     }
-    return { tipo: 'texto', lineas };
+    return { tipo: 'texto', lineas, clase: 'lista' };
   }
 
   async execute(
@@ -143,7 +161,8 @@ export class MyReservationsTool implements AssistantTool {
       )
       .filter((r) => dia === undefined || fechaDelSalon(r.scheduledAt) === dia)
       .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
-    // Con día: todas las de ese día, sin tope. Sin día: las diez más próximas.
+    // Con día: todas las de ese día, sin tope (la presentación sí lo tiene).
+    // Sin día: las diez más próximas.
     const tope = dia === undefined ? 10 : proximas.length;
 
     // Proyección compacta (§6.2): solo lo que hace falta para conversar. Se limita
@@ -170,6 +189,7 @@ export class MyReservationsTool implements AssistantTool {
       if (r.worker?.name) estilistas.set(proyectadas[i], r.worker.name);
     });
     totales.set(proyectadas, proximas.length);
+    if (dia !== undefined) deUnDia.add(proyectadas);
     if (context.canal === 'whatsapp') porWhatsApp.add(proyectadas);
     return proyectadas;
   }

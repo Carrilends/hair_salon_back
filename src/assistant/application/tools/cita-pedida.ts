@@ -62,10 +62,29 @@ export function esLaCitaPedida(
   );
 }
 
+/** Forma de los ids de reserva (la columna es `uuid`). */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Lo que la guardia responde en lugar de dejar escribir. */
+export type RechazoDeLaCita =
+  | { ok: false; motivo: 'argumentos_invalidos' | 'reserva_no_encontrada' }
+  | {
+      ok: false;
+      motivo: 'no_coincide_con_lo_pedido';
+      /** La cita que tiene ese id, para preguntarle a la clienta si es esa. */
+      laCitaConEseId: { fecha: string; hora: string };
+      queHacer: string;
+    }
+  | { ok: false; motivo: 'confirmar_con_la_clienta'; queHacer: string };
+
+/** Qué iba a hacerse con la cita: cambia solo la indicación al modelo. */
+export type AccionSobreLaCita = 'cancelar' | 'mover';
+
 /**
  * Guardia de conversación (TC-RF54-02, M-197): cancelar o mover solo procede
  * sobre la cita que la clienta nombró. Si el día o la hora que dijo no son los
- * de la cita con ese id, no se escribe nada y el modelo recibe un motivo claro.
+ * de la cita con ese id, no se escribe nada y el modelo recibe un motivo claro,
+ * la cita que tiene ese id y la indicación de preguntarle a la clienta.
  * No es una regla de dominio (la propiedad y los plazos los sigue decidiendo el
  * caso de uso): evita que el modelo sustituya una cita por otra «parecida».
  *
@@ -74,18 +93,60 @@ export function esLaCitaPedida(
  * caso de uso responde `no_es_tu_reserva` igual acierte o no el día y la hora;
  * si se comparase antes, la diferencia entre las dos respuestas revelaría el
  * día y la hora exactos de reservas de otras personas (sobre todo por MCP).
+ * Por la misma razón, el día y la hora de la cita solo viajan en el rechazo de
+ * una cita propia (o de administración).
  *
  * Un id que no existe tampoco se juzga aquí: el caso de uso responde por él.
+ *
+ * Revisión final:
+ * - Si la lectura falla, la guardia no tumba el turno. Con un id sin forma de
+ *   UUID (el modelo escribió «3», el número de la línea) la respuesta es
+ *   `reserva_no_encontrada`: ninguna reserva puede tener ese id. Con uno válido
+ *   (la base no respondió) deja que el caso de uso responda.
+ * - Con `citasQueNoCoincidieron` (solo el bucle del asistente lo pone), una
+ *   cita que ya fue rechazada en este turno no se cancela ni se mueve otra vez
+ *   en el mismo turno, aunque ahora el día y la hora sean los suyos (M-203):
+ *   el modelo los acaba de leer en el rechazo, no de la clienta.
  */
-export async function citaNoCoincide(
+export async function comprobarCitaPedida(
   args: Record<string, unknown>,
   id: string,
   leer: LectorDeCita,
   actor: ReservationActor,
-): Promise<'argumentos_invalidos' | 'no_coincide_con_lo_pedido' | null> {
+  accion: AccionSobreLaCita,
+  rechazadasEnElTurno?: Set<string>,
+): Promise<RechazoDeLaCita | null> {
+  if (rechazadasEnElTurno?.has(id)) {
+    return {
+      ok: false,
+      motivo: 'confirmar_con_la_clienta',
+      queHacer:
+        `No ${accion === 'cancelar' ? 'canceles' : 'muevas'} esta cita en este turno: ` +
+        'pregúntale a la clienta si es esa la cita y espera su respuesta.',
+    };
+  }
   const pedida = leerCitaPedida(args);
-  if (!pedida) return 'argumentos_invalidos';
-  const cita = await leer(id);
+  if (!pedida) return { ok: false, motivo: 'argumentos_invalidos' };
+  let cita: Reservation | null;
+  try {
+    cita = await leer(id);
+  } catch {
+    return UUID.test(id)
+      ? null
+      : { ok: false, motivo: 'reserva_no_encontrada' };
+  }
   if (!cita || !canActOn(cita, actor)) return null;
-  return esLaCitaPedida(cita, pedida) ? null : 'no_coincide_con_lo_pedido';
+  if (esLaCitaPedida(cita, pedida)) return null;
+
+  rechazadasEnElTurno?.add(id);
+  const { fecha, hora } = fechaYHoraEnPalabras(cita.scheduledAt.toISOString());
+  return {
+    ok: false,
+    motivo: 'no_coincide_con_lo_pedido',
+    laCitaConEseId: { fecha, hora },
+    queHacer:
+      accion === 'cancelar'
+        ? 'No se canceló nada. Pregúntale a la clienta cuál de sus citas quiere cancelar (por ejemplo, si es esta); no la canceles en este turno.'
+        : 'No se movió nada. Pregúntale a la clienta cuál de sus citas quiere mover (por ejemplo, si es esta), y repite en la pregunta la hora nueva que pidió; no la muevas en este turno.',
+  };
 }

@@ -135,6 +135,40 @@ describe('verAgenda', () => {
     expect(r.citas).toHaveLength(15);
     expect(r.hayMas).toBe(true);
   });
+
+  it('con un día pedido, el tope sigue en 15 y el aviso no vuelve a pedir un día (RF59)', async () => {
+    const muchas = Array.from({ length: 18 }, (_, i) =>
+      vista({ id: `r-${i}` }),
+    );
+    const t = new ViewAgendaTool({ execute: async () => muchas as never });
+
+    const r = await t.execute({ fecha: '2026-10-14' }, duena);
+    const p = await t.presentar(r);
+
+    if (p?.tipo !== 'agenda') throw new Error('no es agenda');
+    expect(p.lineas.filter((l) => l.includes(' · '))).toHaveLength(15);
+    expect(p.hayMas).toBe(true);
+    expect(p.lineas[p.lineas.length - 1]).toBe(
+      'Ese día hay 3 citas más; las ves todas en la bandeja del portal.',
+    );
+    expect(p.lineas.join('\n')).not.toMatch(/pídeme un día/);
+  });
+
+  it('con un día pedido y una sola cita de más, lo dice en singular', async () => {
+    const muchas = Array.from({ length: 16 }, (_, i) =>
+      vista({ id: `r-${i}` }),
+    );
+    const t = new ViewAgendaTool({ execute: async () => muchas as never });
+
+    const p = await t.presentar(
+      await t.execute({ fecha: '2026-10-14' }, duena),
+    );
+
+    if (p?.tipo !== 'agenda') throw new Error('no es agenda');
+    expect(p.lineas[p.lineas.length - 1]).toBe(
+      'Ese día hay 1 cita más; la ves en la bandeja del portal.',
+    );
+  });
 });
 
 describe('confirmarReserva', () => {

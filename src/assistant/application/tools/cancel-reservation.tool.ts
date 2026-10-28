@@ -12,9 +12,14 @@ import { ReservationActor } from 'src/reservations/domain/reservation-actor';
 import { actorDelContexto } from './identidad';
 import {
   ARGUMENTOS_DE_LA_CITA,
-  citaNoCoincide,
+  comprobarCitaPedida,
   LectorDeCita,
 } from './cita-pedida';
+import { AssistantPresentation } from './assistant-presentation';
+import { fechaYHoraEnPalabras } from '../salon-day';
+
+/** Inicio de la cita cancelada, por objeto-respuesta: no viaja al modelo. */
+const citaCancelada = new WeakMap<object, Date>();
 
 /**
  * Contrato mínimo del caso de uso real de cancelación (A6). El actor lleva la
@@ -23,7 +28,10 @@ import {
  * número que firma Meta.
  */
 export interface CancelReservationExecutor {
-  execute(id: string, actor: ReservationActor): Promise<{ status: string }>;
+  execute(
+    id: string,
+    actor: ReservationActor,
+  ): Promise<{ status: string; scheduledAt?: Date }>;
 }
 
 /**
@@ -42,13 +50,16 @@ export class CancelReservationTool implements AssistantTool {
     description:
       'Cancela una reserva de la clienta con sesión iniciada, si el ciclo de vida lo permite. ' +
       'Pasa también el día y la hora de la cita tal como la clienta la nombró: si no coinciden con los de esa reserva, no se cancela nada y debes decírselo; nunca canceles otra cita parecida en su lugar. ' +
-      'Si la cita que nombra no está en misReservas, consúltala con misReservas pasando ese día.',
+      'Si la cita que nombra no está en misReservas, consúltala con misReservas pasando ese día. ' +
+      'Si responde no_coincide_con_lo_pedido o confirmar_con_la_clienta, no vuelvas a llamarla en este turno: pregúntale a la clienta cuál es la cita. ' +
+      'Una vez cancelada, el canal puede mostrar aparte la confirmación con el día y la hora: no la contradigas.',
     parameters: {
       type: 'object',
       properties: {
         reservaId: {
           type: 'string',
-          description: 'ID de la reserva a cancelar',
+          description:
+            'ID de la reserva a cancelar, tal como lo devolvió misReservas (no el número de la línea)',
         },
         ...ARGUMENTOS_DE_LA_CITA,
       },
@@ -63,6 +74,29 @@ export class CancelReservationTool implements AssistantTool {
     // para las pruebas que ejercitan el resto de la herramienta.
     private readonly leer?: LectorDeCita,
   ) {}
+
+  /**
+   * Revisión final (M-203): una cancelación hecha deja una línea escrita por el
+   * sistema con el día y la hora de la cita, para que lo que la clienta lee no
+   * dependa de cómo lo cuente el modelo. Un rechazo o un error no se presentan.
+   */
+  presentar(result: unknown): AssistantPresentation | null {
+    if (typeof result !== 'object' || result === null) return null;
+    if ((result as { ok?: unknown }).ok !== true) return null;
+    const inicio = citaCancelada.get(result);
+    const linea = inicio
+      ? (() => {
+          const { fecha, hora } = fechaYHoraEnPalabras(inicio.toISOString());
+          return `Cancelé tu cita del ${fecha} a las ${hora}.`;
+        })()
+      : 'Tu cita quedó cancelada.';
+    return {
+      tipo: 'texto',
+      lineas: [linea],
+      clase: 'escritura',
+      enElHistorial: linea,
+    };
+  }
 
   async execute(
     args: Record<string, unknown>,
@@ -82,13 +116,24 @@ export class CancelReservationTool implements AssistantTool {
     if (!id) return { ok: false, motivo: 'argumentos_invalidos' };
 
     if (this.leer) {
-      const motivo = await citaNoCoincide(args, id, this.leer, actor);
-      if (motivo) return { ok: false, motivo };
+      const rechazo = await comprobarCitaPedida(
+        args,
+        id,
+        this.leer,
+        actor,
+        'cancelar',
+        context.citasQueNoCoincidieron,
+      );
+      if (rechazo) return rechazo;
     }
 
     try {
       const reservation = await this.cancel.execute(id, actor);
-      return { ok: true, estado: reservation.status };
+      const respuesta = { ok: true, estado: reservation.status };
+      if (reservation.scheduledAt) {
+        citaCancelada.set(respuesta, reservation.scheduledAt);
+      }
+      return respuesta;
     } catch (error) {
       return { ok: false, motivo: mapCancelErrorToReason(error) };
     }

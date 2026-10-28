@@ -125,4 +125,18 @@ export interface AgendaPresentation {
 export interface TextoPresentation {
   tipo: 'texto';
   lineas: string[];
+  /**
+   * Qué es, para que el bucle sepa qué conservar (revisión final): `lista` es
+   * la de `misReservas` (solo la última del turno, y ninguna si en el turno se
+   * canceló o movió algo, porque ya no es cierta); `escritura` es la
+   * confirmación de una cancelación o un cambio hecho de verdad, que se
+   * conserva incluso si el turno acaba en la respuesta de cortesía.
+   */
+  clase?: 'lista' | 'escritura';
+  /**
+   * Lo que se guarda en el historial de la conversación en lugar de las líneas
+   * (que no se guardan: el modelo las releería como suyas en cada turno). No
+   * sale del caso de uso: el bucle lo quita antes de responder.
+   */
+  enElHistorial?: string;
 }

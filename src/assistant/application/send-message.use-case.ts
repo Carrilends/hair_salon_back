@@ -16,7 +16,10 @@ import {
   AssistantTool,
   WhatsAppToolSets,
 } from './tools/assistant-tool';
-import { AssistantPresentation } from './tools/assistant-presentation';
+import {
+  AssistantPresentation,
+  TextoPresentation,
+} from './tools/assistant-presentation';
 import {
   SYSTEM_PROMPT,
   SYSTEM_PROMPT_WHATSAPP_CLIENTA,
@@ -83,6 +86,15 @@ const TIMEOUT_DIFERIDO_MS = 5_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const COURTESY_REPLY =
   'Disculpa, no logré completar la solicitud. ¿Quieres intentarlo de otra forma o reservar por el flujo web de siempre?';
+/**
+ * Cortesía cuando el turno no acabó bien pero algo SÍ se escribió (revisión
+ * final, M-203): decir «no logré completar la solicitud» encima de «Cancelé tu
+ * cita…» sería contradictorio. Va seguida de las confirmaciones del sistema.
+ */
+const PARTIAL_REPLY =
+  'No logré completar todo lo que pediste. Esto sí quedó hecho:';
+/** Lo que queda en el historial en lugar de la lista de reservas. */
+const MARCA_DE_LA_LISTA = '[Se le mostró aparte la lista de sus reservas.]';
 
 export interface SendMessageInput {
   conversationId?: string;
@@ -286,6 +298,10 @@ export class SendMessageUseCase {
       // conversacional quedan autorizadas. Ningún otro adaptador primario lo
       // marca.
       canalConversacional: true,
+      // Citas rechazadas por la guardia en ESTE turno (revisión final, M-203):
+      // nace vacío en cada turno, así que lo que la clienta responda en el
+      // siguiente vuelve a poder actuar sobre ellas.
+      citasQueNoCoincidieron: new Set<string>(),
       // Los últimos mensajes, el nuevo incluido y los viejos primero. Lo pide
       // la verificación previa a reservar (plan 04, T5): sin historial no hay
       // con qué comparar la reserva que se va a crear. Se manda un mensaje más
@@ -394,7 +410,7 @@ export class SendMessageUseCase {
         } else {
           const tool = juego.porNombre.get(call.name);
           result = tool
-            ? await tool.execute(call.arguments, context)
+            ? await this.ejecutarSinTumbarElTurno(tool, call, context)
             : { ok: false, motivo: 'herramienta_desconocida' };
           resultadosDelTurno.set(firma, result);
           // Si la herramienta sabe presentar, se le pide el dato tipado para el
@@ -450,27 +466,47 @@ export class SendMessageUseCase {
     // en el mismo turno en vez de esperar, la caché le devuelve lo mismo, el
     // bucle se corta por falta de novedad y la clienta lee una disculpa en vez
     // de la pregunta. Ni reserva, ni pregunta, ni explicación.
+    //
+    // Salvo también lo que SÍ se escribió (revisión final, M-203): si el turno
+    // canceló o movió una cita y luego se torció, la clienta tiene que leer la
+    // confirmación del sistema igual; callarla sería peor que la disculpa.
     if (!reply) {
-      reply = preguntaPendiente(resultadosDelTurno) ?? COURTESY_REPLY;
-      presentaciones = [];
+      const escrituras = presentaciones.filter(esEscritura);
+      reply =
+        preguntaPendiente(resultadosDelTurno) ??
+        (escrituras.length > 0 ? PARTIAL_REPLY : COURTESY_REPLY);
+      presentaciones = escrituras;
     }
+    presentaciones = textosQueSiguenSiendoCiertos(presentaciones);
 
-    // TC-RF54-01: el texto presentado (lista de reservas, estilista nueva) va
+    // TC-RF54-01: el texto presentado (lista de reservas, confirmaciones) va
     // debajo de la respuesta tal cual. En WhatsApp lo envía el adaptador como
     // mensaje aparte; en la web no hay otro lugar donde pintarlo.
+    const textos = presentaciones.filter(
+      (p): p is TextoPresentation => p.tipo === 'texto',
+    );
+    // Lo que se guarda es el texto del modelo y, como mucho, una marca por
+    // texto del sistema (revisión final): con las líneas dentro, cada turno
+    // siguiente le reenviaba al modelo la lista como si la hubiera escrito él
+    // —enseñándole lo que el prompt le prohíbe— y la pagaba otra vez en tokens.
+    const marcas = textos.map(marcaParaElHistorial).filter(Boolean);
+    const paraElHistorial = marcas.length
+      ? `${reply}\n\n${marcas.join('\n')}`
+      : reply;
     if (!porWhatsApp) {
-      const aparte = presentaciones
-        .filter((p) => p.tipo === 'texto')
-        .map((p) => (p.tipo === 'texto' ? p.lineas.join('\n') : ''))
-        .join('\n\n');
+      const aparte = textos.map((p) => p.lineas.join('\n')).join('\n\n');
       if (aparte) reply = `${reply}\n\n${aparte}`;
     }
+    // `enElHistorial` es del caso de uso: no sale hacia la web ni hacia WhatsApp.
+    presentaciones = presentaciones.map(sinNotaDelHistorial);
 
     // Historia durable: el mensaje de la clienta y la respuesta final. El
     // consumo se imputa a la respuesta, que es la fila que lo causó; el mensaje
     // de la clienta se guarda sin nada que cobrar.
     conversation.append(Message.user(input.message));
-    conversation.append(Message.assistant(reply, { usage: usoDelTurno }));
+    conversation.append(
+      Message.assistant(paraElHistorial, { usage: usoDelTurno }),
+    );
 
     if (conversation.needsSummary(SUMMARY_EVERY)) {
       const { summary, usage } = await this.summarizer.execute(conversation);
@@ -498,6 +534,30 @@ export class SendMessageUseCase {
       ...(presentaciones.length > 0 ? { presentaciones } : {}),
       ...(porWhatsApp ? { conversacionNueva: esNueva } : {}),
     };
+  }
+
+  /**
+   * Una herramienta que lanza no puede tumbar el turno (revisión final): el
+   * mensaje de la clienta y las vueltas ya pagadas se perderían —`save` va
+   * después del bucle— y por MCP no pasa por aquí, así que la herramienta
+   * sigue siendo la primera responsable de devolver sus fallos como motivo.
+   * El modelo recibe un motivo genérico, nunca el texto de la excepción.
+   */
+  private async ejecutarSinTumbarElTurno(
+    tool: AssistantTool,
+    call: LlmToolCall,
+    context: AssistantContext,
+  ): Promise<unknown> {
+    try {
+      return await tool.execute(call.arguments, context);
+    } catch (error) {
+      this.logger.warn(
+        `La herramienta ${call.name} lanzó: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+      return { ok: false, motivo: 'error_desconocido' };
+    }
   }
 
   /**
@@ -878,4 +938,41 @@ function yaPresentada(
 ): boolean {
   const serializada = JSON.stringify(candidata);
   return recogidas.some((p) => JSON.stringify(p) === serializada);
+}
+
+/** ¿Es la confirmación de una cancelación o un cambio hecho de verdad? */
+function esEscritura(p: AssistantPresentation): boolean {
+  return p.tipo === 'texto' && p.clase === 'escritura';
+}
+
+/**
+ * Los textos del sistema que siguen siendo ciertos al final del turno
+ * (revisión final): de las listas de `misReservas`, solo la última; y ninguna
+ * si en el turno se canceló o movió algo, porque la lista ya no es la de ahora.
+ * Lo demás, en su orden.
+ */
+function textosQueSiguenSiendoCiertos(
+  presentaciones: AssistantPresentation[],
+): AssistantPresentation[] {
+  const esLista = (p: AssistantPresentation) =>
+    p.tipo === 'texto' && p.clase === 'lista';
+  const hayEscritura = presentaciones.some(esEscritura);
+  const ultimaLista = presentaciones.filter(esLista).pop();
+  return presentaciones.filter(
+    (p) => !esLista(p) || (!hayEscritura && p === ultimaLista),
+  );
+}
+
+/** Qué se guarda en el historial por un texto del sistema. */
+function marcaParaElHistorial(p: TextoPresentation): string {
+  if (p.clase === 'lista') return MARCA_DE_LA_LISTA;
+  if (p.enElHistorial) return `[Mostrado aparte: ${p.enElHistorial}]`;
+  return '';
+}
+
+function sinNotaDelHistorial(p: AssistantPresentation): AssistantPresentation {
+  if (p.tipo !== 'texto' || p.enElHistorial === undefined) return p;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { enElHistorial, ...resto } = p;
+  return resto;
 }

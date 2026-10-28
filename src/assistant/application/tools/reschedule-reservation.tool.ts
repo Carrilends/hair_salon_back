@@ -13,16 +13,18 @@ import {
 } from 'src/reservations/domain/errors';
 import { ReservationActor } from 'src/reservations/domain/reservation-actor';
 import { actorDelContexto } from './identidad';
-import { instanteDelSalon } from '../salon-day';
+import { fechaYHoraEnPalabras, instanteDelSalon } from '../salon-day';
 import {
   ARGUMENTOS_DE_LA_CITA,
-  citaNoCoincide,
+  comprobarCitaPedida,
   LectorDeCita,
 } from './cita-pedida';
 import { AssistantPresentation } from './assistant-presentation';
 
 /** Id de la nueva estilista por objeto-respuesta: no viaja al modelo. */
 const nuevaEstilista = new WeakMap<object, string>();
+/** Inicio nuevo de la cita movida, por objeto-respuesta: no viaja al modelo. */
+const nuevoInicio = new WeakMap<object, Date>();
 
 /**
  * Contrato mínimo del caso de uso real de reprogramación. Como en la
@@ -35,7 +37,7 @@ export interface RescheduleReservationExecutor {
     scheduledAt: string,
     actor: ReservationActor,
   ): Promise<{
-    reservation: { status: string; workerId?: string };
+    reservation: { status: string; workerId?: string; scheduledAt?: Date };
     workerChanged: boolean;
   }>;
 }
@@ -72,13 +74,15 @@ export class RescheduleReservationTool implements AssistantTool {
       // Y el aviso posterior: la frase con la nueva estilista la presenta el
       // sistema, aparte, solo si de verdad cambió (TC-RF54-01). El modelo no la
       // repite ni la contradice ni habla de «posible» cambio ya hecho.
-      'Una vez movida: si la respuesta trae estilistaCambio en true, dile que la atenderá otra estilista (si el canal muestra aparte quién es, no lo repitas ni inventes nombres); si trae false, no menciones otra estilista.',
+      'Si responde no_coincide_con_lo_pedido o confirmar_con_la_clienta, no vuelvas a llamarla en este turno: pregúntale a la clienta cuál es la cita, repitiendo la hora nueva que pidió. ' +
+      'Una vez movida: si la respuesta trae estilistaCambio en true, dile que la atenderá otra estilista (si el canal muestra aparte quién es, no lo repitas ni inventes nombres); si trae false, no menciones otra estilista. Si el canal muestra aparte la confirmación con el día y la hora, no la contradigas.',
     parameters: {
       type: 'object',
       properties: {
         reservaId: {
           type: 'string',
-          description: 'ID de la reserva que se quiere mover',
+          description:
+            'ID de la reserva que se quiere mover, tal como lo devolvió misReservas (no el número de la línea)',
         },
         ...ARGUMENTOS_DE_LA_CITA,
         nuevaFecha: {
@@ -102,13 +106,30 @@ export class RescheduleReservationTool implements AssistantTool {
   ) {}
 
   /**
-   * TC-RF54-01: si la estilista cambió, la clienta lee una frase fija con su
-   * nombre; si no cambió, nada. El nombre no pasa por el resultado del modelo.
+   * TC-RF54-01 y revisión final (M-203): todo cambio hecho deja una línea
+   * escrita por el sistema con el día y la hora nuevos; si la estilista cambió,
+   * la misma línea dice quién la atenderá. El nombre no pasa por el resultado
+   * del modelo, ni por el historial (`enElHistorial` lo omite).
    */
   async presentar(result: unknown): Promise<AssistantPresentation | null> {
     if (typeof result !== 'object' || result === null) return null;
     const r = result as { ok?: boolean; estilistaCambio?: boolean };
-    if (r.ok !== true || r.estilistaCambio !== true) return null;
+    if (r.ok !== true) return null;
+    const inicio = nuevoInicio.get(result);
+    const quedo = inicio
+      ? (() => {
+          const { fecha, hora } = fechaYHoraEnPalabras(inicio.toISOString());
+          return `Tu cita quedó el ${fecha} a las ${hora}`;
+        })()
+      : 'Tu cita quedó movida';
+    if (r.estilistaCambio !== true) {
+      return {
+        tipo: 'texto',
+        lineas: [`${quedo}.`],
+        clase: 'escritura',
+        enElHistorial: `${quedo}.`,
+      };
+    }
     let nombre: string | null = null;
     const id = nuevaEstilista.get(result);
     if (id && this.nombreDeEstilista) {
@@ -118,13 +139,14 @@ export class RescheduleReservationTool implements AssistantTool {
         nombre = null;
       }
     }
+    const sinNombre = `${quedo}; te atenderá otra estilista.`;
     return {
       tipo: 'texto',
       lineas: [
-        nombre
-          ? `Te atenderá ${nombre}, otra estilista.`
-          : 'Te atenderá otra estilista.',
+        nombre ? `${quedo}; te atenderá ${nombre}, otra estilista.` : sinNombre,
       ],
+      clase: 'escritura',
+      enElHistorial: sinNombre,
     };
   }
 
@@ -152,8 +174,15 @@ export class RescheduleReservationTool implements AssistantTool {
     if (!id || !fecha) return { ok: false, motivo: 'argumentos_invalidos' };
 
     if (this.leer) {
-      const motivo = await citaNoCoincide(args, id, this.leer, actor);
-      if (motivo) return { ok: false, motivo };
+      const rechazo = await comprobarCitaPedida(
+        args,
+        id,
+        this.leer,
+        actor,
+        'mover',
+        context.citasQueNoCoincidieron,
+      );
+      if (rechazo) return rechazo;
     }
 
     try {
@@ -173,6 +202,9 @@ export class RescheduleReservationTool implements AssistantTool {
       if (workerChanged && reservation.workerId) {
         nuevaEstilista.set(respuesta, reservation.workerId);
       }
+      // La hora que de verdad quedó; si el caso de uso no la devuelve, la
+      // pedida, que es exactamente la que el caso de uso fija.
+      nuevoInicio.set(respuesta, reservation.scheduledAt ?? instante!);
       return respuesta;
     } catch (error) {
       return { ok: false, motivo: mapRescheduleErrorToReason(error) };

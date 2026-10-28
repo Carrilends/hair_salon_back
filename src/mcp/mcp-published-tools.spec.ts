@@ -200,9 +200,12 @@ describe('Superficie MCP — herramientas de gestion (T6)', () => {
       horaDeLaCita: '11:00',
     });
 
-    expect(resultadoDe(body)).toEqual({
+    // Es su propia cita: el rechazo puede decir cuál es la de ese id (la
+    // ajena, más abajo, no revela nada).
+    expect(resultadoDe(body)).toMatchObject({
       ok: false,
       motivo: 'no_coincide_con_lo_pedido',
+      laCitaConEseId: { fecha: 'lunes, 20 de abril de 2026', hora: '10:00' },
     });
     expect(reservaGuardada.status).not.toBe('cancelada');
   });
