@@ -96,19 +96,32 @@ export function buildWhatsAppTools(
     deps,
   );
   const citas = { citas: getReservation };
+  // Cancelar y mover las comparten la clienta y la dueña: cada una vuelve a
+  // consultar el día con su propia herramienta de lista.
+  const reconsultar =
+    'Si la cita que se nombra no está en la lista que consultaste, vuelve a consultar ese día (misReservas la clienta, verAgenda la dueña, pasando fecha).';
   const cancelar = new ProposeCancelTool(
     conDefinicion(de('cancelarReserva'), {
       description:
-        'Prepara la cancelación de una cita por su id. NO cancela: se confirma con un botón, y el sistema comprueba entonces su estado y su plazo.',
+        'Prepara la cancelación de una cita por su id. NO cancela: se confirma con un botón, y el sistema comprueba entonces su estado y su plazo. ' +
+        // TC-RF54-02: `ProposeCancelTool` compara día y hora antes de proponer.
+        'Pasa también el día y la hora de la cita tal como se nombró: si no coinciden con los de esa cita, no se prepara nada y debes decirlo; nunca propongas cancelar otra cita parecida. ' +
+        reconsultar,
     }).definition,
     citas,
   );
   const reprogramar = new ProposeRescheduleTool(
     conDefinicion(de('reprogramarReserva'), {
+      // «no se mueve nada» si no coinciden es cierto también aquí: la
+      // comprobación la hace `ProposeRescheduleTool` antes de proponer.
       description: sustituir(
-        de('reprogramarReserva').definition.description ?? '',
-        'Cambia la fecha y hora de una reserva de la clienta con sesión iniciada',
-        'Prepara el cambio de fecha y hora de una cita por su id (NO la mueve: se confirma con un botón)',
+        sustituir(
+          de('reprogramarReserva').definition.description ?? '',
+          'Cambia la fecha y hora de una reserva de la clienta con sesión iniciada',
+          'Prepara el cambio de fecha y hora de una cita por su id (NO la mueve: se confirma con un botón)',
+        ),
+        'Si la cita que nombra no está en misReservas, consúltala con misReservas pasando ese día.',
+        reconsultar,
       ),
     }).definition,
     citas,

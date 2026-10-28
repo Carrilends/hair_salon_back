@@ -108,9 +108,10 @@ export class MyReservationsTool implements AssistantTool {
       lineas.push(
         `Tienes ${mas} ${mas === 1 ? 'reserva más' : 'reservas más'}` +
           // Solo lo que existe: la web lista todas en «Mis reservas»; por
-          // WhatsApp no hay otra consulta que la de las próximas diez.
+          // WhatsApp no hay portal para un número, pero esta misma consulta
+          // acepta `fecha` y da todas las de ese día.
           (porWhatsApp.has(lista)
-            ? '; te las muestro cuando pasen las anteriores.'
+            ? '; pídeme un día concreto y te las muestro.'
             : '; puedes verlas todas en «Mis reservas» del portal.'),
       );
     }

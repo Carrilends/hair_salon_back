@@ -192,6 +192,10 @@ function cita(id: string, telefono: string, nombre = 'Ana') {
   });
 }
 const OTRA = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
+/** Día y hora de `cita`: 15:00Z = 10:00 en Bogotá. */
+const LA_CITA = { fechaDeLaCita: '2026-10-20', horaDeLaCita: '10:00' };
+const OTRA_HORA = { fechaDeLaCita: '2026-10-20', horaDeLaCita: '11:00' };
+const OTRO_DIA = { fechaDeLaCita: '2026-10-21', horaDeLaCita: '10:00' };
 const citas = {
   execute: async (id: string) =>
     id === RID
@@ -208,7 +212,7 @@ describe('cancelarReserva en WhatsApp: propone el botón de cancelar', () => {
   );
 
   it('la clienta, sobre SU cita: propuesta con los datos de la base, no del modelo', async () => {
-    const r = await tool.execute({ reservaId: RID }, clienta);
+    const r = await tool.execute({ reservaId: RID, ...LA_CITA }, clienta);
 
     expect(r).toMatchObject({ ok: true, estado: 'requiere_boton' });
     expect(tool.presentar(r)).toEqual({
@@ -223,14 +227,37 @@ describe('cancelarReserva en WhatsApp: propone el botón de cancelar', () => {
   });
 
   it('la clienta, sobre la cita de OTRO número: ni botón ni datos', async () => {
-    const r = await tool.execute({ reservaId: OTRA }, clienta);
+    const r = await tool.execute({ reservaId: OTRA, ...LA_CITA }, clienta);
 
     expect(r).toEqual({ ok: false, motivo: 'no_es_tu_reserva' });
     expect(JSON.stringify(r)).not.toContain('Lucía');
   });
 
+  it('la cita de OTRO número responde igual acierte o no su día y hora (no es un oráculo)', async () => {
+    for (const pedida of [LA_CITA, OTRA_HORA, OTRO_DIA]) {
+      await expect(
+        tool.execute({ reservaId: OTRA, ...pedida }, clienta),
+      ).resolves.toEqual({ ok: false, motivo: 'no_es_tu_reserva' });
+    }
+  });
+
+  it.each([OTRA_HORA, OTRO_DIA])(
+    'sobre SU cita, con otro día u hora (%p): no propone nada',
+    async (pedida) => {
+      const r = await tool.execute({ reservaId: RID, ...pedida }, clienta);
+      expect(r).toEqual({ ok: false, motivo: 'no_coincide_con_lo_pedido' });
+      expect(tool.presentar(r)).toBeNull();
+    },
+  );
+
+  it('la dueña también nombra la cita: con otra hora no propone cancelarla', async () => {
+    await expect(
+      tool.execute({ reservaId: OTRA, ...OTRA_HORA }, duena),
+    ).resolves.toEqual({ ok: false, motivo: 'no_coincide_con_lo_pedido' });
+  });
+
   it('la dueña ve también de quién es la cita que va a cancelar', async () => {
-    const r = await tool.execute({ reservaId: OTRA }, duena);
+    const r = await tool.execute({ reservaId: OTRA, ...LA_CITA }, duena);
 
     expect(tool.presentar(r)).toMatchObject({
       cita: { clienta: 'Lucía', servicios: ['Corte'] },
@@ -239,9 +266,14 @@ describe('cancelarReserva en WhatsApp: propone el botón de cancelar', () => {
 
   it.each([
     [{}, 'argumentos_invalidos'],
-    [{ reservaId: 'no-es-uuid' }, 'argumentos_invalidos'],
+    [{ reservaId: 'no-es-uuid', ...LA_CITA }, 'argumentos_invalidos'],
+    [{ reservaId: RID }, 'argumentos_invalidos'],
     [
-      { reservaId: '5e4f9a8b-7c6d-4a3b-8c2d-1e0f9a8b7c6d' },
+      { reservaId: RID, ...LA_CITA, horaDeLaCita: '25:00' },
+      'argumentos_invalidos',
+    ],
+    [
+      { reservaId: '5e4f9a8b-7c6d-4a3b-8c2d-1e0f9a8b7c6d', ...LA_CITA },
       'reserva_no_encontrada',
     ],
   ])('%p → %s', async (args, motivo) => {
@@ -252,7 +284,9 @@ describe('cancelarReserva en WhatsApp: propone el botón de cancelar', () => {
   });
 
   it('fuera de WhatsApp, nada', async () => {
-    await expect(tool.execute({ reservaId: RID }, web)).resolves.toMatchObject({
+    await expect(
+      tool.execute({ reservaId: RID, ...LA_CITA }, web),
+    ).resolves.toMatchObject({
       motivo: 'solo_whatsapp',
     });
   });
@@ -266,7 +300,7 @@ describe('reprogramarReserva en WhatsApp: propone el botón de mover', () => {
 
   it('pasa la hora nueva a la del salón y muestra también la cita actual', async () => {
     const r = await tool.execute(
-      { reservaId: RID, nuevaFecha: '2026-10-20T20:30:00.000Z' },
+      { reservaId: RID, nuevaFecha: '2026-10-20T20:30:00.000Z', ...LA_CITA },
       clienta,
     );
 
@@ -287,7 +321,7 @@ describe('reprogramarReserva en WhatsApp: propone el botón de mover', () => {
 
   it('una hora nueva sin zona es hora del salón aunque el servidor corra en UTC', async () => {
     const r = await tool.execute(
-      { reservaId: RID, nuevaFecha: '2026-10-20T15:30:00' },
+      { reservaId: RID, nuevaFecha: '2026-10-20T15:30:00', ...LA_CITA },
       clienta,
     );
 
@@ -297,19 +331,46 @@ describe('reprogramarReserva en WhatsApp: propone el botón de mover', () => {
     });
   });
 
-  it('no propone mover la cita de otro número', async () => {
-    await expect(
-      tool.execute(
-        { reservaId: OTRA, nuevaFecha: '2026-10-20T20:30:00.000Z' },
-        clienta,
-      ),
-    ).resolves.toEqual({ ok: false, motivo: 'no_es_tu_reserva' });
+  it('no propone mover la cita de otro número, acierte o no su día y hora', async () => {
+    for (const pedida of [LA_CITA, OTRA_HORA, OTRO_DIA]) {
+      await expect(
+        tool.execute(
+          {
+            reservaId: OTRA,
+            nuevaFecha: '2026-10-20T20:30:00.000Z',
+            ...pedida,
+          },
+          clienta,
+        ),
+      ).resolves.toEqual({ ok: false, motivo: 'no_es_tu_reserva' });
+    }
+  });
+
+  it('sobre SU cita, con otra hora que la nombrada: no propone moverla', async () => {
+    const r = await tool.execute(
+      { reservaId: RID, nuevaFecha: '2026-10-20T20:30:00.000Z', ...OTRA_HORA },
+      clienta,
+    );
+    expect(r).toEqual({ ok: false, motivo: 'no_coincide_con_lo_pedido' });
+    expect(tool.presentar(r)).toBeNull();
   });
 
   it('rechaza una fecha que no se entiende', async () => {
     await expect(
-      tool.execute({ reservaId: RID, nuevaFecha: 'el lunes' }, clienta),
+      tool.execute(
+        { reservaId: RID, nuevaFecha: 'el lunes', ...LA_CITA },
+        clienta,
+      ),
     ).resolves.toMatchObject({ ok: false, motivo: 'argumentos_invalidos' });
+  });
+
+  it('exige el día y la hora de la cita actual', async () => {
+    await expect(
+      tool.execute(
+        { reservaId: RID, nuevaFecha: '2026-10-20T20:30:00.000Z' },
+        clienta,
+      ),
+    ).resolves.toEqual({ ok: false, motivo: 'argumentos_invalidos' });
   });
 });
 

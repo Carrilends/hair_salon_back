@@ -82,7 +82,7 @@ export class CancelReservationTool implements AssistantTool {
     if (!id) return { ok: false, motivo: 'argumentos_invalidos' };
 
     if (this.leer) {
-      const motivo = await citaNoCoincide(args, id, this.leer);
+      const motivo = await citaNoCoincide(args, id, this.leer, actor);
       if (motivo) return { ok: false, motivo };
     }
 

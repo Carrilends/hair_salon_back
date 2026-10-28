@@ -153,10 +153,10 @@ describe('RescheduleReservationTool', () => {
  * `misReservas` no proyecta estilista (RF57/RF58 no le dan esa capacidad), así
  * que si la herramienta no lo dice, nadie se lo dice a la clienta.
  *
- * El aviso es **genérico a propósito**: un booleano, nunca un nombre. Que el
- * asistente nombre estilistas es requerimiento nuevo —y arrastra una decisión de
- * privacidad—, y aquí no se abre esa puerta. En el portal y en WhatsApp sí se
- * nombran porque allí ya se muestran hoy.
+ * Al modelo le llega **solo un booleano**, nunca un nombre: así no puede
+ * repetirlo mal ni usarlo fuera de lugar. El nombre de la nueva estilista lo
+ * pone `presentar` aparte (TC-RF54-01), en una frase fija que la clienta lee
+ * tal cual; MCP, que no presenta, se queda con el booleano.
  */
 describe('RescheduleReservationTool · aviso de cambio de estilista', () => {
   it('dice que cambió cuando el caso de uso reasignó', async () => {

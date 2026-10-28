@@ -19,7 +19,15 @@ export function assertCanActOn(
   throw new ReservationOwnershipError();
 }
 
-function canActOn(reservation: Reservation, actor: ReservationActor): boolean {
+/**
+ * La misma regla sin lanzar. La usa la guardia de la cita pedida del asistente
+ * para no comparar el día y la hora de una reserva que no es de quien pregunta
+ * (compararlos la convertiría en un oráculo de reservas ajenas).
+ */
+export function canActOn(
+  reservation: Reservation,
+  actor: ReservationActor,
+): boolean {
   switch (actor.kind) {
     case 'admin':
       return true;

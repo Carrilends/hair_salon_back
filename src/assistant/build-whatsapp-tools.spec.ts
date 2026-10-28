@@ -92,6 +92,19 @@ describe('buildWhatsAppTools (D6)', () => {
     }
   });
 
+  it('cancelar y mover piden el día y la hora de la cita y lo dicen (TC-RF54-02)', () => {
+    const { juegos } = montar();
+    for (const n of ['cancelarReserva', 'reprogramarReserva']) {
+      const def = juegos.clienta.find((t) => t.name === n)!.definition;
+      const params = def.parameters as { required: string[] };
+      expect(params.required).toEqual(
+        expect.arrayContaining(['fechaDeLaCita', 'horaDeLaCita']),
+      );
+      expect(def.description).toMatch(/no coinciden/);
+      expect(def.description).toMatch(/misReservas/);
+    }
+  });
+
   it('ninguna descripción de WhatsApp habla de iniciar sesión', () => {
     const { juegos } = montar();
     for (const t of [...juegos.clienta, ...juegos.duena]) {

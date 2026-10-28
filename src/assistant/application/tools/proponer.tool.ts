@@ -18,6 +18,7 @@ import { ServiceCatalogQueryPort } from '../../domain/ports/service-catalog-quer
 import { PendingBookingRepositoryPort } from '../../domain/ports/pending-booking-repository.port';
 import { PENDING_BOOKING_TTL_MINUTES } from '../../domain/pending-booking';
 import { getDatePartsInTz } from 'src/reservations/salon-time';
+import { CitaPedida, esLaCitaPedida, leerCitaPedida } from './cita-pedida';
 
 /**
  * Las herramientas de WhatsApp que **proponen** en vez de escribir (plan 06,
@@ -48,10 +49,17 @@ export interface CitaPorId {
  * de F4): el id lo escribió el modelo, así que antes de enseñar un botón se
  * mira qué cita es de verdad y de quién. El dominio lo vuelve a comprobar al
  * pulsar; esto evita enseñar un botón —y datos— que no le corresponden.
+ *
+ * Después, la guardia de la cita pedida (TC-RF54-02), como en la web: si el día
+ * o la hora que se nombraron no son los de esa cita, no se propone nada. Va
+ * **después** de la propiedad a propósito: con una cita de otro número la
+ * respuesta es `no_es_tu_reserva` acierte o no el día y la hora, así que no
+ * sirve para averiguarlos.
  */
 async function citaParaConfirmar(
   citas: CitaPorId,
   id: string,
+  pedida: CitaPedida,
   context: AssistantContext,
 ): Promise<{ cita: CitaAConfirmar } | { motivo: string }> {
   const actor = actorDelContexto(context);
@@ -62,6 +70,9 @@ async function citaParaConfirmar(
     assertCanActOn(reserva, actor);
   } catch {
     return { motivo: 'no_es_tu_reserva' };
+  }
+  if (!esLaCitaPedida(reserva, pedida)) {
+    return { motivo: 'no_coincide_con_lo_pedido' };
   }
   const { fecha, hora } = fechaYHoraEnPalabras(
     reserva.scheduledAt.toISOString(),
@@ -187,9 +198,17 @@ export class ProposeCancelTool implements AssistantTool {
   ): Promise<unknown> {
     if (context.canal !== 'whatsapp') return SOLO_WHATSAPP;
     const reservaId = idDeReserva(args);
-    if (!reservaId) return { ok: false, motivo: 'argumentos_invalidos' };
+    const pedida = leerCitaPedida(args);
+    if (!reservaId || !pedida) {
+      return { ok: false, motivo: 'argumentos_invalidos' };
+    }
 
-    const r = await citaParaConfirmar(this.deps.citas, reservaId, context);
+    const r = await citaParaConfirmar(
+      this.deps.citas,
+      reservaId,
+      pedida,
+      context,
+    );
     if ('motivo' in r) return { ok: false, motivo: r.motivo };
     return {
       ok: true,
@@ -237,11 +256,17 @@ export class ProposeRescheduleTool implements AssistantTool {
       typeof args.nuevaFecha === 'string'
         ? instanteDelSalon(args.nuevaFecha)
         : null;
-    if (!reservaId || !nueva) {
+    const pedida = leerCitaPedida(args);
+    if (!reservaId || !nueva || !pedida) {
       return { ok: false, motivo: 'argumentos_invalidos' };
     }
 
-    const actual = await citaParaConfirmar(this.deps.citas, reservaId, context);
+    const actual = await citaParaConfirmar(
+      this.deps.citas,
+      reservaId,
+      pedida,
+      context,
+    );
     if ('motivo' in actual) return { ok: false, motivo: actual.motivo };
 
     // El botón `RSAT` lleva la hora del salón (`YYYY-MM-DDTHH:mm`), como el

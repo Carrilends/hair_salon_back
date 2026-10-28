@@ -2,6 +2,10 @@ import { CancelReservationTool } from './cancel-reservation.tool';
 import { RescheduleReservationTool } from './reschedule-reservation.tool';
 import { MyReservationsTool } from './my-reservations.tool';
 import { AssistantContext } from './assistant-tool';
+import { Reservation } from 'src/reservations/domain/reservation';
+import { ReservationStatus } from 'src/reservations/domain/reservation-status';
+import { ReservationActor } from 'src/reservations/domain/reservation-actor';
+import { assertCanActOn } from 'src/reservations/domain/reservation-authorization';
 
 /**
  * TC-RF54-02 / M-197: una cancelación o un cambio nunca puede caer sobre una
@@ -13,21 +17,101 @@ const ctx: AssistantContext = {
   isAdmin: false,
   now: new Date('2026-10-20T12:00:00Z'),
 };
+const admin: AssistantContext = { ...ctx, userId: 'a1', isAdmin: true };
 // 14:00Z = 09:00 en Bogotá
-const real = { scheduledAt: new Date('2026-11-08T14:00:00Z') };
-const leer = async (id: string) => (id === 'r1' ? real : null);
+const citaDe = (id: string, userId: string) =>
+  Reservation.fromPersistence({
+    id,
+    userId,
+    contact: null,
+    scheduledAt: new Date('2026-11-08T14:00:00Z'),
+    endedAt: new Date('2026-11-08T14:30:00Z'),
+    workerId: 'w-1',
+    status: ReservationStatus.Pendiente,
+    lines: [{ serviceId: 's-1', name: 'Corte', price: 1, durationMinutes: 30 }],
+  });
+const real = citaDe('r1', 'u1');
+// La de otra cuenta, el mismo día y a la misma hora.
+const ajena = citaDe('r-ajena', 'u2');
+const leer = async (id: string) =>
+  id === 'r1' ? real : id === 'r-ajena' ? ajena : null;
+const LA_CITA = { fechaDeLaCita: '2026-11-08', horaDeLaCita: '09:00' };
+const OTRA_HORA = { fechaDeLaCita: '2026-11-08', horaDeLaCita: '11:00' };
+const OTRO_DIA = { fechaDeLaCita: '2026-11-09', horaDeLaCita: '09:00' };
+
+/**
+ * Los casos de uso de verdad deciden la propiedad con `assertCanActOn`; los
+ * dobles hacen lo mismo para que la prueba de una reserva ajena sea honesta.
+ */
+async function comoElCasoDeUso(id: string, actor: ReservationActor) {
+  const r = await leer(id);
+  if (r) assertCanActOn(r, actor);
+}
 
 describe('cancelarReserva · cita pedida', () => {
   const montar = () => {
     const llamadas: string[] = [];
     const cancel = {
-      execute: async (id: string) => {
+      execute: async (id: string, actor: ReservationActor) => {
+        await comoElCasoDeUso(id, actor);
         llamadas.push(id);
         return { status: 'cancelada' };
       },
     };
     return { llamadas, tool: new CancelReservationTool(cancel as never, leer) };
   };
+
+  it('una reserva ajena responde lo mismo con su día y hora que sin ellos (no es un oráculo)', async () => {
+    const { llamadas, tool } = montar();
+    const respuestas = [];
+    for (const pedida of [LA_CITA, OTRA_HORA, OTRO_DIA]) {
+      respuestas.push(
+        await tool.execute({ reservaId: 'r-ajena', ...pedida }, ctx),
+      );
+    }
+    for (const r of respuestas) {
+      expect(r).toEqual({ ok: false, motivo: 'no_es_tu_reserva' });
+    }
+    expect(llamadas).toEqual([]);
+  });
+
+  it('la administración sí compara: una hora distinta no cancela la cita de otra', async () => {
+    const { llamadas, tool } = montar();
+    expect(
+      await tool.execute({ reservaId: 'r-ajena', ...OTRA_HORA }, admin),
+    ).toEqual({ ok: false, motivo: 'no_coincide_con_lo_pedido' });
+    expect(llamadas).toEqual([]);
+    expect(
+      await tool.execute({ reservaId: 'r-ajena', ...LA_CITA }, admin),
+    ).toEqual({ ok: true, estado: 'cancelada' });
+  });
+
+  it.each(['9:00', '9'])(
+    'acepta la hora sin cero delante (%s) y la entiende como 09:00',
+    async (hora) => {
+      const { llamadas, tool } = montar();
+      const res = await tool.execute(
+        { reservaId: 'r1', fechaDeLaCita: '2026-11-08', horaDeLaCita: hora },
+        ctx,
+      );
+      expect(res).toEqual({ ok: true, estado: 'cancelada' });
+      expect(llamadas).toEqual(['r1']);
+    },
+  );
+
+  it.each(['9h', '25:00', '09:60', '9:5', 'nueve', '009:00'])(
+    'una hora que no se entiende (%s) es un argumento inválido',
+    async (hora) => {
+      const { llamadas, tool } = montar();
+      expect(
+        await tool.execute(
+          { reservaId: 'r1', fechaDeLaCita: '2026-11-08', horaDeLaCita: hora },
+          ctx,
+        ),
+      ).toEqual({ ok: false, motivo: 'argumentos_invalidos' });
+      expect(llamadas).toEqual([]);
+    },
+  );
 
   it('rechaza si la hora pedida no es la de la cita y no cancela nada', async () => {
     const { llamadas, tool } = montar();
@@ -84,7 +168,8 @@ describe('reprogramarReserva · cita pedida', () => {
   const montar = () => {
     const llamadas: string[] = [];
     const uc = {
-      execute: async (id: string) => {
+      execute: async (id: string, _f: string, actor: ReservationActor) => {
+        await comoElCasoDeUso(id, actor);
         llamadas.push(id);
         return { reservation: { status: 'pendiente' }, workerChanged: false };
       },
@@ -103,6 +188,16 @@ describe('reprogramarReserva · cita pedida', () => {
       ctx,
     );
     expect(res).toEqual({ ok: false, motivo: 'no_coincide_con_lo_pedido' });
+    expect(llamadas).toEqual([]);
+  });
+
+  it('una reserva ajena responde lo mismo con su día y hora que sin ellos (no es un oráculo)', async () => {
+    const { llamadas, tool } = montar();
+    for (const pedida of [LA_CITA, OTRA_HORA, OTRO_DIA]) {
+      expect(
+        await tool.execute({ ...base, reservaId: 'r-ajena', ...pedida }, ctx),
+      ).toEqual({ ok: false, motivo: 'no_es_tu_reserva' });
+    }
     expect(llamadas).toEqual([]);
   });
 

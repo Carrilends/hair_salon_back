@@ -189,10 +189,12 @@ describe('MyReservationsTool · presentar (TC-RF54-01)', () => {
     const p = await tool.presentar(await tool.execute({}, wa));
     if (p?.tipo !== 'texto') throw new Error('no es texto');
     const ultima = p.lineas[p.lineas.length - 1];
+    // misReservas por WhatsApp también acepta `fecha`: pedir un día es la
+    // forma real de ver las demás (no hay que esperar a que pasen las otras).
     expect(ultima).toBe(
-      'Tienes 2 reservas más; te las muestro cuando pasen las anteriores.',
+      'Tienes 2 reservas más; pídeme un día concreto y te las muestro.',
     );
-    expect(ultima).not.toMatch(/portal|día concreto/);
+    expect(ultima).not.toMatch(/portal|cuando pasen/);
   });
 
   it('conserva una cita en curso (empezó pero no ha terminado)', async () => {

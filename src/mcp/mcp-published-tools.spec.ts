@@ -248,6 +248,30 @@ describe('Superficie MCP — herramientas de gestion (T6)', () => {
     expect(reservaGuardada.status).not.toBe('cancelada');
   });
 
+  it('la reserva de otra persona no revela su dia ni su hora (mismo motivo acierte o no)', async () => {
+    // Si el dia y la hora se compararan antes de la propiedad, un fallo diria
+    // `no_coincide_con_lo_pedido` y un acierto `no_es_tu_reserva`: un oraculo.
+    usuarioDelToken = { id: 'intrusa', roles: ['user'] };
+    reservaGuardada = reservaDe('duena');
+    ahora = new Date('2026-04-20T14:00:00.000Z');
+
+    for (const pedida of [
+      LA_CITA,
+      { fechaDeLaCita: '2026-04-20', horaDeLaCita: '11:00' },
+      { fechaDeLaCita: '2026-04-21', horaDeLaCita: '10:00' },
+    ]) {
+      const { body } = await llamar('cancelarReserva', {
+        reservaId: 'r-1',
+        ...pedida,
+      });
+      expect(resultadoDe(body)).toEqual({
+        ok: false,
+        motivo: 'no_es_tu_reserva',
+      });
+    }
+    expect(reservaGuardada.status).not.toBe('cancelada');
+  });
+
   it('no deja cancelar pasada la hora si no hay rol de administracion', async () => {
     usuarioDelToken = { id: 'duena', roles: ['user'] };
     reservaGuardada = reservaDe('duena');
