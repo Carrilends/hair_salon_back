@@ -14,6 +14,11 @@ import {
 import { ReservationActor } from 'src/reservations/domain/reservation-actor';
 import { actorDelContexto } from './identidad';
 import { instanteDelSalon } from '../salon-day';
+import {
+  ARGUMENTOS_DE_LA_CITA,
+  citaNoCoincide,
+  LectorDeCita,
+} from './cita-pedida';
 import { AssistantPresentation } from './assistant-presentation';
 
 /** Id de la nueva estilista por objeto-respuesta: no viaja al modelo. */
@@ -57,6 +62,7 @@ export class RescheduleReservationTool implements AssistantTool {
     // para quien eligió estilista, y el texto tiene que decir de qué depende.
     description:
       'Cambia la fecha y hora de una reserva de la clienta con sesión iniciada, conservando sus servicios. ' +
+      'Pasa también el día y la hora ACTUALES de esa cita tal como la clienta la nombró (fechaDeLaCita, horaDeLaCita): si no coinciden con la reserva, no se mueve nada y debes decírselo; nunca muevas otra cita parecida. Si la cita que nombra no está en misReservas, consúltala con misReservas pasando ese día. ' +
       'Si la clienta eligió estilista, la conserva; si no eligió ninguna, la cita puede quedar con otra estilista que esté libre a la hora nueva. ' +
       // Consentimiento informado: el aviso previo. Solo tiene sentido cuando
       // puede ocurrir —a quien eligió estilista no se la cambia nunca—, y esa
@@ -74,13 +80,14 @@ export class RescheduleReservationTool implements AssistantTool {
           type: 'string',
           description: 'ID de la reserva que se quiere mover',
         },
+        ...ARGUMENTOS_DE_LA_CITA,
         nuevaFecha: {
           type: 'string',
           description:
             'Nueva fecha y hora en hora de Colombia, ISO 8601 sin zona (p. ej. 2026-10-23T08:00:00)',
         },
       },
-      required: ['reservaId', 'nuevaFecha'],
+      required: ['reservaId', 'nuevaFecha', 'fechaDeLaCita', 'horaDeLaCita'],
       additionalProperties: false,
     },
   };
@@ -90,6 +97,8 @@ export class RescheduleReservationTool implements AssistantTool {
     // Nombre de la estilista por id, solo para la frase presentada. Opcional:
     // sin él la frase dice «otra estilista».
     private readonly nombreDeEstilista?: (id: string) => Promise<string | null>,
+    // Guardia de la cita pedida; siempre cableada en producción.
+    private readonly leer?: LectorDeCita,
   ) {}
 
   /**
@@ -142,13 +151,18 @@ export class RescheduleReservationTool implements AssistantTool {
     const fecha = instante?.toISOString() ?? null;
     if (!id || !fecha) return { ok: false, motivo: 'argumentos_invalidos' };
 
+    if (this.leer) {
+      const motivo = await citaNoCoincide(args, id, this.leer);
+      if (motivo) return { ok: false, motivo };
+    }
+
     try {
       const { reservation, workerChanged } = await this.reschedule.execute(
         id,
         fecha,
         actor,
       );
-      // Un sí/no, nunca un nombre: el chat no nombra estilistas. Sin este campo
+      // Un sí sin nombre para el modelo; el nombre viaja aparte, presentado. Sin este campo
       // el modelo no tendría cómo enterarse —`misReservas` tampoco proyecta
       // estilista— y la clienta lo sabría el día de la cita.
       const respuesta = {

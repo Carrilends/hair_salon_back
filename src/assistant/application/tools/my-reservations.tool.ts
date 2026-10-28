@@ -1,6 +1,6 @@
 import { AssistantContext, AssistantTool } from './assistant-tool';
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
-import { fechaYHoraEnPalabras } from '../salon-day';
+import { fechaDelSalon, fechaYHoraEnPalabras } from '../salon-day';
 import { AssistantPresentation } from './assistant-presentation';
 
 interface MiLinea {
@@ -60,11 +60,19 @@ export class MyReservationsTool implements AssistantTool {
 
   readonly definition: LlmToolDefinition = {
     name: this.name,
-    description: 'Devuelve las reservas de la clienta que está conversando.',
+    description:
+      'Devuelve las diez próximas reservas de la clienta que está conversando. ' +
+      'Si la clienta nombra una cita que no está en esa lista, vuelve a llamarla con fecha (el día de esa cita) para ver todas las de ese día.',
     parameters: {
       type: 'object',
-      // Vacío a propósito: la identidad no se expresa por argumento.
-      properties: {},
+      // La identidad no se expresa por argumento; solo se puede acotar el día.
+      properties: {
+        fecha: {
+          type: 'string',
+          description:
+            'Día en formato YYYY-MM-DD (hora de Colombia). Sin él, las diez más próximas.',
+        },
+      },
       required: [],
       additionalProperties: false,
     },
@@ -110,9 +118,16 @@ export class MyReservationsTool implements AssistantTool {
   }
 
   async execute(
-    _args: Record<string, unknown>,
+    args: Record<string, unknown>,
     context: AssistantContext,
   ): Promise<unknown> {
+    const dia = args.fecha;
+    if (
+      dia !== undefined &&
+      (typeof dia !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dia))
+    ) {
+      return { ok: false, motivo: 'argumentos_invalidos' };
+    }
     const reservations = await this.lasDeQuienConversa(context);
     if (!reservations) return { ok: false, motivo: 'sesion_requerida' };
 
@@ -125,11 +140,14 @@ export class MyReservationsTool implements AssistantTool {
           (r.status === 'pendiente' || r.status === 'confirmada') &&
           (r.endedAt ?? r.scheduledAt).getTime() > context.now.getTime(),
       )
+      .filter((r) => dia === undefined || fechaDelSalon(r.scheduledAt) === dia)
       .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
+    // Con día: todas las de ese día, sin tope. Sin día: las diez más próximas.
+    const tope = dia === undefined ? 10 : proximas.length;
 
     // Proyección compacta (§6.2): solo lo que hace falta para conversar. Se limita
     // a 10 para acotar los tokens de la siguiente llamada.
-    const proyectadas = proximas.slice(0, 10).map((r) => ({
+    const proyectadas = proximas.slice(0, tope).map((r) => ({
       id: r.id,
       // Fecha y hora del salón en todos los canales: el modelo las repite tal
       // cual. Con el instante en UTC la convertía mal y actuaba sobre la cita
@@ -141,12 +159,13 @@ export class MyReservationsTool implements AssistantTool {
       // La condición del aviso previo al reprogramar: si la eligió la clienta,
       // mover la cita no se la cambia nunca, así que advertirla sería
       // preocuparla por algo imposible. Es un sí/no sobre el **origen** de la
-      // asignación, no una identidad: el chat sigue sin nombrar estilistas.
+      // asignación, no una identidad. El nombre de la estilista, cuando se
+      // conoce, viaja solo en la presentación (no en lo que ve el modelo).
       estilistaElegida: r.workerPinned,
     }));
     // Lo que solo ve la clienta (no el modelo) viaja aparte, por identidad de
     // objeto, para no engordar lo que se paga en tokens ni tocar su forma.
-    proximas.slice(0, 10).forEach((r, i) => {
+    proximas.slice(0, tope).forEach((r, i) => {
       if (r.worker?.name) estilistas.set(proyectadas[i], r.worker.name);
     });
     totales.set(proyectadas, proximas.length);

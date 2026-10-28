@@ -16,6 +16,7 @@ import { ReservePackageTool } from './application/tools/reserve-package.tool';
 import { ServiceCatalogQueryAdapter } from './infrastructure/catalog/service-catalog-query.adapter';
 import { AvailabilityQueryAdapter } from './infrastructure/availability/availability-query.adapter';
 import { JudgmentPort } from './domain/ports/judgment.port';
+import { GetReservationUseCase } from 'src/reservations/application/get-reservation.use-case';
 import { WorkersService } from 'src/workers/workers.service';
 import { JudgmentSettings } from './application/judgment-settings';
 
@@ -40,7 +41,13 @@ export function buildAssistantTools(
   judge?: JudgmentPort,
   settings?: JudgmentSettings,
   workers?: WorkersService,
+  getReservation?: GetReservationUseCase,
 ): AssistantTool[] {
+  // Guardia de la cita pedida (TC-RF54-02): cancelar y mover comparan el día y
+  // la hora nombrados con los de la cita real. Siempre cableada en producción.
+  const leer = getReservation
+    ? (id: string) => getReservation.execute(id)
+    : undefined;
   // Verificación de correspondencia previa a crear (T5) y reordenación por
   // relevancia del listado (T7). Se montan solo si hay proveedor; que estén
   // encendidas o apagadas lo decide el modo de cada una.
@@ -53,10 +60,11 @@ export function buildAssistantTools(
     new CheckAvailabilityTool(availability),
     new CreateReservationTool(createReservation, verificacion),
     new MyReservationsTool(getMyReservations),
-    new CancelReservationTool(cancelReservation),
+    new CancelReservationTool(cancelReservation, leer),
     new RescheduleReservationTool(
       rescheduleReservation,
       workers ? (id) => workers.getWorkerName(id) : undefined,
+      leer,
     ),
     new RecommendServicesTool(catalog),
     new ComposePackageTool(catalog),

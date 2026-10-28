@@ -10,6 +10,11 @@ import {
 } from 'src/reservations/domain/errors';
 import { ReservationActor } from 'src/reservations/domain/reservation-actor';
 import { actorDelContexto } from './identidad';
+import {
+  ARGUMENTOS_DE_LA_CITA,
+  citaNoCoincide,
+  LectorDeCita,
+} from './cita-pedida';
 
 /**
  * Contrato mínimo del caso de uso real de cancelación (A6). El actor lleva la
@@ -35,7 +40,9 @@ export class CancelReservationTool implements AssistantTool {
   readonly definition: LlmToolDefinition = {
     name: this.name,
     description:
-      'Cancela una reserva de la clienta con sesión iniciada, si el ciclo de vida lo permite.',
+      'Cancela una reserva de la clienta con sesión iniciada, si el ciclo de vida lo permite. ' +
+      'Pasa también el día y la hora de la cita tal como la clienta la nombró: si no coinciden con los de esa reserva, no se cancela nada y debes decírselo; nunca canceles otra cita parecida en su lugar. ' +
+      'Si la cita que nombra no está en misReservas, consúltala con misReservas pasando ese día.',
     parameters: {
       type: 'object',
       properties: {
@@ -43,13 +50,19 @@ export class CancelReservationTool implements AssistantTool {
           type: 'string',
           description: 'ID de la reserva a cancelar',
         },
+        ...ARGUMENTOS_DE_LA_CITA,
       },
-      required: ['reservaId'],
+      required: ['reservaId', 'fechaDeLaCita', 'horaDeLaCita'],
       additionalProperties: false,
     },
   };
 
-  constructor(private readonly cancel: CancelReservationExecutor) {}
+  constructor(
+    private readonly cancel: CancelReservationExecutor,
+    // Siempre se cablea en producción (`buildAssistantTools`); es opcional solo
+    // para las pruebas que ejercitan el resto de la herramienta.
+    private readonly leer?: LectorDeCita,
+  ) {}
 
   async execute(
     args: Record<string, unknown>,
@@ -67,6 +80,11 @@ export class CancelReservationTool implements AssistantTool {
 
     const id = typeof args.reservaId === 'string' ? args.reservaId : null;
     if (!id) return { ok: false, motivo: 'argumentos_invalidos' };
+
+    if (this.leer) {
+      const motivo = await citaNoCoincide(args, id, this.leer);
+      if (motivo) return { ok: false, motivo };
+    }
 
     try {
       const reservation = await this.cancel.execute(id, actor);

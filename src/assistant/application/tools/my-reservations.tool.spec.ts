@@ -63,7 +63,7 @@ describe('MyReservationsTool', () => {
     // `estilistaElegida` se suma a la proyección. Es la condición del aviso
     // previo: a quien eligió estilista no se la cambian nunca al mover la cita,
     // así que avisarla sería preocuparla por algo que no puede pasarle. Sigue
-    // siendo un sí/no —el chat no nombra estilistas—.
+    // siendo un sí/no: el modelo no ve nombres de estilista.
     expect(res[0]).toEqual({
       id: 'r0',
       fecha: 'jueves, 20 de agosto de 2026',

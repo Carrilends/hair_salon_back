@@ -271,6 +271,7 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
         JUDGMENT,
         JUDGMENT_SETTINGS,
         WorkersService,
+        GetReservationUseCase,
       ],
     },
     {

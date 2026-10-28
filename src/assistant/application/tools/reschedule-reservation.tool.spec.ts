@@ -120,7 +120,12 @@ describe('RescheduleReservationTool', () => {
       unknown
     >;
 
-    expect(Object.keys(props).sort()).toEqual(['nuevaFecha', 'reservaId']);
+    expect(Object.keys(props).sort()).toEqual([
+      'fechaDeLaCita',
+      'horaDeLaCita',
+      'nuevaFecha',
+      'reservaId',
+    ]);
     expect(tool.definition.parameters.additionalProperties).toBe(false);
   });
 
@@ -174,8 +179,8 @@ describe('RescheduleReservationTool · aviso de cambio de estilista', () => {
   });
 
   it('el aviso es un sí/no: la respuesta no lleva NINGÚN nombre de estilista', async () => {
-    // Límite duro: el chat no nombra estilistas. Si algún día hiciera falta,
-    // es requerimiento nuevo, no un retoque de presentación.
+    // Límite duro: el resultado que ve el modelo no lleva nombres; el de la
+    // nueva estilista viaja aparte, en la presentación.
     const uc = new FakeReschedule(() => ({
       status: 'pendiente',
       workerChanged: true,

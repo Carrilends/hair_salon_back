@@ -41,6 +41,9 @@ const LINEAS = [
   { serviceId: 's1', name: 'Corte', price: 20000, durationMinutes: 30 },
 ];
 
+/** Día y hora de `reservaDe`: 15:00Z = 10:00 en Bogotá. */
+const LA_CITA = { fechaDeLaCita: '2026-04-20', horaDeLaCita: '10:00' };
+
 const reservaDe = (userId: string): Reservation =>
   Reservation.schedule({
     scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
@@ -89,6 +92,10 @@ describe('Superficie MCP — herramientas de gestion (T6)', () => {
       {} as never,
       cancelar as never,
       {} as never,
+      undefined,
+      undefined,
+      undefined,
+      { execute: async () => reservaGuardada } as never,
     );
 
     const modulo = await Test.createTestingModule({
@@ -182,6 +189,46 @@ describe('Superficie MCP — herramientas de gestion (T6)', () => {
     });
   });
 
+  it('no cancela una cita distinta de la que se nombró', async () => {
+    usuarioDelToken = { id: 'duena', roles: ['user'] };
+    reservaGuardada = reservaDe('duena');
+    ahora = new Date('2026-04-20T14:00:00.000Z');
+
+    const { body } = await llamar('cancelarReserva', {
+      reservaId: 'r-1',
+      fechaDeLaCita: '2026-04-20',
+      horaDeLaCita: '11:00',
+    });
+
+    expect(resultadoDe(body)).toEqual({
+      ok: false,
+      motivo: 'no_coincide_con_lo_pedido',
+    });
+    expect(reservaGuardada.status).not.toBe('cancelada');
+  });
+
+  it('publica el esquema con el día y la hora de la cita', async () => {
+    const { body } = await request(app.getHttpServer())
+      .post('/api/mcp')
+      .set('Accept', 'application/json, text/event-stream')
+      .set('MCP-Protocol-Version', MCP_PROTOCOL_VERSION)
+      .set('Mcp-Method', 'tools/list')
+      .send({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/list',
+        params: { _meta: sobre() },
+      });
+    for (const nombre of ['cancelarReserva', 'reprogramarReserva']) {
+      const t = body.result.tools.find(
+        (x: { name: string }) => x.name === nombre,
+      );
+      expect(t.inputSchema.required).toEqual(
+        expect.arrayContaining(['fechaDeLaCita', 'horaDeLaCita']),
+      );
+    }
+  });
+
   it('no deja cancelar la reserva de otra persona', async () => {
     // Segunda barrera: el esquema ya impide pedir "la reserva de otra", pero
     // ademas el caso de uso revalida la propiedad por su cuenta.
@@ -189,7 +236,10 @@ describe('Superficie MCP — herramientas de gestion (T6)', () => {
     reservaGuardada = reservaDe('duena');
     ahora = new Date('2026-04-20T14:00:00.000Z');
 
-    const { body } = await llamar('cancelarReserva', { reservaId: 'r-1' });
+    const { body } = await llamar('cancelarReserva', {
+      reservaId: 'r-1',
+      ...LA_CITA,
+    });
 
     expect(resultadoDe(body)).toEqual({
       ok: false,
@@ -203,7 +253,10 @@ describe('Superficie MCP — herramientas de gestion (T6)', () => {
     reservaGuardada = reservaDe('duena');
     ahora = new Date('2026-04-20T16:00:00.000Z');
 
-    const { body } = await llamar('cancelarReserva', { reservaId: 'r-1' });
+    const { body } = await llamar('cancelarReserva', {
+      reservaId: 'r-1',
+      ...LA_CITA,
+    });
 
     expect(resultadoDe(body)).toEqual({ ok: false, motivo: 'fuera_de_plazo' });
   });
@@ -213,7 +266,10 @@ describe('Superficie MCP — herramientas de gestion (T6)', () => {
     reservaGuardada = reservaDe('duena');
     ahora = new Date('2026-04-20T16:00:00.000Z');
 
-    const { body } = await llamar('cancelarReserva', { reservaId: 'r-1' });
+    const { body } = await llamar('cancelarReserva', {
+      reservaId: 'r-1',
+      ...LA_CITA,
+    });
 
     expect(resultadoDe(body)).toEqual({ ok: true, estado: 'cancelada' });
   });
