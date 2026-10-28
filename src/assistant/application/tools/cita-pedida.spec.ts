@@ -450,13 +450,15 @@ describe('la guardia no tumba el turno si la lectura falla', () => {
     expect(escritas).toEqual([]);
   });
 
-  it('con un UUID válido y la base caída, deja responder al caso de uso', async () => {
+  it('con un UUID válido y la base caída, no escribe sin haber comprobado el día y la hora', async () => {
+    // Si la lectura falla y la guardia se abriera, el caso de uso cancelaría
+    // sin que nadie mirase si es la cita nombrada (fail-open).
     const escritas: string[] = [];
     const tool = new CancelReservationTool(
       {
         execute: async (rid: string) => {
           escritas.push(rid);
-          throw new Error('conexión perdida');
+          return { status: 'cancelada' };
         },
       },
       leerQueFalla,
@@ -464,7 +466,32 @@ describe('la guardia no tumba el turno si la lectura falla', () => {
     await expect(
       tool.execute({ reservaId: UUID_VALIDO, ...LA_CITA }, ctx),
     ).resolves.toEqual({ ok: false, motivo: 'error_desconocido' });
-    expect(escritas).toEqual([UUID_VALIDO]);
+    expect(escritas).toEqual([]);
+  });
+
+  it('mover tampoco escribe si la lectura de un UUID válido falla', async () => {
+    const escritas: string[] = [];
+    const tool = new RescheduleReservationTool(
+      {
+        execute: async (rid: string) => {
+          escritas.push(rid);
+          return { reservation: { status: 'pendiente' }, workerChanged: false };
+        },
+      },
+      undefined,
+      leerQueFalla,
+    );
+    await expect(
+      tool.execute(
+        {
+          reservaId: UUID_VALIDO,
+          nuevaFecha: '2026-11-10T10:00:00',
+          ...LA_CITA,
+        },
+        ctx,
+      ),
+    ).resolves.toEqual({ ok: false, motivo: 'error_desconocido' });
+    expect(escritas).toEqual([]);
   });
 });
 
@@ -607,5 +634,81 @@ describe('cancelarReserva · confirmación escrita por el sistema', () => {
     expect(
       await tool.presentar({ ok: false, motivo: 'fuera_de_plazo' }),
     ).toBeNull();
+  });
+});
+
+/**
+ * Re-revisión: Postgres acepta el mismo UUID en mayúsculas o sin guiones, así
+ * que el registro del turno no puede comparar el id tal cual lo escribió el
+ * modelo: con otra forma del mismo id y la hora real se saltaba el bloqueo.
+ */
+describe('el registro del turno reconoce la misma cita escrita de otra forma', () => {
+  const ID = '0b8f6a8e-2c1d-4c3b-9a4e-5f6a7b8c9d0e';
+  const suya = Reservation.fromPersistence({
+    id: ID,
+    userId: 'u1',
+    contact: null,
+    scheduledAt: new Date('2026-11-08T14:00:00Z'),
+    endedAt: new Date('2026-11-08T14:30:00Z'),
+    workerId: 'w-1',
+    status: ReservationStatus.Pendiente,
+    lines: [{ serviceId: 's-1', name: 'Corte', price: 1, durationMinutes: 30 }],
+  });
+  // Como Postgres: cualquier forma del mismo UUID encuentra la misma fila.
+  const canonico = (id: string) => id.toLowerCase().replace(/[-{}]/g, '');
+  const leerComoPostgres = async (id: string) =>
+    canonico(id) === canonico(ID) ? suya : null;
+
+  it.each([
+    ['en mayúsculas', ID.toUpperCase()],
+    ['sin guiones', ID.replace(/-/g, '')],
+    ['entre llaves', `{${ID}}`],
+  ])('%s: no cancela en el mismo turno', async (_forma, otraForma) => {
+    const escritas: string[] = [];
+    const tool = new CancelReservationTool(
+      {
+        execute: async (id: string) => {
+          escritas.push(id);
+          return { status: 'cancelada' };
+        },
+      },
+      leerComoPostgres,
+    );
+    const turno: AssistantContext = {
+      ...ctx,
+      citasQueNoCoincidieron: new Set<string>(),
+    };
+    await tool.execute({ reservaId: ID, ...OTRA_HORA }, turno);
+    expect(
+      await tool.execute({ reservaId: otraForma, ...LA_CITA }, turno),
+    ).toMatchObject({ ok: false, motivo: 'confirmar_con_la_clienta' });
+    expect(escritas).toEqual([]);
+  });
+
+  it('y al revés: rechazada con otra forma, tampoco se mueve con la canónica', async () => {
+    const escritas: string[] = [];
+    const tool = new RescheduleReservationTool(
+      {
+        execute: async (id: string) => {
+          escritas.push(id);
+          return { reservation: { status: 'pendiente' }, workerChanged: false };
+        },
+      },
+      undefined,
+      leerComoPostgres,
+    );
+    const turno: AssistantContext = {
+      ...ctx,
+      citasQueNoCoincidieron: new Set<string>(),
+    };
+    const nueva = { nuevaFecha: '2026-11-08T15:00:00' };
+    await tool.execute(
+      { reservaId: ID.toUpperCase(), ...nueva, ...OTRA_HORA },
+      turno,
+    );
+    expect(
+      await tool.execute({ reservaId: ID, ...nueva, ...LA_CITA }, turno),
+    ).toMatchObject({ ok: false, motivo: 'confirmar_con_la_clienta' });
+    expect(escritas).toEqual([]);
   });
 });

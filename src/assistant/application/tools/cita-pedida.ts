@@ -65,9 +65,25 @@ export function esLaCitaPedida(
 /** Forma de los ids de reserva (la columna es `uuid`). */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Clave de una cita en el registro del turno. Postgres acepta el mismo UUID en
+ * mayúsculas, sin guiones o entre llaves, y todas esas formas encuentran la
+ * misma fila: comparar el id tal como lo escribió el modelo dejaba saltarse el
+ * bloqueo con otra forma del mismo id (re-revisión).
+ */
+function claveDeLaCita(id: string): string {
+  return id.trim().toLowerCase().replace(/[-{}]/g, '');
+}
+
 /** Lo que la guardia responde en lugar de dejar escribir. */
 export type RechazoDeLaCita =
-  | { ok: false; motivo: 'argumentos_invalidos' | 'reserva_no_encontrada' }
+  | {
+      ok: false;
+      motivo:
+        | 'argumentos_invalidos'
+        | 'reserva_no_encontrada'
+        | 'error_desconocido';
+    }
   | {
       ok: false;
       motivo: 'no_coincide_con_lo_pedido';
@@ -102,7 +118,9 @@ export type AccionSobreLaCita = 'cancelar' | 'mover';
  * - Si la lectura falla, la guardia no tumba el turno. Con un id sin forma de
  *   UUID (el modelo escribió «3», el número de la línea) la respuesta es
  *   `reserva_no_encontrada`: ninguna reserva puede tener ese id. Con uno válido
- *   (la base no respondió) deja que el caso de uso responda.
+ *   (la base no respondió) la respuesta es `error_desconocido` y no se escribe
+ *   nada: dejar pasar al caso de uso sería cancelar o mover sin haber
+ *   comprobado el día y la hora (re-revisión).
  * - Con `citasQueNoCoincidieron` (solo el bucle del asistente lo pone), una
  *   cita que ya fue rechazada en este turno no se cancela ni se mueve otra vez
  *   en el mismo turno, aunque ahora el día y la hora sean los suyos (M-203):
@@ -116,15 +134,16 @@ export async function comprobarCitaPedida(
   accion: AccionSobreLaCita,
   rechazadasEnElTurno?: Set<string>,
 ): Promise<RechazoDeLaCita | null> {
-  if (rechazadasEnElTurno?.has(id)) {
-    return {
-      ok: false,
-      motivo: 'confirmar_con_la_clienta',
-      queHacer:
-        `No ${accion === 'cancelar' ? 'canceles' : 'muevas'} esta cita en este turno: ` +
-        'pregúntale a la clienta si es esa la cita y espera su respuesta.',
-    };
-  }
+  const yaRechazada = (clave: string) =>
+    rechazadasEnElTurno?.has(claveDeLaCita(clave)) === true;
+  const confirmarAntes: RechazoDeLaCita = {
+    ok: false,
+    motivo: 'confirmar_con_la_clienta',
+    queHacer:
+      `No ${accion === 'cancelar' ? 'canceles' : 'muevas'} esta cita en este turno: ` +
+      'pregúntale a la clienta si es esa la cita y espera su respuesta.',
+  };
+  if (yaRechazada(id)) return confirmarAntes;
   const pedida = leerCitaPedida(args);
   if (!pedida) return { ok: false, motivo: 'argumentos_invalidos' };
   let cita: Reservation | null;
@@ -132,13 +151,17 @@ export async function comprobarCitaPedida(
     cita = await leer(id);
   } catch {
     return UUID.test(id)
-      ? null
+      ? { ok: false, motivo: 'error_desconocido' }
       : { ok: false, motivo: 'reserva_no_encontrada' };
   }
   if (!cita || !canActOn(cita, actor)) return null;
+  // Por el id que de verdad tiene la cita, además del escrito: cubre cualquier
+  // otra forma que la base acepte.
+  if (cita.id && yaRechazada(cita.id)) return confirmarAntes;
   if (esLaCitaPedida(cita, pedida)) return null;
 
-  rechazadasEnElTurno?.add(id);
+  rechazadasEnElTurno?.add(claveDeLaCita(id));
+  if (cita.id) rechazadasEnElTurno?.add(claveDeLaCita(cita.id));
   const { fecha, hora } = fechaYHoraEnPalabras(cita.scheduledAt.toISOString());
   return {
     ok: false,
