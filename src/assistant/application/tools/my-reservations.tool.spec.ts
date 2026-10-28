@@ -160,7 +160,7 @@ describe('MyReservationsTool · presentar (TC-RF54-01)', () => {
       '1. martes, 1 de septiembre de 2026 · 10:00 · Corte, Peinado · con Monica',
     );
     expect(p.lineas[p.lineas.length - 1]).toBe(
-      'Tienes 2 reservas más: pídeme un día concreto.',
+      'Tienes 2 reservas más; puedes verlas todas en «Mis reservas» del portal.',
     );
   });
 
@@ -174,6 +174,44 @@ describe('MyReservationsTool · presentar (TC-RF54-01)', () => {
 
     if (p?.tipo !== 'texto') throw new Error('no es texto');
     expect(p.lineas.join('\n')).not.toMatch(/más|con /);
+  });
+
+  it('por WhatsApp el aviso de «más» no manda al portal', async () => {
+    const tool = new MyReservationsTool(
+      new FakeGetMine([]) as never,
+      { execute: async () => doce } as never,
+    );
+    const wa = {
+      ...ctx(null),
+      canal: 'whatsapp' as const,
+      phoneE164: '573001112233',
+    };
+    const p = await tool.presentar(await tool.execute({}, wa));
+    if (p?.tipo !== 'texto') throw new Error('no es texto');
+    const ultima = p.lineas[p.lineas.length - 1];
+    expect(ultima).toBe(
+      'Tienes 2 reservas más; te las muestro cuando pasen las anteriores.',
+    );
+    expect(ultima).not.toMatch(/portal|día concreto/);
+  });
+
+  it('conserva una cita en curso (empezó pero no ha terminado)', async () => {
+    const tool = new MyReservationsTool(
+      new FakeGetMine([
+        reserva({
+          id: 'en-curso',
+          scheduledAt: new Date('2026-08-19T13:30:00Z'),
+          endedAt: new Date('2026-08-19T14:30:00Z'),
+        }),
+        reserva({
+          id: 'terminada',
+          scheduledAt: new Date('2026-08-19T12:00:00Z'),
+          endedAt: new Date('2026-08-19T13:00:00Z'),
+        }),
+      ]) as never,
+    );
+    const res = (await tool.execute({}, ctx('u1'))) as Array<{ id: string }>;
+    expect(res.map((r) => r.id)).toEqual(['en-curso']);
   });
 
   it('no cuenta las canceladas ni las pasadas, y no presenta errores ni vacíos', async () => {

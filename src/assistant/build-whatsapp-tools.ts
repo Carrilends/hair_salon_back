@@ -121,6 +121,7 @@ export function buildWhatsAppTools(
       (await findActionable.execute(phoneE164)).map((r) => ({
         id: r.id,
         scheduledAt: r.scheduledAt,
+        endedAt: r.endedAt,
         status: r.status,
         totalDurationMinutes: r.totalDurationMinutes,
         services: r.lines.map((l) => ({ name: l.name })),

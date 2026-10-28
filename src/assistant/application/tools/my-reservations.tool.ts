@@ -10,6 +10,7 @@ interface MiLinea {
 }
 const estilistas = new WeakMap<object, string>();
 const totales = new WeakMap<object, number>();
+const porWhatsApp = new WeakSet<object>();
 
 /**
  * Forma mínima de reserva que la herramienta proyecta. El read model real de
@@ -19,6 +20,8 @@ const totales = new WeakMap<object, number>();
 export interface MyReservationView {
   id?: string;
   scheduledAt: Date;
+  /** Fin de la cita; si falta, se toma su inicio. */
+  endedAt?: Date;
   status: string;
   totalDurationMinutes: number;
   services: { name: string }[];
@@ -95,7 +98,12 @@ export class MyReservationsTool implements AssistantTool {
     if (enTotal > lista.length) {
       const mas = enTotal - lista.length;
       lineas.push(
-        `Tienes ${mas} ${mas === 1 ? 'reserva más' : 'reservas más'}: pídeme un día concreto.`,
+        `Tienes ${mas} ${mas === 1 ? 'reserva más' : 'reservas más'}` +
+          // Solo lo que existe: la web lista todas en «Mis reservas»; por
+          // WhatsApp no hay otra consulta que la de las próximas diez.
+          (porWhatsApp.has(lista)
+            ? '; te las muestro cuando pasen las anteriores.'
+            : '; puedes verlas todas en «Mis reservas» del portal.'),
       );
     }
     return { tipo: 'texto', lineas };
@@ -115,7 +123,7 @@ export class MyReservationsTool implements AssistantTool {
       .filter(
         (r) =>
           (r.status === 'pendiente' || r.status === 'confirmada') &&
-          r.scheduledAt.getTime() >= context.now.getTime(),
+          (r.endedAt ?? r.scheduledAt).getTime() > context.now.getTime(),
       )
       .sort((a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime());
 
@@ -142,6 +150,7 @@ export class MyReservationsTool implements AssistantTool {
       if (r.worker?.name) estilistas.set(proyectadas[i], r.worker.name);
     });
     totales.set(proyectadas, proximas.length);
+    if (context.canal === 'whatsapp') porWhatsApp.add(proyectadas);
     return proyectadas;
   }
 

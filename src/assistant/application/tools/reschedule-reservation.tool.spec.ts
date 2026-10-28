@@ -302,3 +302,16 @@ describe('RescheduleReservationTool · frase de la nueva estilista (TC-RF54-01)'
     ).toBeNull();
   });
 });
+
+describe('RescheduleReservationTool · descripción verdadera en todos los canales', () => {
+  const d = new RescheduleReservationTool({
+    execute: async () => ({}),
+  } as never).definition.description;
+  it('no promete una frase aparte que MCP no recibe', () => {
+    expect(d).not.toMatch(/mostrará aparte/);
+    expect(d).toMatch(/si el canal/i);
+  });
+  it('no obliga a callar el aviso previo', () => {
+    expect(d).toMatch(/Antes de llamarla/);
+  });
+});

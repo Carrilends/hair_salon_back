@@ -66,7 +66,7 @@ export class RescheduleReservationTool implements AssistantTool {
       // Y el aviso posterior: la frase con la nueva estilista la presenta el
       // sistema, aparte, solo si de verdad cambió (TC-RF54-01). El modelo no la
       // repite ni la contradice ni habla de «posible» cambio ya hecho.
-      'Si la respuesta trae estilistaCambio en true, el sistema mostrará aparte quién la atenderá: no lo repitas ni nombres estilistas. Si trae false, no menciones otra estilista.',
+      'Una vez movida: si la respuesta trae estilistaCambio en true, dile que la atenderá otra estilista (si el canal muestra aparte quién es, no lo repitas ni inventes nombres); si trae false, no menciones otra estilista.',
     parameters: {
       type: 'object',
       properties: {
