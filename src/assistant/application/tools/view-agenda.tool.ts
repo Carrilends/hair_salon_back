@@ -13,6 +13,8 @@ export interface AgendaView {
   scheduledAt: Date;
   status: string;
   contact: { name: string } | null;
+  /** Nombre de la cuenta, para las citas hechas con sesión (sin contacto). */
+  accountName?: string | null;
   worker: { name: string };
   services: { name: string }[];
 }
@@ -120,7 +122,7 @@ export class ViewAgendaTool implements AssistantTool {
         estado: r.status,
         // Filtrado: un nombre con forma de orden no llega al modelo, que en
         // este turno puede cancelar y mover cualquier cita (revisión de F3b).
-        clienta: nombreParaElModelo(r.contact?.name),
+        clienta: nombreParaElModelo(r.contact?.name || r.accountName),
         servicios: r.services.map((s) => s.name),
         estilista: r.worker.name,
       })),

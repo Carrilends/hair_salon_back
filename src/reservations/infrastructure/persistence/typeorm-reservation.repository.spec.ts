@@ -132,6 +132,40 @@ describe('TypeOrmReservationRepository.findActiveWithWorker', () => {
   });
 });
 
+describe('TypeOrmReservationRepository.findActiveWithWorker (agenda)', () => {
+  it('ordena de la más próxima a la más lejana y carga la cuenta', async () => {
+    const repo = { find: jest.fn(async () => []) };
+    const sut = new TypeOrmReservationRepository(repo as any);
+
+    await sut.findActiveWithWorker(new Date('2026-08-20T12:00:00.000Z'));
+
+    const arg = (repo.find.mock.calls[0] as any[])[0];
+    expect(arg.order).toEqual({ scheduledAt: 'ASC' });
+    expect(arg.relations).toEqual(
+      expect.arrayContaining(['worker', 'services', 'user']),
+    );
+  });
+
+  it('expone el nombre de la cuenta, y nada más de ella', async () => {
+    const row = {
+      ...ormRow(),
+      worker: { id: 'w-1', name: 'Monica', isDefault: false },
+      user: {
+        fullName: 'Ana Pérez',
+        email: 'ana@example.com',
+        phone: '3001112233',
+      },
+    };
+    const repo = { find: jest.fn(async () => [row]) };
+    const sut = new TypeOrmReservationRepository(repo as any);
+
+    const [v] = await sut.findActiveWithWorker(new Date());
+
+    expect(v.accountName).toBe('Ana Pérez');
+    expect(JSON.stringify(v)).not.toMatch(/ana@example|3001112233/);
+  });
+});
+
 describe('TypeOrmReservationRepository.settlePastReservations', () => {
   it('da por cumplidas las confirmadas pasadas y cancela las pendientes pasadas (M4)', async () => {
     // Respeta la máquina de estados: confirmada→cumplida y pendiente→cancelada

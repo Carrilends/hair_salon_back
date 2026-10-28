@@ -157,6 +157,24 @@ describe('verAgenda · presentar', () => {
     expect(todo).not.toMatch(/3001112233|x@y\.co/);
   });
 
+  it('una cita con cuenta lleva el nombre de la cuenta, no «Cliente registrado»', async () => {
+    const tool = new ViewAgendaTool({
+      execute: async () =>
+        [
+          {
+            ...cita(1),
+            contact: null,
+            userId: 'u-1',
+            accountName: 'Ana Pérez',
+          },
+        ] as never,
+    });
+    const p = await tool.presentar(await tool.execute({}, duena));
+    if (p?.tipo !== 'agenda') throw new Error('no es agenda');
+    expect(p.lineas.join('\n')).toContain('Ana Pérez');
+    expect(p.lineas.join('\n')).not.toContain('Cliente registrado');
+  });
+
   it('no presenta nada si la herramienta falló o no hay citas', async () => {
     const tool = new ViewAgendaTool({ execute: async () => [] });
     expect(

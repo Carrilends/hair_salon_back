@@ -108,10 +108,16 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
       // Vigentes = ventana aún no terminada y NO cancelada. Coherente con
       // `countOverlaps` y `findOccupancyRows`, que ya excluyen las canceladas.
       where: { endedAt: MoreThan(now), status: Not('cancelada') },
-      relations: ['worker', 'services'],
-      order: { scheduledAt: 'DESC' },
+      // `user` se carga para el nombre de la cuenta (la agenda de la dueña).
+      relations: ['worker', 'services', 'user'],
+      // De la más próxima a la más lejana: la agenda recorta por arriba y debe
+      // quedarse con las primeras.
+      order: { scheduledAt: 'ASC' },
     });
-    return rows.map((r) => this.toView(r));
+    return rows.map((r) => ({
+      ...this.toView(r),
+      accountName: r.user?.fullName ?? null,
+    }));
   }
 
   async findByUser(userId: string): Promise<ReservationView[]> {

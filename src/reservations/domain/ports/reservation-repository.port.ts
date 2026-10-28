@@ -24,6 +24,11 @@ export interface ReservationView {
   totalDurationMinutes: number;
   status: string;
   userId: string | null;
+  /**
+   * Nombre de la cuenta que reservó. Solo lo rellena la lista de la agenda
+   * (`findActiveWithWorker`); nunca lleva teléfono ni correo.
+   */
+  accountName?: string | null;
   contact: { name: string; phone: string; email?: string | null } | null;
   worker: { id: string; name: string; isDefault: boolean };
   services: {
