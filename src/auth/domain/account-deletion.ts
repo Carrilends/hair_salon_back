@@ -44,7 +44,9 @@ export function isLiveReservation(r: ReservationSnapshot, now: Date): boolean {
  * Qué se copia de la cuenta a una reserva antes de desvincularla. A las no
  * vigentes nada. A las vigentes: el nombre solo si `customer_name` está vacío
  * (§7.2: una cita «para otra persona» conserva el suyo), y el correo solo si
- * `customer_phone_e164` es nulo (§7.1: sin E.164 no hay WhatsApp).
+ * `customer_phone_e164` es nulo (§7.1: sin E.164 no hay WhatsApp) **y**
+ * `customer_email` está vacío (un correo ya dado, quizá de otra persona, se
+ * respeta igual que el nombre).
  */
 export function handOverFor(
   r: ReservationSnapshot,
@@ -56,7 +58,10 @@ export function handOverFor(
   if (!r.customerName || r.customerName.trim() === '') {
     cambios.customerName = account.fullName;
   }
-  if (r.customerPhoneE164 == null && r.customerEmail !== account.email) {
+  if (
+    r.customerPhoneE164 == null &&
+    (!r.customerEmail || r.customerEmail.trim() === '')
+  ) {
     cambios.customerEmail = account.email;
   }
   return cambios;

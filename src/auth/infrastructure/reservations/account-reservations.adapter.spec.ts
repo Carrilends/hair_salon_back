@@ -129,6 +129,33 @@ describe('AccountReservationsAdapter.handOverAndDetach', () => {
     );
   });
 
+  it('una vigente sin teléfono con otro correo ya lleno lo conserva', async () => {
+    const { tx, repo } = txCon([
+      fila('r-1', {
+        customerName: 'Sofía (para otra persona)',
+        customerPhoneE164: null,
+        customerEmail: 'sofia@ejemplo.test',
+      }),
+    ]);
+
+    await sut.handOverAndDetach(tx as never, 'u-1', CUENTA, AHORA);
+
+    expect(repo.update).not.toHaveBeenCalled();
+  });
+
+  it('una vigente sin teléfono y con correo en blanco recibe el de la cuenta', async () => {
+    const { tx, repo } = txCon([
+      fila('r-1', { customerName: 'Ana', customerEmail: '  ' }),
+    ]);
+
+    await sut.handOverAndDetach(tx as never, 'u-1', CUENTA, AHORA);
+
+    expect(repo.update).toHaveBeenCalledWith(
+      { id: 'r-1' },
+      { customerEmail: 'ana@ejemplo.test' },
+    );
+  });
+
   it('una pendiente con ended_at pasado no recibe nada', async () => {
     const { tx, repo } = txCon([fila('r-1', { endedAt: PASADO })]);
 
