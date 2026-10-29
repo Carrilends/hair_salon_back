@@ -43,6 +43,9 @@ import { JwtTokenIssuerAdapter } from './infrastructure/security/jwt-token-issue
 import { GoogleIdentityAdapter } from './infrastructure/security/google-identity.adapter';
 import { ReviewAuthorRenamerAdapter } from './infrastructure/reviews/review-author-renamer.adapter';
 import { SystemClockAdapter } from './infrastructure/time/system-clock.adapter';
+import { AccountReservationsAdapter } from './infrastructure/reservations/account-reservations.adapter';
+import { AccountReviewsAdapter } from './infrastructure/reviews/account-reviews.adapter';
+import { AccountAssistantDataAdapter } from './infrastructure/assistant/account-assistant-data.adapter';
 
 // Tokens de inyección
 import {
@@ -57,6 +60,9 @@ import {
   REFRESH_TOKEN_REPOSITORY,
   GOOGLE_IDENTITY,
   SESSION_CONFIG,
+  ACCOUNT_RESERVATIONS,
+  ACCOUNT_REVIEWS,
+  ACCOUNT_ASSISTANT_DATA,
 } from './application/tokens';
 
 @Module({
@@ -101,6 +107,11 @@ import {
     { provide: SECURE_TOKEN_GENERATOR, useClass: CryptoTokenGeneratorAdapter },
     { provide: REVIEW_AUTHOR_RENAMER, useClass: ReviewAuthorRenamerAdapter },
     { provide: AUTH_CLOCK, useClass: SystemClockAdapter },
+    // Eliminar la cuenta: trabajan solo con el EntityManager de la transacción
+    // que reciben, así que no inyectan repositorios.
+    { provide: ACCOUNT_RESERVATIONS, useClass: AccountReservationsAdapter },
+    { provide: ACCOUNT_REVIEWS, useClass: AccountReviewsAdapter },
+    { provide: ACCOUNT_ASSISTANT_DATA, useClass: AccountAssistantDataAdapter },
     {
       // Enlaces del frontend derivados de FRONT_URL (que ya existe para CORS).
       // FRONT_URL puede ser lista separada por comas: se toma el primero.

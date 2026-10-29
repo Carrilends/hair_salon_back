@@ -15,3 +15,9 @@ export const FRONT_BASE_URL = Symbol('FrontBaseUrl');
 export const REFRESH_TOKEN_REPOSITORY = Symbol('RefreshTokenRepositoryPort');
 export const GOOGLE_IDENTITY = Symbol('GoogleIdentityPort');
 export const SESSION_CONFIG = Symbol('SessionConfig'); // vigencias y opciones de cookie
+
+// Eliminar la cuenta (2026-10-28): lo que el caso de uso toca de otros
+// contextos, dentro de su transacción.
+export const ACCOUNT_RESERVATIONS = Symbol('AccountReservationsPort');
+export const ACCOUNT_REVIEWS = Symbol('AccountReviewsPort');
+export const ACCOUNT_ASSISTANT_DATA = Symbol('AccountAssistantDataPort');
