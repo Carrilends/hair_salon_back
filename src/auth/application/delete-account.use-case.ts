@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
+  AccountDeletionConfirmationError,
   AdminAccountDeletionError,
-  InvalidCredentialsError,
   TooManyAttemptsError,
   UserNotFoundError,
 } from '../domain/errors';
@@ -43,11 +43,15 @@ export interface DeleteAccountResult {
  * Eliminar la cuenta propia (derecho de supresión, Ley 1581 de 2012).
  *
  * Reglas (diseño `2026-10-28-eliminar-cuenta`), todas aquí y no en el borde:
- * - una cuenta con rol `admin` no puede borrarse (403), sin tocar nada;
+ * - una cuenta con rol `admin` no puede borrarse (403), sin tocar nada; se
+ *   comprueba antes de confirmar y otra vez sobre la fila bloqueada;
  * - se confirma con la contraseña si la cuenta tiene una; si no (solo Google),
  *   con el correo, sin distinguir mayúsculas y sin espacios alrededor. Si no
- *   coincide, 401 sin tocar nada;
- * - 5 confirmaciones fallidas en 15 minutos por cuenta bloquean (429);
+ *   coincide, 422 sin tocar nada (no 401: la sesión es válida, y el portal
+ *   renueva la sesión ante un 401);
+ * - 5 confirmaciones fallidas en 15 minutos por cuenta bloquean (429). El
+ *   intento se reserva antes de comparar, para que peticiones en paralelo no
+ *   multipliquen los intentos;
  * - en **una** transacción: se copia nombre/correo a las reservas vigentes, se
  *   anonimizan las reseñas, se borran las conversaciones del asistente y se
  *   borra el usuario (sus sesiones y enlaces caen por CASCADE; sus reservas
@@ -82,20 +86,24 @@ export class DeleteAccountUseCase {
       throw new AdminAccountDeletionError();
 
     const now = this.clock.now();
-    if (this.limiter.isBlocked(userId, now)) throw new TooManyAttemptsError();
-    if (!(await this.confirms(user, command))) {
-      this.limiter.recordFailure(userId, now);
-      throw new InvalidCredentialsError();
-    }
+    // Se reserva el intento (contado como fallo) antes de la comparación
+    // asíncrona; si la confirmación es buena, se devuelve.
+    if (!this.limiter.tryAcquire(userId, now)) throw new TooManyAttemptsError();
+    if (!(await this.confirms(user, command)))
+      throw new AccountDeletionConfirmationError();
+    this.limiter.release(userId, now);
 
-    const account = { fullName: user.fullName, email: user.email.value };
     const result = await this.unitOfWork.run(async (tx) => {
-      if (!(await this.users.lockForDeletion(tx, userId)))
-        throw new UserNotFoundError();
+      const locked = await this.users.lockForDeletion(tx, userId);
+      if (!locked) throw new UserNotFoundError();
+      // Se vuelve a mirar el rol sobre la fila bloqueada: un ascenso a admin
+      // hecho en paralelo no puede colarse.
+      if (locked.roles.includes(ValidRoles.admin))
+        throw new AdminAccountDeletionError();
       const { vigentes, detached } = await this.reservations.handOverAndDetach(
         tx,
         userId,
-        account,
+        { fullName: locked.fullName, email: locked.email },
         now,
       );
       const resenas = await this.reviews.anonymize(tx, userId);

@@ -215,7 +215,14 @@ describe('DELETE /api/auth/me (integración, HairSalonE2E)', () => {
       phone: '3009990002',
       e164: '573009990002',
     });
-    await insertar(r.pasada, new Date(Date.now() - 3 * 86_400_000), 'cumplida');
+    // La pasada, en una franja fija fuera del horario del salón (03:00 UTC =
+    // 22:00 en Bogotá): ninguna reserva sembrada puede ocuparla, así que no
+    // choca con la restricción de exclusión. No va a 2020 a propósito: la
+    // prueba de la purga corre en paralelo y borra TODA reserva terminada hace
+    // más de un mes; hace tres días queda fuera de su alcance.
+    const pasada = new Date(Date.now() - 3 * 86_400_000);
+    pasada.setUTCHours(3, 0, 0, 0);
+    await insertar(r.pasada, pasada, 'cumplida');
 
     await ds.query(
       `INSERT INTO reviews (id, name, description, score)
@@ -286,20 +293,20 @@ describe('DELETE /api/auth/me (integración, HairSalonE2E)', () => {
       .expect(400);
   });
 
-  it('con la contraseña mala: 401 y nada cambia', async () => {
+  it('con la confirmación mala: 422 (no 401) y nada cambia', async () => {
     const { token } = await login(clienta.email);
     const antes = await foto();
     await request(app.getHttpServer())
       .delete('/api/auth/me')
       .set('Authorization', `Bearer ${token}`)
       .send({ password: 'No-Es-La-Clave-1' })
-      .expect(401);
+      .expect(422);
     // Con contraseña, mandar solo el correo tampoco basta.
     await request(app.getHttpServer())
       .delete('/api/auth/me')
       .set('Authorization', `Bearer ${token}`)
       .send({ email: clienta.email })
-      .expect(401);
+      .expect(422);
     expect(await foto()).toEqual(antes);
   });
 
@@ -330,7 +337,7 @@ describe('DELETE /api/auth/me (integración, HairSalonE2E)', () => {
     expect(await foto()).toEqual(antes);
   });
 
-  it('borra la cuenta, entrega las citas vigentes sin cancelarlas y cierra la sesión (focos 3 y 5)', async () => {
+  it('borra la cuenta, entrega las citas vigentes sin cancelarlas y cierra la sesión (focos 3, 5a y 5b)', async () => {
     const { token, cookie } = await login(clienta.email);
     const antes = await foto();
     const estadoAntes = Object.fromEntries(
@@ -427,9 +434,9 @@ describe('DELETE /api/auth/me (integración, HairSalonE2E)', () => {
       .get('/api/auth/check-status')
       .set('Authorization', `Bearer ${token}`)
       .expect(401);
-  });
 
-  it('tras el borrado, WhatsApp (actor phone) aún cancela la cita por su teléfono (foco 5b)', async () => {
+    // Foco 5b: tras el borrado, WhatsApp (actor phone) aún cancela la cita
+    // por el teléfono de la reserva, que ya no tiene cuenta.
     const cancelar = new CancelReservationUseCase(
       new TypeOrmReservationRepository(ds.getRepository(ReservationOrmEntity)),
       { now: () => new Date() },

@@ -1,6 +1,8 @@
 import { AuthDomainExceptionFilter } from './auth-domain-exception.filter';
 import {
+  AccountDeletionConfirmationError,
   AdminAccountDeletionError,
+  InvalidCredentialsError,
   AuthTokenAlreadyUsedError,
   AuthTokenNotFoundError,
   ExpiredAuthTokenError,
@@ -45,5 +47,15 @@ describe('AuthDomainExceptionFilter', () => {
     const { status, body } = traducir(new TooManyAttemptsError());
     expect(status).toBe(429);
     expect(body.statusCode).toBe(429);
+  });
+  it('una confirmación mala al eliminar la cuenta responde 422, no 401', () => {
+    const { status, body } = traducir(new AccountDeletionConfirmationError());
+    expect(status).toBe(422);
+    expect(body.statusCode).toBe(422);
+    expect(body.message).toMatch(/confirmación/);
+  });
+
+  it('las credenciales inválidas del inicio de sesión siguen en 401', () => {
+    expect(traducir(new InvalidCredentialsError()).status).toBe(401);
   });
 });

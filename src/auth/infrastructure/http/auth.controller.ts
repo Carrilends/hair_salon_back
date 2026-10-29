@@ -188,8 +188,8 @@ export class AuthController {
    * Eliminar la cuenta propia. El cuerpo confirma (contraseña, o correo si la
    * cuenta es solo de Google); las reglas viven en el caso de uso. Si borra,
    * la cookie de sesión se limpia como en `logout` (sus refresh tokens ya
-   * cayeron con la cuenta). 401 credencial mala o sin sesión, 403 admin, 429
-   * demasiados intentos.
+   * cayeron con la cuenta). 401 sin sesión, 422 confirmación mala, 403 admin,
+   * 429 demasiados intentos.
    */
   @Delete('me')
   @Auth()

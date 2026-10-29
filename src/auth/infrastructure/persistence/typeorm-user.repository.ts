@@ -4,7 +4,10 @@ import { EntityManager, Repository } from 'typeorm';
 import { User } from 'src/auth/entities/user.entity';
 import { UserAccount } from '../../domain/user-account';
 import { Email } from '../../domain/email';
-import { UserRepositoryPort } from '../../domain/ports/user-repository.port';
+import {
+  LockedAccount,
+  UserRepositoryPort,
+} from '../../domain/ports/user-repository.port';
 import { UserNotFoundError } from '../../domain/errors';
 import { UserMapper } from './user.mapper';
 
@@ -69,13 +72,18 @@ export class TypeOrmUserRepository implements UserRepositoryPort {
     return UserMapper.toDomain(row!);
   }
 
-  async lockForDeletion(tx: EntityManager, id: string): Promise<boolean> {
+  async lockForDeletion(
+    tx: EntityManager,
+    id: string,
+  ): Promise<LockedAccount | null> {
     const row = await tx.getRepository(User).findOne({
-      select: { id: true },
+      select: { id: true, fullName: true, email: true, roles: true },
       where: { id },
       lock: { mode: 'pessimistic_write' },
     });
-    return row !== null;
+    return row
+      ? { fullName: row.fullName, email: row.email, roles: row.roles }
+      : null;
   }
 
   async deleteWithin(tx: EntityManager, id: string): Promise<void> {

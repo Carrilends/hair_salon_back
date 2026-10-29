@@ -110,6 +110,19 @@ export class AdminAccountDeletionError extends AuthDomainError {
 }
 
 /**
+ * La confirmación para eliminar la cuenta (contraseña, o correo si la cuenta
+ * es solo de Google) no coincide. Se responde 422 y no 401: la sesión sí es
+ * válida, y un 401 haría que el portal renovara la sesión y repitiera la
+ * petición, gastando dos intentos por cada contraseña mala.
+ */
+export class AccountDeletionConfirmationError extends AuthDomainError {
+  constructor() {
+    super('La confirmación no coincide; revisa la contraseña o el correo');
+    this.name = 'AccountDeletionConfirmationError';
+  }
+}
+
+/**
  * Demasiadas confirmaciones fallidas seguidas (contraseña o correo). Se
  * responde 429 hasta que la ventana pase.
  */

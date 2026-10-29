@@ -24,6 +24,30 @@ export class FailedAttemptLimiter {
     return this.vivos(clave, now).length >= this.maxFallos;
   }
 
+  /**
+   * Reserva un intento **antes** de comprobar la credencial, de forma atómica
+   * (síncrona: nada se intercala entre mirar y anotar). Se anota como fallo y,
+   * si la credencial resulta buena, se devuelve con `release`. Así N peticiones
+   * en paralelo no consiguen N intentos mientras la comparación (asíncrona) está
+   * en vuelo. Devuelve `false` si la cuenta ya agotó su cupo.
+   */
+  tryAcquire(clave: string, now: Date): boolean {
+    const vivos = this.vivos(clave, now);
+    if (vivos.length >= this.maxFallos) return false;
+    vivos.push(now.getTime());
+    this.fallos.set(clave, vivos);
+    return true;
+  }
+
+  /** Devuelve un intento reservado con `tryAcquire(clave, at)`. */
+  release(clave: string, at: Date): void {
+    const marcas = this.fallos.get(clave);
+    if (!marcas) return;
+    const i = marcas.indexOf(at.getTime());
+    if (i !== -1) marcas.splice(i, 1);
+    if (marcas.length === 0) this.fallos.delete(clave);
+  }
+
   recordFailure(clave: string, now: Date): void {
     const vivos = this.vivos(clave, now);
     vivos.push(now.getTime());

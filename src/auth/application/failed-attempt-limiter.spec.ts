@@ -30,4 +30,15 @@ describe('FailedAttemptLimiter', () => {
     l.clear('a');
     expect(l.isBlocked('a', T0)).toBe(false);
   });
+
+  it('tryAcquire reserva el intento y se niega al llegar al cupo; release lo devuelve', () => {
+    const l = new FailedAttemptLimiter(2, 1000);
+    expect(l.tryAcquire('a', T0)).toBe(true);
+    expect(l.tryAcquire('a', mas(1))).toBe(true);
+    expect(l.tryAcquire('a', mas(2))).toBe(false);
+    l.release('a', mas(1));
+    expect(l.isBlocked('a', mas(3))).toBe(false);
+    expect(l.tryAcquire('a', mas(3))).toBe(true);
+    expect(l.isBlocked('a', mas(4))).toBe(true);
+  });
 });

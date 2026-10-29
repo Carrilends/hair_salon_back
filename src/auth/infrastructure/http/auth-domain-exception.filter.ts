@@ -8,8 +8,10 @@ import {
   HttpStatus,
   NotFoundException,
   UnauthorizedException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import {
+  AccountDeletionConfirmationError,
   AdminAccountDeletionError,
   AuthDomainError,
   AuthTokenAlreadyUsedError,
@@ -28,6 +30,9 @@ import {
  *   - InvalidCredentialsError / InactiveUserError -> 401 Unauthorized
  *   - UserNotFoundError                           -> 404 Not Found
  *   - AdminAccountDeletionError                   -> 403 Forbidden
+ *   - AccountDeletionConfirmationError            -> 422 Unprocessable Entity
+ *     (confirmación mala al eliminar la cuenta; no 401, que el portal lee como
+ *     sesión caducada y renueva)
  *   - TooManyAttemptsError                        -> 429 Too Many Requests
  *   - resto (correo inválido/duplicado, mismo correo/contraseña, correo ya
  *     verificado y todos los errores de token: inexistente/expirado/usado) -> 400
@@ -51,6 +56,8 @@ export class AuthDomainExceptionFilter implements ExceptionFilter {
       http = new UnauthorizedException(error.message);
     } else if (error instanceof UserNotFoundError) {
       http = new NotFoundException(error.message);
+    } else if (error instanceof AccountDeletionConfirmationError) {
+      http = new UnprocessableEntityException(error.message);
     } else if (error instanceof AdminAccountDeletionError) {
       http = new ForbiddenException(error.message);
     } else if (error instanceof TooManyAttemptsError) {
