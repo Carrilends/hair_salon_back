@@ -125,7 +125,7 @@ describe('DeleteAccountUseCase', () => {
     nadaTocado(d);
   });
 
-  it('cuenta con contraseña sin contraseña en el cuerpo: 401', async () => {
+  it('cuenta con contraseña sin contraseña en el cuerpo: confirmación mala (422)', async () => {
     const d = deps();
     await expect(d.uc.execute('u-1', {})).rejects.toThrow(
       AccountDeletionConfirmationError,
@@ -134,7 +134,7 @@ describe('DeleteAccountUseCase', () => {
     nadaTocado(d);
   });
 
-  it('cuenta con contraseña a la que se le manda solo el correo: 401', async () => {
+  it('cuenta con contraseña a la que se le manda solo el correo: confirmación mala (422)', async () => {
     const d = deps({ user: account({ googleId: 'g-1' }) });
     await expect(
       d.uc.execute('u-1', { email: 'ana@correo.test' }),
@@ -149,7 +149,7 @@ describe('DeleteAccountUseCase', () => {
     expect(d.users.deleteWithin).toHaveBeenCalled();
   });
 
-  it('cuenta de Google con otro correo: 401 y nada tocado', async () => {
+  it('cuenta de Google con otro correo: confirmación mala (422) y nada tocado', async () => {
     const d = deps({ user: account({ passwordHash: null, googleId: 'g-1' }) });
     await expect(
       d.uc.execute('u-1', { email: 'otra@correo.test' }),
@@ -157,7 +157,7 @@ describe('DeleteAccountUseCase', () => {
     nadaTocado(d);
   });
 
-  it('cuenta de Google sin correo en el cuerpo: 401', async () => {
+  it('cuenta de Google sin correo en el cuerpo: confirmación mala (422)', async () => {
     const d = deps({ user: account({ passwordHash: null, googleId: 'g-1' }) });
     await expect(
       d.uc.execute('u-1', { password: 'Correcta-1' }),

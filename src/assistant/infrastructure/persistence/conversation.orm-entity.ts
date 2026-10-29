@@ -11,8 +11,9 @@ import { AssistantMessageOrmEntity } from './assistant-message.orm-entity';
 /**
  * Tabla `assistant_conversations`: la raíz del historial del asistente (A4), con
  * la telemetría de tokens acumulada por conversación (§6.2). `user_id` es
- * opcional (conversación anónima) y se desvincula, no se borra, al eliminar la
- * cuenta (FK ON DELETE SET NULL, definida en la migración).
+ * opcional (conversación anónima); la FK es ON DELETE SET NULL, pero
+ * `DeleteAccountUseCase` borra las conversaciones de la cuenta (y sus mensajes)
+ * antes de borrar el usuario.
  */
 @Entity('assistant_conversations')
 export class ConversationOrmEntity {
