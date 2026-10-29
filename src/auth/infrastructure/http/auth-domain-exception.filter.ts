@@ -3,11 +3,14 @@ import {
   BadRequestException,
   Catch,
   ExceptionFilter,
+  ForbiddenException,
   HttpException,
+  HttpStatus,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import {
+  AdminAccountDeletionError,
   AuthDomainError,
   AuthTokenAlreadyUsedError,
   AuthTokenNotFoundError,
@@ -16,6 +19,7 @@ import {
   InvalidCredentialsError,
   InvalidRefreshTokenError,
   RefreshTokenReuseDetectedError,
+  TooManyAttemptsError,
   UserNotFoundError,
 } from '../../domain/errors';
 
@@ -23,6 +27,8 @@ import {
  * Traduce los errores de dominio de Auth a excepciones HTTP:
  *   - InvalidCredentialsError / InactiveUserError -> 401 Unauthorized
  *   - UserNotFoundError                           -> 404 Not Found
+ *   - AdminAccountDeletionError                   -> 403 Forbidden
+ *   - TooManyAttemptsError                        -> 429 Too Many Requests
  *   - resto (correo inválido/duplicado, mismo correo/contraseña, correo ya
  *     verificado y todos los errores de token: inexistente/expirado/usado) -> 400
  *
@@ -45,6 +51,17 @@ export class AuthDomainExceptionFilter implements ExceptionFilter {
       http = new UnauthorizedException(error.message);
     } else if (error instanceof UserNotFoundError) {
       http = new NotFoundException(error.message);
+    } else if (error instanceof AdminAccountDeletionError) {
+      http = new ForbiddenException(error.message);
+    } else if (error instanceof TooManyAttemptsError) {
+      http = new HttpException(
+        {
+          statusCode: HttpStatus.TOO_MANY_REQUESTS,
+          message: error.message,
+          error: 'Too Many Requests',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     } else {
       http = new BadRequestException(error.message);
     }

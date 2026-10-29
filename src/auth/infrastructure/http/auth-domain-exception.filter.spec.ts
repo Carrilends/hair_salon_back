@@ -1,8 +1,10 @@
 import { AuthDomainExceptionFilter } from './auth-domain-exception.filter';
 import {
+  AdminAccountDeletionError,
   AuthTokenAlreadyUsedError,
   AuthTokenNotFoundError,
   ExpiredAuthTokenError,
+  TooManyAttemptsError,
 } from '../../domain/errors';
 
 /** Respuesta de Express mínima: solo anota lo que el filtro le pide. */
@@ -32,5 +34,16 @@ describe('AuthDomainExceptionFilter', () => {
     expect(status).toBe(400);
     expect(body.code).toBe(code);
     expect(body.message).toBe(error.message);
+  });
+  it('una cuenta admin que intenta borrarse responde 403', () => {
+    const { status, body } = traducir(new AdminAccountDeletionError());
+    expect(status).toBe(403);
+    expect(body.message).toMatch(/administración/);
+  });
+
+  it('demasiados intentos responde 429', () => {
+    const { status, body } = traducir(new TooManyAttemptsError());
+    expect(status).toBe(429);
+    expect(body.statusCode).toBe(429);
   });
 });

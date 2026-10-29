@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Inject,
@@ -25,6 +26,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ResendVerificationDto } from './dto/resend-verification.dto';
 import { GoogleLoginDto } from './dto/google-login.dto';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 import { AuthDomainExceptionFilter } from './auth-domain-exception.filter';
 import {
   REFRESH_COOKIE_NAME,
@@ -45,6 +47,7 @@ import { RefreshSessionUseCase } from '../../application/refresh-session.use-cas
 import { LogoutUseCase } from '../../application/logout.use-case';
 import { LogoutAllUseCase } from '../../application/logout-all.use-case';
 import { LoginWithGoogleUseCase } from '../../application/login-with-google.use-case';
+import { DeleteAccountUseCase } from '../../application/delete-account.use-case';
 import { SESSION_CONFIG } from '../../application/tokens';
 import { SessionConfig } from '../../application/session-config';
 
@@ -66,6 +69,7 @@ export class AuthController {
     private readonly logoutUseCase: LogoutUseCase,
     private readonly logoutAllUseCase: LogoutAllUseCase,
     private readonly loginWithGoogleUseCase: LoginWithGoogleUseCase,
+    private readonly deleteAccountUseCase: DeleteAccountUseCase,
     @Inject(SESSION_CONFIG) private readonly sessionConfig: SessionConfig,
   ) {}
 
@@ -178,6 +182,28 @@ export class AuthController {
       currentPassword: dto.currentPassword,
       newPassword: dto.newPassword,
     });
+  }
+
+  /**
+   * Eliminar la cuenta propia. El cuerpo confirma (contraseña, o correo si la
+   * cuenta es solo de Google); las reglas viven en el caso de uso. Si borra,
+   * la cookie de sesión se limpia como en `logout` (sus refresh tokens ya
+   * cayeron con la cuenta). 401 credencial mala o sin sesión, 403 admin, 429
+   * demasiados intentos.
+   */
+  @Delete('me')
+  @Auth()
+  @HttpCode(204)
+  async deleteAccount(
+    @GetUser() user: User,
+    @Body() dto: DeleteAccountDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    await this.deleteAccountUseCase.execute(user.id, {
+      password: dto.password,
+      email: dto.email,
+    });
+    clearRefreshCookie(res);
   }
 
   @Post('forgot-password')

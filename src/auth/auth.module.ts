@@ -30,6 +30,8 @@ import { RefreshSessionUseCase } from './application/refresh-session.use-case';
 import { LogoutUseCase } from './application/logout.use-case';
 import { LogoutAllUseCase } from './application/logout-all.use-case';
 import { LoginWithGoogleUseCase } from './application/login-with-google.use-case';
+import { DeleteAccountUseCase } from './application/delete-account.use-case';
+import { FailedAttemptLimiter } from './application/failed-attempt-limiter';
 import { AuthLinks } from './application/auth-email-composer';
 import { SessionConfig } from './application/session-config';
 
@@ -46,6 +48,7 @@ import { SystemClockAdapter } from './infrastructure/time/system-clock.adapter';
 import { AccountReservationsAdapter } from './infrastructure/reservations/account-reservations.adapter';
 import { AccountReviewsAdapter } from './infrastructure/reviews/account-reviews.adapter';
 import { AccountAssistantDataAdapter } from './infrastructure/assistant/account-assistant-data.adapter';
+import { TypeOrmUnitOfWorkAdapter } from './infrastructure/persistence/typeorm-unit-of-work.adapter';
 
 // Tokens de inyección
 import {
@@ -63,6 +66,8 @@ import {
   ACCOUNT_RESERVATIONS,
   ACCOUNT_REVIEWS,
   ACCOUNT_ASSISTANT_DATA,
+  AUTH_UNIT_OF_WORK,
+  ACCOUNT_DELETION_LIMITER,
 } from './application/tokens';
 
 @Module({
@@ -84,6 +89,7 @@ import {
     LogoutUseCase,
     LogoutAllUseCase,
     LoginWithGoogleUseCase,
+    DeleteAccountUseCase,
     // Puertos -> adaptadores
     { provide: USER_REPOSITORY, useClass: TypeOrmUserRepository },
     { provide: AUTH_TOKEN_REPOSITORY, useClass: TypeOrmAuthTokenRepository },
@@ -112,6 +118,13 @@ import {
     { provide: ACCOUNT_RESERVATIONS, useClass: AccountReservationsAdapter },
     { provide: ACCOUNT_REVIEWS, useClass: AccountReviewsAdapter },
     { provide: ACCOUNT_ASSISTANT_DATA, useClass: AccountAssistantDataAdapter },
+    { provide: AUTH_UNIT_OF_WORK, useClass: TypeOrmUnitOfWorkAdapter },
+    {
+      // El inicio de sesión no tiene límite propio que reutilizar: 5
+      // confirmaciones fallidas en 15 minutos por cuenta, en memoria.
+      provide: ACCOUNT_DELETION_LIMITER,
+      useFactory: () => new FailedAttemptLimiter(5, 15 * 60_000),
+    },
     {
       // Enlaces del frontend derivados de FRONT_URL (que ya existe para CORS).
       // FRONT_URL puede ser lista separada por comas: se toma el primero.

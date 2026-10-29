@@ -96,3 +96,26 @@ export class DataPolicyConsentRequiredError extends AuthDomainError {
     this.name = 'DataPolicyConsentRequiredError';
   }
 }
+
+/**
+ * Las cuentas de administración no pueden borrarse a sí mismas (eliminar la
+ * cuenta, 2026-10-28): el portal no muestra la acción y el servidor la niega
+ * igual, por si se llama a la API directamente. Se responde 403.
+ */
+export class AdminAccountDeletionError extends AuthDomainError {
+  constructor() {
+    super('Las cuentas de administración no pueden eliminarse');
+    this.name = 'AdminAccountDeletionError';
+  }
+}
+
+/**
+ * Demasiadas confirmaciones fallidas seguidas (contraseña o correo). Se
+ * responde 429 hasta que la ventana pase.
+ */
+export class TooManyAttemptsError extends AuthDomainError {
+  constructor() {
+    super('Demasiados intentos; espera unos minutos y vuelve a intentarlo');
+    this.name = 'TooManyAttemptsError';
+  }
+}

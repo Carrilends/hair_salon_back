@@ -18,6 +18,7 @@ describe('AuthController (hexagonal)', () => {
   let logoutUseCase: { execute: jest.Mock };
   let logoutAll: { execute: jest.Mock };
   let loginWithGoogle: { execute: jest.Mock };
+  let deleteAccount: { execute: jest.Mock };
 
   const makeRes = () => ({ cookie: jest.fn(), clearCookie: jest.fn() }) as any;
 
@@ -36,6 +37,7 @@ describe('AuthController (hexagonal)', () => {
     logoutUseCase = { execute: jest.fn() };
     logoutAll = { execute: jest.fn() };
     loginWithGoogle = { execute: jest.fn() };
+    deleteAccount = { execute: jest.fn() };
     controller = new AuthController(
       registerUser as any,
       loginUser as any,
@@ -51,6 +53,7 @@ describe('AuthController (hexagonal)', () => {
       logoutUseCase as any,
       logoutAll as any,
       loginWithGoogle as any,
+      deleteAccount as any,
       { refreshTtlDays: 30, refreshTtlMs: 2592000000 } as any,
     );
   });
@@ -241,5 +244,44 @@ describe('AuthController (hexagonal)', () => {
       AuthController.prototype.checkAuthStatus,
     );
     expect(roles ?? []).not.toContain('admin');
+  });
+  it('DELETE me borra la cuenta con el id de la sesión y limpia la cookie', async () => {
+    deleteAccount.execute.mockResolvedValue({});
+    const res = makeRes();
+    await expect(
+      controller.deleteAccount(
+        { id: 'u-1' } as any,
+        { password: 'Clave-1' } as any,
+        res,
+      ),
+    ).resolves.toBeUndefined();
+    expect(deleteAccount.execute).toHaveBeenCalledWith('u-1', {
+      password: 'Clave-1',
+      email: undefined,
+    });
+    expect(res.clearCookie).toHaveBeenCalledWith(
+      'marlene_rt',
+      expect.objectContaining({ path: '/api/auth' }),
+    );
+  });
+
+  it('DELETE me no limpia la cookie si el caso de uso rechaza', async () => {
+    deleteAccount.execute.mockRejectedValue(new Error('no'));
+    const res = makeRes();
+    await expect(
+      controller.deleteAccount({ id: 'u-1' } as any, {} as any, res),
+    ).rejects.toThrow('no');
+    expect(res.clearCookie).not.toHaveBeenCalled();
+  });
+
+  it('DELETE me exige sesión (@Auth) sin rol concreto y responde 204', () => {
+    const metodo = AuthController.prototype.deleteAccount;
+    expect(Reflect.getMetadata('__guards__', metodo)?.length).toBeGreaterThan(
+      0,
+    );
+    expect(Reflect.getMetadata('roles', metodo) ?? []).toEqual([]);
+    expect(Reflect.getMetadata('__httpCode__', metodo)).toBe(204);
+    expect(Reflect.getMetadata('path', metodo)).toBe('me');
+    expect(Reflect.getMetadata('method', metodo)).toBe(3); // RequestMethod.DELETE
   });
 });

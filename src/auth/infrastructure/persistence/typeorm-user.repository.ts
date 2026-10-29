@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { User } from 'src/auth/entities/user.entity';
 import { UserAccount } from '../../domain/user-account';
 import { Email } from '../../domain/email';
 import { UserRepositoryPort } from '../../domain/ports/user-repository.port';
+import { UserNotFoundError } from '../../domain/errors';
 import { UserMapper } from './user.mapper';
 
 // `password` es `select: false`: hay que pedirla explícitamente para no perder
@@ -66,5 +67,19 @@ export class TypeOrmUserRepository implements UserRepositoryPort {
       select: SELECT_WITH_PASSWORD,
     });
     return UserMapper.toDomain(row!);
+  }
+
+  async lockForDeletion(tx: EntityManager, id: string): Promise<boolean> {
+    const row = await tx.getRepository(User).findOne({
+      select: { id: true },
+      where: { id },
+      lock: { mode: 'pessimistic_write' },
+    });
+    return row !== null;
+  }
+
+  async deleteWithin(tx: EntityManager, id: string): Promise<void> {
+    const result = await tx.getRepository(User).delete({ id });
+    if (result.affected !== 1) throw new UserNotFoundError();
   }
 }

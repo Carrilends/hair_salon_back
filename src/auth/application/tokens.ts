@@ -21,3 +21,6 @@ export const SESSION_CONFIG = Symbol('SessionConfig'); // vigencias y opciones d
 export const ACCOUNT_RESERVATIONS = Symbol('AccountReservationsPort');
 export const ACCOUNT_REVIEWS = Symbol('AccountReviewsPort');
 export const ACCOUNT_ASSISTANT_DATA = Symbol('AccountAssistantDataPort');
+// La transacción que abre el caso de uso y el límite de confirmaciones fallidas.
+export const AUTH_UNIT_OF_WORK = Symbol('UnitOfWorkPort');
+export const ACCOUNT_DELETION_LIMITER = Symbol('AccountDeletionLimiter');
