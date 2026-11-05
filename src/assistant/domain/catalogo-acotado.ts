@@ -13,7 +13,9 @@ const PEDIR_TODO = new Set([
   'carta',
   'menu',
   'lista',
+  'todo',
   'todos',
+  'todas',
 ]);
 
 const LONGITUD_RAIZ = 4;
@@ -32,6 +34,11 @@ function raicesDe(texto: string): Set<string> {
   );
 }
 
+/** Un trozo de la búsqueda sin puntuación, tildes ni mayúsculas. */
+function plegarToken(token: string): string {
+  return sinDiacriticos(token.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''));
+}
+
 /** Lo que la clienta busca de verdad, sin las palabras de «dame todo». */
 export function conceptoDe(busqueda?: string): string[] {
   const { palabras, ambiguas } = analizarBusqueda(busqueda);
@@ -46,14 +53,30 @@ export function sinPalabrasDeTodo(busqueda?: string): string | undefined {
   if (busqueda === undefined) return undefined;
   return busqueda
     .split(/\s+/)
-    .filter((t) => {
-      const limpio = sinDiacriticos(
-        t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''),
-      );
-      return !PEDIR_TODO.has(limpio);
-    })
+    .filter((t) => !PEDIR_TODO.has(plegarToken(t)))
     .join(' ')
     .trim();
+}
+
+/**
+ * El concepto tal como se escribió, con sus tildes y su ñ, para nombrarlo en una
+ * pregunta: «uñas», no la forma plegada «unas», y sin el relleno («de», «para»).
+ */
+export function conceptoLegible(busqueda?: string): string {
+  const concepto = conceptoDe(busqueda);
+  const palabras = new Set(concepto);
+  const legibles = (sinPalabrasDeTodo(busqueda) ?? '')
+    .split(/\s+/)
+    .filter((t) => palabras.has(plegarToken(t)));
+  return (legibles.length > 0 ? legibles : concepto).join(' ');
+}
+
+/** ¿`busqueda` es exactamente este nombre? Sin tildes, mayúsculas ni espacios de más. */
+export function esElNombreExacto(nombre: string, busqueda?: string): boolean {
+  if (busqueda === undefined) return false;
+  const plegar = (t: string) =>
+    sinDiacriticos(t.toLowerCase()).trim().replace(/\s+/g, ' ');
+  return plegar(nombre) === plegar(busqueda);
 }
 
 /** Alguna de las palabras fue mencionada (por raíz) en los mensajes recientes. */

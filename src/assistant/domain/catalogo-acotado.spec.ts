@@ -21,6 +21,14 @@ describe('catalogo-acotado', () => {
     expect(conceptoDe('catálogo')).toEqual([]);
     expect(conceptoDe('unas mechas')).toEqual(['mechas', 'unas']);
   });
+  it('M1 «todo» y «todas» también son pedir todo', () => {
+    expect(conceptoDe('todas')).toEqual([]);
+    expect(conceptoDe('todo')).toEqual([]);
+    expect(conceptoDe('todas las uñas')).toEqual(['unas']);
+    expect(sinPalabrasDeTodo('todas las uñas')).toBe('las uñas');
+    expect(sinPalabrasDeTodo('todo de corte')).toBe('de corte');
+    expect(sinPalabrasDeTodo('todo')).toBe('');
+  });
   it('ancla por raíz y sin tildes', () => {
     expect(estaAnclado(['corte'], [r('quiero cortarme el pelo')])).toBe(true);
     expect(estaAnclado(['cejas'], [r('me arreglo la CEJA')])).toBe(true);

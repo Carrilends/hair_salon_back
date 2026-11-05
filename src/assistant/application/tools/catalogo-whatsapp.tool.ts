@@ -7,6 +7,8 @@ import {
   MAX_SERVICIOS_WHATSAPP,
   coincidenEnNombre,
   conceptoDe,
+  conceptoLegible,
+  esElNombreExacto,
   sinPalabrasDeTodo,
   estaAnclado,
   yaPreguntoSobre,
@@ -128,10 +130,23 @@ export function conCatalogoAcotado(
         return { servicios: lote, ...extra };
       };
 
+      // Nombre exacto de un servicio («Me interesa» en «Capas en U»): solo ese,
+      // aunque «en» y «U» no cuenten como palabras y «capas» dé varios.
+      const exacto = servicios.find((s) =>
+        esElNombreExacto(s.nombre, busqueda),
+      );
+      if (exacto) return entregar([exacto]);
+
       const porPrecio = analizarBusqueda(busqueda).porPrecio;
-      // R3: un único nombre que lleva todas las palabras. No con orden por
-      // precio: la ventana ya son los más baratos, no todas las coincidencias.
-      if (servicios.length > 1 && !porPrecio) {
+      // R3: un único nombre que lleva todas las palabras, si caben todas. Con más
+      // de 6 no: la ventana solo enseña unas pocas de las coincidencias y dejaría
+      // «corte» en un servicio cualquiera. Tampoco con orden por precio: la
+      // ventana ya son los más baratos.
+      if (
+        servicios.length > 1 &&
+        servicios.length <= MAX_SERVICIOS_WHATSAPP &&
+        !porPrecio
+      ) {
         const porNombre = coincidenEnNombre(servicios, concepto);
         if (porNombre.length === 1) return entregar(porNombre);
       }
@@ -170,7 +185,7 @@ export function conCatalogoAcotado(
         { texto, genero, precioMaximo },
         MAX_OPCIONES,
       );
-      const nombre = concepto.join(' ');
+      const nombre = conceptoLegible(busqueda);
       return opciones.length > 0
         ? pregunta('demasiados', preguntaOpciones(nombre, opciones), opciones)
         : pregunta('demasiados', preguntaPrecio(nombre));

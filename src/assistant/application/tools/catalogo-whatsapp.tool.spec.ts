@@ -159,6 +159,104 @@ describe('conCatalogoAcotado', () => {
     ]);
   });
 
+  it('C1 R3 no reduce a uno una búsqueda con más de 6: pregunta (R7)', async () => {
+    servicios = [svc(1, 'Corte midi con cortina'), ...lista(7, 2)];
+    opciones.mockResolvedValue(['Cortes clásicos', 'Fade']);
+    const r = (await tool.execute(
+      { busqueda: 'corte' },
+      ctx(['¿Cuánto vale un corte?']),
+    )) as any;
+    expect(r.motivo).toBe('demasiados');
+    expect(r.opciones).toEqual(['Cortes clásicos', 'Fade']);
+    expect(r.servicios).toBeUndefined();
+  });
+
+  it('C1 con 6 o menos R3 sigue reduciendo al que lo lleva en el nombre', async () => {
+    servicios = [svc(1, 'Balayage clásico'), ...lista(5, 2)];
+    const r = (await tool.execute(
+      { busqueda: 'balayage' },
+      ctx(['quiero balayage']),
+    )) as any;
+    expect(r.servicios.map((s: any) => s.nombre)).toEqual(['Balayage clásico']);
+  });
+
+  it.each([
+    ['tal cual', 'Capas en U'],
+    ['sin mayúsculas', 'capas en u'],
+    ['con espacios de más', '  Capas  en U '],
+  ])('I5 el nombre exacto de un servicio da solo ese (%s)', async (_n, b) => {
+    servicios = [
+      svc(1, 'Capas en U'),
+      svc(2, 'Capas en V'),
+      svc(3, 'Capas largas'),
+    ];
+    const r = (await tool.execute(
+      { busqueda: b },
+      ctx(['Me interesa el servicio Capas en U.']),
+    )) as any;
+    expect(r.servicios.map((s: any) => s.nombre)).toEqual(['Capas en U']);
+    expect(r.parcial).toBeUndefined();
+  });
+
+  it('I5 compara sin tildes y gana a «más de 6»', async () => {
+    servicios = [...lista(7, 2), svc(1, 'Peinado clásico')];
+    const r = (await tool.execute(
+      { busqueda: 'peinado clasico' },
+      ctx(['peinado clasico']),
+    )) as any;
+    expect(r.servicios.map((s: any) => s.nombre)).toEqual(['Peinado clásico']);
+  });
+
+  it('I5 una parte del nombre no es el nombre', async () => {
+    servicios = [
+      svc(1, 'Capas en U'),
+      svc(2, 'Capas en V'),
+      svc(3, 'Capas largas'),
+    ];
+    const r = (await tool.execute(
+      { busqueda: 'capas' },
+      ctx(['quiero capas']),
+    )) as any;
+    expect(r.servicios).toHaveLength(3);
+  });
+
+  it('I5 el nombre exacto también respeta R8', async () => {
+    const c = ctx(['corte y Capas en U']);
+    servicios = lista(6);
+    await tool.execute({ busqueda: 'corte' }, c);
+    servicios = [svc(20, 'Capas en U'), svc(21, 'Capas en V')];
+    const r = await tool.execute({ busqueda: 'Capas en U' }, c);
+    expect(r).toMatchObject({ motivo: 'tope_del_turno' });
+  });
+
+  it.each([
+    [
+      'con opciones',
+      'pestañas',
+      ['Lifting'],
+      '¿Qué opción de pestañas te interesa: Lifting?',
+    ],
+    [
+      'con «dame todo»',
+      'catálogo de uñas',
+      ['Manicure'],
+      '¿Qué opción de uñas te interesa: Manicure?',
+    ],
+    ['sin opciones', 'uñas', [], '¿Hasta qué precio te gustaría para uñas?'],
+  ])(
+    'M2 la pregunta conserva la palabra de la clienta (%s)',
+    async (_n, b, ops, q) => {
+      servicios = lista(8);
+      opciones.mockResolvedValue(ops);
+      const r = (await tool.execute(
+        { busqueda: b },
+        ctx([`quiero ${b}`]),
+      )) as any;
+      expect(r.motivo).toBe('demasiados');
+      expect(r.pregunta).toBe(q);
+    },
+  );
+
   it('R4 hasta 6: pasa con la forma de siempre y sin URL', async () => {
     const base = lista(6);
     servicios = base.map((s) => ({
