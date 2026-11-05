@@ -1,7 +1,14 @@
 import { WhatsAppMessage } from 'src/notifications/domain/ports/whatsapp-sender.port';
 import { AssistantPresentation } from 'src/assistant/application/tools/assistant-presentation';
 import { toWhatsAppImageUrl } from 'src/common/whatsapp-image-url';
-import { PESOS } from 'src/assistant/application/tools/servicios-del-turno';
+import { PresentedService } from 'src/assistant/application/tools/assistant-presentation';
+import {
+  PESOS,
+  lineaDeServicio,
+  pideConfirmacion,
+  serviciosDelTurno,
+} from 'src/assistant/application/tools/servicios-del-turno';
+import { encodeButtonPayload } from '../domain/button-payload';
 import { mensajeDeConfirmacion } from './mensaje-de-confirmacion';
 
 /** Tope de un mensaje de texto de WhatsApp (límite de Meta). */
@@ -14,6 +21,10 @@ const SIN_RESPUESTA =
   'Disculpa, no logré responderte. ¿Me lo escribes de otra forma?';
 /** Tope del pie de una imagen (límite de Meta). */
 const MAX_PIE = 1024;
+/** Tope del texto de una tarjeta del carrusel (límite de Meta). */
+const MAX_TARJETA = 160;
+const CUERPO_CARRUSEL = 'Desliza para ver las opciones.';
+const BOTON_TARJETA = 'Me interesa';
 
 /**
  * El prompt de WhatsApp pide texto plano, pero el modelo a veces escribe
@@ -88,18 +99,32 @@ export function avisoLegal(politicaUrl?: string): string {
 
 /**
  * La respuesta de un turno, convertida en los mensajes que se envían y en el
- * orden en que se envían: aviso legal (si toca), el texto, la foto del servicio
- * (si se habló de uno solo) y los botones de lo que haya que confirmar.
+ * orden en que se envían: aviso legal (si toca), el texto con la lista de los
+ * servicios presentados (la lista siempre sale: una foto puede fallar después
+ * de que Meta responda 200), los textos de agenda, los medios (foto o carrusel)
+ * y los botones de lo que haya que confirmar.
+ *
+ * `imagenPorDefecto` es la foto de respaldo ya validada; sin ella, un servicio
+ * sin foto válida va solo en la lista.
  */
 export function mensajesDeLaRespuesta(
   respuesta: { reply: string; presentaciones: AssistantPresentation[] },
   to: string,
   aviso: string | null,
+  imagenPorDefecto?: string,
 ): WhatsAppMessage[] {
   const mensajes: WhatsAppMessage[] = [];
   if (aviso) mensajes.push({ kind: 'text', to, body: aviso });
 
-  const partes = partirTexto(aFormatoWhatsApp(respuesta.reply));
+  const servicios = serviciosDelTurno(respuesta.presentaciones);
+  const confirma = pideConfirmacion(respuesta.presentaciones);
+  // Con un botón de confirmación pendiente no se lista nada: la lista
+  // distraería del único paso que importa.
+  const lista = confirma ? [] : servicios.map(lineaDeServicio);
+  const texto = [aFormatoWhatsApp(respuesta.reply), lista.join('\n')]
+    .filter(Boolean)
+    .join('\n\n');
+  const partes = partirTexto(texto);
   const botones = conBotones(respuesta.presentaciones)
     .map((p) => mensajeDeConfirmacion(p, to))
     .filter((m): m is WhatsAppMessage => m !== null);
@@ -120,8 +145,7 @@ export function mensajesDeLaRespuesta(
     }
   }
 
-  const foto = fotoDelServicio(respuesta.presentaciones, to);
-  if (foto) mensajes.push(foto);
+  mensajes.push(...mediosDelTurno(servicios, confirma, to, imagenPorDefecto));
 
   mensajes.push(...botones);
   return mensajes;
@@ -144,25 +168,77 @@ function conBotones(
   );
 }
 
-/** La foto, solo si el turno presentó exactamente un servicio con imagen válida. */
-function fotoDelServicio(
-  presentaciones: AssistantPresentation[],
-  to: string,
-): WhatsAppMessage | null {
-  const listas = presentaciones.filter((p) => p.tipo === 'servicios');
-  if (listas.length !== 1) return null;
-  const lista = listas[0];
-  if (lista.tipo !== 'servicios' || lista.servicios.length !== 1) return null;
+/** `lineaDeServicio` recortada al tope de una tarjeta. */
+function textoDeTarjeta(linea: string): string {
+  return linea.length > MAX_TARJETA
+    ? `${linea.slice(0, MAX_TARJETA - 1)}…`
+    : linea;
+}
 
-  const s = lista.servicios[0];
-  const imageUrl = s.imagen ? toWhatsAppImageUrl(s.imagen) : null;
-  if (!imageUrl) return null;
-
-  const pie = `${s.nombre}: ${PESOS.format(s.precio)} (${s.minutos} min)`;
+function foto(to: string, imageUrl: string, pie: string): WhatsAppMessage {
   return {
     kind: 'image',
     to,
     imageUrl,
     caption: pie.length > MAX_PIE ? `${pie.slice(0, MAX_PIE - 1)}…` : pie,
   };
+}
+
+/**
+ * Las fotos del turno. En un turno que pide confirmación: solo la foto real de
+ * un único servicio, con su pie, como siempre. Fuera de él: una foto si hay un
+ * solo servicio con imagen (o con respaldo), un carrusel si hay dos o más
+ * tarjetas posibles (Meta exige de 2 a 10), y nada si ninguno tiene imagen. La
+ * numeración de cada tarjeta es la de la lista de texto, aunque a algunos
+ * servicios les falte tarjeta.
+ */
+function mediosDelTurno(
+  servicios: PresentedService[],
+  confirma: boolean,
+  to: string,
+  imagenPorDefecto?: string,
+): WhatsAppMessage[] {
+  const real = (s: PresentedService) =>
+    s.imagen ? toWhatsAppImageUrl(s.imagen) : null;
+
+  if (confirma) {
+    if (servicios.length !== 1) return [];
+    const url = real(servicios[0]);
+    if (!url) return [];
+    const s = servicios[0];
+    return [
+      foto(
+        to,
+        url,
+        `${s.nombre}: ${PESOS.format(s.precio)} (${s.minutos} min)`,
+      ),
+    ];
+  }
+
+  const candidatos = servicios
+    .map((s, i) => ({
+      s,
+      i,
+      imageUrl: real(s) ?? imagenPorDefecto ?? null,
+    }))
+    .filter((c): c is typeof c & { imageUrl: string } => c.imageUrl !== null);
+
+  if (candidatos.length === 0) return [];
+  if (candidatos.length === 1) {
+    const [{ s, i, imageUrl }] = candidatos;
+    return [foto(to, imageUrl, lineaDeServicio(s, i))];
+  }
+  return [
+    {
+      kind: 'carousel',
+      to,
+      body: CUERPO_CARRUSEL,
+      cards: candidatos.map(({ s, i, imageUrl }) => ({
+        imageUrl,
+        body: textoDeTarjeta(lineaDeServicio(s, i)),
+        buttonId: encodeButtonPayload({ action: 'service', serviceId: s.id }),
+        buttonTitle: BOTON_TARJETA,
+      })),
+    },
+  ];
 }

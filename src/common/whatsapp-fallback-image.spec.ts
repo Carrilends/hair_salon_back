@@ -1,4 +1,4 @@
-import { imagenDeRespaldo } from './fallback-image';
+import { imagenDeRespaldo } from './whatsapp-fallback-image';
 
 /**
  * Plan 06, F1 (revisión): la foto de respaldo se escribe a mano en el entorno,

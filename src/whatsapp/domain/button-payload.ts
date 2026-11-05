@@ -31,6 +31,9 @@ export type ButtonPayload =
   // aún no existe.
   | { action: 'book_ok'; bookingId: string }
   | { action: 'book_no'; bookingId: string }
+  // Catálogo con fotos: el botón «Me interesa» de una tarjeta del carrusel. El
+  // id es el del servicio; pulsarlo no escribe nada en la agenda.
+  | { action: 'service'; serviceId: string }
   | { action: 'noop' };
 
 /**
@@ -52,6 +55,7 @@ const CODIGOS = {
   reservation: 'RESV',
   book_ok: 'BOOK_OK',
   book_no: 'BOOK_NO',
+  service: 'SERVICE',
   noop: 'NOOP',
 } as const;
 
@@ -81,6 +85,8 @@ export function encodeButtonPayload(payload: ButtonPayload): string {
     case 'book_ok':
     case 'book_no':
       return [codigo, payload.bookingId].join(SEPARADOR);
+    case 'service':
+      return [codigo, payload.serviceId].join(SEPARADOR);
     default:
       return [codigo, payload.reservationId].join(SEPARADOR);
   }
@@ -112,6 +118,12 @@ export function parseButtonPayload(raw: unknown): ButtonPayload | null {
   if (accion === 'book_ok' || accion === 'book_no') {
     return partes.length === 2
       ? { action: accion, bookingId: reservationId }
+      : null;
+  }
+
+  if (accion === 'service') {
+    return partes.length === 2
+      ? { action: 'service', serviceId: reservationId }
       : null;
   }
 

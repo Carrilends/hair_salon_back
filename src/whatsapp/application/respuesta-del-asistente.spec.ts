@@ -154,46 +154,184 @@ describe('mensajesDeLaRespuesta', () => {
     expect(foto.caption).toContain('45 min');
   });
 
-  it('sin foto cuando hay varios servicios, ninguno o una imagen que no es de Cloudinary', () => {
-    const casos: AssistantPresentation[][] = [
-      [
-        {
-          tipo: 'servicios',
-          servicios: [
-            { id: 's1', nombre: 'Corte', precio: 1, minutos: 1, imagen: FOTO },
-            { id: 's2', nombre: 'Tinte', precio: 1, minutos: 1, imagen: FOTO },
-          ],
-        },
-      ],
-      [
-        {
-          tipo: 'servicios',
-          servicios: [{ id: 's1', nombre: 'Corte', precio: 1, minutos: 1 }],
-        },
-      ],
-      [
-        {
-          tipo: 'servicios',
-          servicios: [
-            {
-              id: 's1',
-              nombre: 'Corte',
-              precio: 1,
-              minutos: 1,
-              imagen: 'https://placehold.co/600x400',
-            },
-          ],
-        },
-      ],
-    ];
-    for (const presentaciones of casos) {
-      const ms = mensajesDeLaRespuesta(
-        { reply: 'x', presentaciones },
-        TO,
-        null,
-      );
-      expect(ms.some((m) => m.kind === 'image')).toBe(false);
-    }
+  // ---------------------------------------------------------- catálogo con fotos
+  const SID = (n: number) =>
+    `aaaaaaaa-aaaa-4aaa-8aaa-${String(n).padStart(12, '0')}`;
+  const REPLY_OK =
+    'https://res.cloudinary.com/demo/image/upload/v17/respaldo.jpg';
+  const servicio = (n: number, conFoto = true) => ({
+    id: SID(n),
+    nombre: `Servicio ${String.fromCharCode(64 + n)}`,
+    precio: 10000 * n,
+    minutos: 30,
+    ...(conFoto ? { imagen: FOTO } : {}),
+  });
+  const listaDe = (
+    n: number,
+    conFoto: (i: number) => boolean = () => true,
+  ): AssistantPresentation => ({
+    tipo: 'servicios',
+    servicios: Array.from({ length: n }, (_, i) => servicio(i + 1, conFoto(i))),
+  });
+  const mensajes = (
+    presentaciones: AssistantPresentation[],
+    respaldo?: string,
+  ) =>
+    mensajesDeLaRespuesta(
+      { reply: 'Mira.', presentaciones },
+      TO,
+      null,
+      respaldo,
+    );
+  const carrusel = (ms: WhatsAppMessage[]) => {
+    const c = ms.find((m) => m.kind === 'carousel');
+    if (!c || c.kind !== 'carousel') throw new Error('sin carrusel');
+    return c;
+  };
+
+  it('varios con foto: texto con lista y luego carrusel, sin más mensajes', () => {
+    const ms = mensajes([listaDe(6)]);
+    expect(ms.map((m) => m.kind)).toEqual(['text', 'carousel']);
+    expect(textos(ms)[0]).toContain('Mira.');
+    expect(textos(ms)[0]).toContain('1. Servicio A');
+    expect(textos(ms)[0]).toContain('6. Servicio F');
+    const c = carrusel(ms);
+    expect(c.body).toBe('Desliza para ver las opciones.');
+    expect(c.cards).toHaveLength(6);
+    expect(c.cards[0].buttonTitle).toBe('Me interesa');
+    expect(c.cards[0].imageUrl).toContain('f_jpg,w_800,c_limit');
+  });
+
+  it('con respaldo, los que no tienen foto llevan la de respaldo', () => {
+    const ms = mensajes([listaDe(6, (i) => i < 3)], REPLY_OK);
+    const c = carrusel(ms);
+    expect(c.cards).toHaveLength(6);
+    expect(c.cards[5].imageUrl).toBe(REPLY_OK);
+    expect(
+      textos(ms)[0]
+        .split('\n')
+        .filter((l) => /^\d\. /.test(l)),
+    ).toHaveLength(6);
+  });
+
+  it('con respaldo y ninguna foto real, también hay carrusel', () => {
+    const ms = mensajes([listaDe(3, () => false)], REPLY_OK);
+    expect(carrusel(ms).cards.map((x) => x.imageUrl)).toEqual([
+      REPLY_OK,
+      REPLY_OK,
+      REPLY_OK,
+    ]);
+  });
+
+  it('un solo servicio sin foto y con respaldo: foto por defecto con pie', () => {
+    const ms = mensajes([listaDe(1, () => false)], REPLY_OK);
+    expect(ms.map((m) => m.kind)).toEqual(['text', 'image']);
+    const foto = ms[1];
+    if (foto.kind !== 'image') throw new Error('sin foto');
+    expect(foto.imageUrl).toBe(REPLY_OK);
+    expect(foto.caption).toContain('Servicio A');
+    expect(textos(ms)[0]).toContain('1. Servicio A');
+  });
+
+  it('un solo servicio sin foto y sin respaldo: solo la lista', () => {
+    const ms = mensajes([listaDe(1, () => false)]);
+    expect(ms.map((m) => m.kind)).toEqual(['text']);
+    expect(textos(ms)[0]).toContain('1. Servicio A');
+  });
+
+  it('sin respaldo, el resto va solo en la lista y la numeración es la de la lista', () => {
+    const ms = mensajes([listaDe(6, (i) => i % 2 === 1)]);
+    const c = carrusel(ms);
+    expect(c.cards).toHaveLength(3);
+    expect(c.cards.map((x) => x.body.slice(0, 2))).toEqual(['2.', '4.', '6.']);
+    expect(
+      textos(ms)[0]
+        .split('\n')
+        .filter((l) => /^\d\. /.test(l)),
+    ).toHaveLength(6);
+  });
+
+  it('sin respaldo y una sola con foto: esa foto con pie numerado', () => {
+    const ms = mensajes([listaDe(3, (i) => i === 2)]);
+    expect(ms.map((m) => m.kind)).toEqual(['text', 'image']);
+    const foto = ms[1];
+    if (foto.kind !== 'image') throw new Error('sin foto');
+    expect(foto.caption).toContain('3. Servicio C');
+  });
+
+  it('sin respaldo y ninguna con foto: solo la lista', () => {
+    const ms = mensajes([listaDe(3, () => false)]);
+    expect(ms.map((m) => m.kind)).toEqual(['text']);
+  });
+
+  it('dos presentaciones con un mismo servicio: una tarjeta', () => {
+    const ms = mensajes([
+      { tipo: 'servicios', servicios: [servicio(1), servicio(2)] },
+      { tipo: 'servicios', servicios: [servicio(1)] },
+    ]);
+    expect(carrusel(ms).cards).toHaveLength(2);
+  });
+
+  it('nunca más de 6, aunque lleguen más', () => {
+    const ms = mensajes([listaDe(9)]);
+    expect(carrusel(ms).cards).toHaveLength(6);
+    expect(textos(ms)[0]).not.toContain('7. ');
+  });
+
+  it('una imagen de placehold.co usa el respaldo; sin respaldo, no da tarjeta', () => {
+    const malo = {
+      ...servicio(2),
+      imagen: 'https://placehold.co/600x400',
+    };
+    const lista: AssistantPresentation = {
+      tipo: 'servicios',
+      servicios: [servicio(1), malo, servicio(3)],
+    };
+    expect(carrusel(mensajes([lista], REPLY_OK)).cards[1].imageUrl).toBe(
+      REPLY_OK,
+    );
+    expect(carrusel(mensajes([lista])).cards).toHaveLength(2);
+  });
+
+  it('Review Focus 5: con confirmación y varios servicios, ni lista ni carrusel', () => {
+    const ms = mensajes([listaDe(6), reserva(PID_1)], REPLY_OK);
+    expect(ms.map((m) => m.kind)).toEqual(['text', 'interactive-buttons']);
+    expect(textos(ms)[0]).toBe('Mira.');
+  });
+
+  it('con confirmación y un servicio sin foto, ni siquiera la de respaldo', () => {
+    const ms = mensajes([listaDe(1, () => false), reserva(PID_1)], REPLY_OK);
+    expect(ms.map((m) => m.kind)).toEqual(['text', 'interactive-buttons']);
+  });
+
+  it('aviso, texto con la línea del servicio, foto y botones con un solo servicio', () => {
+    const ms = mensajesDeLaRespuesta(
+      { reply: 'Te propongo.', presentaciones: [listaDe(1), reserva(PID_1)] },
+      TO,
+      'AVISO',
+    );
+    expect(ms.map((m) => m.kind)).toEqual([
+      'text',
+      'text',
+      'image',
+      'interactive-buttons',
+    ]);
+    expect(textos(ms)).toEqual(['AVISO', 'Te propongo.']);
+  });
+
+  it('el botón de cada tarjeta lleva SERVICE y el id', () => {
+    const c = carrusel(mensajes([listaDe(2)]));
+    expect(c.cards[0].buttonId).toBe(`SERVICE|${SID(1)}`);
+    expect(c.cards[1].buttonId).toBe(`SERVICE|${SID(2)}`);
+  });
+
+  it('la tarjeta se recorta a 160', () => {
+    const largo = { ...servicio(1), nombre: 'X'.repeat(300) };
+    const c = carrusel(
+      mensajes([{ tipo: 'servicios', servicios: [largo, servicio(2)] }]),
+    );
+    expect(c.cards[0].body).toHaveLength(160);
+    expect(c.cards[0].body.endsWith('…')).toBe(true);
   });
 
   it('de varias propuestas de reserva en un turno, solo la última lleva botones', () => {

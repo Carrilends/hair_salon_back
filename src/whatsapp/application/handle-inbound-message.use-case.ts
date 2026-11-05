@@ -48,6 +48,11 @@ export interface WhatsAppChannelConfig {
   timeZone: string;
   /** Enlace a la política de datos para el aviso legal (D10). Sin él, el aviso va sin enlace. */
   politicaUrl?: string;
+  /**
+   * Foto que lleva el servicio sin imagen válida (`WHATSAPP_FALLBACK_IMAGE_URL`,
+   * ya validada). Sin ella, ese servicio va solo en la lista de texto.
+   */
+  imagenPorDefecto?: string;
 }
 
 /** Respuesta a lo que no es texto (plan 06, F2). */
@@ -251,6 +256,10 @@ export class HandleInboundMessageUseCase {
 
       case 'book_no':
         return this.descartarPropuesta(payload.bookingId, from);
+
+      // «Me interesa» de una tarjeta del carrusel: se atiende en la Tarea 12.
+      case 'service':
+        return this.texto(from, BOTON_DESCONOCIDO);
     }
   }
 
@@ -336,7 +345,12 @@ export class HandleInboundMessageUseCase {
         : null;
     // Cada envío por separado: que Meta rechace la foto no puede dejar a la
     // clienta sin los botones para confirmar.
-    for (const m of mensajesDeLaRespuesta(r, from, aviso)) {
+    for (const m of mensajesDeLaRespuesta(
+      r,
+      from,
+      aviso,
+      this.config.imagenPorDefecto,
+    )) {
       try {
         await this.enviar(m);
       } catch (error) {

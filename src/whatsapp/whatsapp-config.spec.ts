@@ -32,4 +32,18 @@ describe('configuración del canal (plan 06, F5)', () => {
       timeZone: 'America/Bogota',
     });
   });
+
+  it('la foto por defecto sale de WHATSAPP_FALLBACK_IMAGE_URL, validada', () => {
+    expect(
+      configDelCanal({
+        WHATSAPP_FALLBACK_IMAGE_URL:
+          'https://res.cloudinary.com/demo/image/upload/v17/respaldo.webp',
+      }).imagenPorDefecto,
+    ).toContain('f_jpg,w_800,c_limit');
+    expect(
+      configDelCanal({ WHATSAPP_FALLBACK_IMAGE_URL: 'http://x.com/a.jpg' })
+        .imagenPorDefecto,
+    ).toBeUndefined();
+    expect(configDelCanal({}).imagenPorDefecto).toBeUndefined();
+  });
 });

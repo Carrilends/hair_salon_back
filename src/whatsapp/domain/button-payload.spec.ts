@@ -25,6 +25,7 @@ const TODOS: ButtonPayload[] = [
     whenYmdHm: '2026-09-12T15:30',
   },
   { action: 'reservation', reservationId: RID },
+  { action: 'service', serviceId: RID },
   { action: 'noop' },
 ];
 
@@ -56,6 +57,8 @@ describe('button-payload · entradas corruptas', () => {
     ['hora mal formada', `RSAT|${RID}|2026-09-12 15:30`],
     ['desplazamiento no numérico', `RSDAY|${RID}|2026-09-12|x`],
     ['sobra un campo', `CANCEL|${RID}|extra`],
+    ['SERVICE con un id que no es UUID', 'SERVICE|no-es-uuid'],
+    ['SERVICE con un campo de más', `SERVICE|${RID}|x`],
   ])('devuelve null ante %s', (_caso, texto) => {
     expect(parseButtonPayload(texto)).toBeNull();
   });

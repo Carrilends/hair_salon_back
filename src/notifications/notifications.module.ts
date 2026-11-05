@@ -1,5 +1,5 @@
 import { Logger, Module } from '@nestjs/common';
-import { imagenDeRespaldo } from './infrastructure/whatsapp/fallback-image';
+import { imagenDeRespaldo } from 'src/common/whatsapp-fallback-image';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
