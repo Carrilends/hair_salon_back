@@ -1,4 +1,9 @@
-import { SYSTEM_PROMPT, RECOMMENDABLE_CATEGORIES } from './system-prompt';
+import {
+  SYSTEM_PROMPT,
+  SYSTEM_PROMPT_WHATSAPP_CLIENTA,
+  SYSTEM_PROMPT_WHATSAPP_DUENA,
+  RECOMMENDABLE_CATEGORIES,
+} from './system-prompt';
 
 /**
  * El prompt del sistema es la única pieza del asistente que nadie estaba
@@ -44,5 +49,36 @@ describe('SYSTEM_PROMPT', () => {
     // categorías sí se incrustan, pero son una lista fija y corta.
     expect(SYSTEM_PROMPT).toContain(RECOMMENDABLE_CATEGORIES[0]);
     expect(SYSTEM_PROMPT).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+  });
+});
+
+/**
+ * Los dos prompts de WhatsApp comparten las reglas de catálogo (COMUN_WHATSAPP):
+ * presentar como mucho seis servicios, preguntar antes de acotar y no repetir
+ * una pregunta sin el servicio que nombra.
+ */
+describe('SYSTEM_PROMPT_WHATSAPP (clienta y dueña)', () => {
+  const whatsapp = [
+    ['clienta', SYSTEM_PROMPT_WHATSAPP_CLIENTA],
+    ['dueña', SYSTEM_PROMPT_WHATSAPP_DUENA],
+  ] as const;
+
+  it.each(whatsapp)('el prompt de la %s manda preguntar primero y presentar como mucho seis', (_, p) => {
+    expect(p).toMatch(/pregunta primero/i);
+    expect(p).toMatch(/como mucho seis/i);
+    expect(p).not.toMatch(/como mucho cinco/i);
+  });
+
+  it.each(whatsapp)('el prompt de la %s pide mantener el servicio al repetir una pregunta', (_, p) => {
+    expect(p).toContain('sin quitar el servicio que nombra');
+  });
+
+  it('el prompt de la web no lleva las reglas de WhatsApp', () => {
+    expect(SYSTEM_PROMPT).not.toMatch(/como mucho seis|pregunta primero|sin quitar el servicio que nombra/i);
+    expect(SYSTEM_PROMPT).toMatch(/tarjeta/i);
+  });
+
+  it.each(whatsapp)('el prompt de la %s sigue siendo constante: sin fechas', (_, p) => {
+    expect(p).not.toMatch(/\d{4}-\d{2}-\d{2}/);
   });
 });
