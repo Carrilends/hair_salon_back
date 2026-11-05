@@ -42,6 +42,28 @@ function raicesDe(texto: string): Set<string> {
   );
 }
 
+/**
+ * Las palabras con que alguien contesta que le da lo mismo. Las de pedir el
+ * catálogo («catálogo», «carta», «menú», «lista») no están: «mándame el catálogo»
+ * como respuesta sigue siendo no haber dicho qué busca.
+ */
+const LE_DA_IGUAL = new Set([
+  'igual',
+  'cualquiera',
+  'cualquier',
+  'sea',
+  'todo',
+  'todas',
+  'todos',
+]);
+
+/** El texto en palabras enteras, sin puntuación, tildes ni mayúsculas. */
+function palabrasPlegadas(texto: string): string[] {
+  return sinDiacriticos(texto.toLowerCase())
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+}
+
 /** Un trozo de la búsqueda sin puntuación, tildes ni mayúsculas. */
 function plegarToken(token: string): string {
   return sinDiacriticos(token.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''));
@@ -126,6 +148,26 @@ function ultimoDelAsistente(recientes: Reciente[]): string | undefined {
 }
 
 /**
+ * Contesta que le da igual a lo último que preguntó el asistente, aunque el
+ * modelo preguntara por su cuenta y no haya marca. Es solo la salida de R1: R6
+ * sigue exigiendo la marca, porque ahí el «?» de una cortesía sí engañaría.
+ */
+export function leDaIgualTrasUnaPregunta(recientes: Reciente[]): boolean {
+  if (!ultimoDelAsistente(recientes)?.includes('?')) return false;
+  const mensaje = ultimoDeLaClienta(recientes);
+  return (
+    mensaje !== undefined &&
+    conceptoDe(mensaje).length === 0 &&
+    palabrasPlegadas(mensaje).some((p) => LE_DA_IGUAL.has(p))
+  );
+}
+
+/** Lo último que escribió la clienta: el mensaje de este turno. */
+export function ultimoDeLaClienta(recientes: Reciente[]): string | undefined {
+  return [...recientes].reverse().find((m) => m.rol === 'clienta')?.texto;
+}
+
+/**
  * El ÚLTIMO mensaje del asistente lleva la marca de haber preguntado para acotar
  * este concepto (por raíz). Es un hecho que anota el servidor: no depende de cómo
  * redacte el modelo, y una cortesía con «?» no cuenta.
@@ -159,6 +201,26 @@ export function yaPreguntoQueBusca(recientes: Reciente[]): boolean {
   return (
     ultimoDelAsistente(recientes)?.includes(MARCA_PREGUNTO_QUE_BUSCA) ?? false
   );
+}
+
+/**
+ * El servicio cuyo nombre completo aparece en el mensaje, comparando palabras
+ * enteras: «Bob» no encaja en «bobina». Si aparecen varios, el más largo («Undercut
+ * mujer» antes que «Undercut»); si empatan, ninguno, porque no se sabe cuál es.
+ */
+export function nombreCitado<T extends { nombre: string }>(
+  servicios: T[],
+  mensaje: string | undefined,
+): T | undefined {
+  if (mensaje === undefined) return undefined;
+  const enPalabras = (t: string) => ` ${palabrasPlegadas(t).join(' ')} `;
+  const dicho = enPalabras(mensaje);
+  const citados = servicios
+    .map((s) => ({ s, nombre: enPalabras(s.nombre) }))
+    .filter(({ nombre }) => dicho.includes(nombre));
+  const largo = Math.max(...citados.map(({ nombre }) => nombre.length));
+  const mejores = citados.filter(({ nombre }) => nombre.length === largo);
+  return mejores.length === 1 ? mejores[0].s : undefined;
 }
 
 /** Servicios cuyo nombre contiene todas las palabras (por raíz). */

@@ -414,22 +414,30 @@ describe('Catálogo por WhatsApp, cableado de punta a punta', () => {
     expect(texto(t3)).toContain(CATEGORIA);
   });
 
-  it('si el modelo pregunta por su cuenta en el primer turno, la secuencia también termina en servicios', async () => {
-    const { turno } = montar();
-    await turno(CLIENTA, { texto: 'mándame el catálogo' }, [
-      { texto: '¿Qué te interesa?' },
+  it('C «Mándame el catálogo» (el modelo pregunta, sin marca) → «Me da igual» da el listado por categoría en el segundo mensaje', async () => {
+    const { turno, historial } = montar();
+    const t1 = await turno(CLIENTA, { texto: 'Mándame el catálogo' }, [
+      { texto: '¿Qué te interesa: cabello, uñas o maquillaje?' },
     ]);
-    const t2 = await turno(CLIENTA, { texto: 'me da igual' }, [
-      { tool: 'listarServicios', args: {} },
-      { texto: '¿Qué servicio estás buscando?' },
-    ]);
-    expect(lineasDeServicio(t2)).toEqual([]);
-    const t3 = await turno(CLIENTA, { texto: 'todo' }, [
+    expect(lineasDeServicio(t1)).toEqual([]);
+    expect(historial(CLIENTA)).not.toContain('Se le preguntó');
+    const t2 = await turno(CLIENTA, { texto: 'Me da igual' }, [
       { tool: 'listarServicios', args: {} },
       { texto: 'Te mando una muestra.' },
     ]);
-    expect(lineasDeServicio(t3).length).toBeGreaterThan(0);
-    expect(texto(t3)).toContain(CATEGORIA);
+    expect(lineasDeServicio(t2).length).toBeGreaterThan(0);
+    expect(texto(t2)).toContain(CATEGORIA);
+  });
+
+  it('C una cortesía con «?» seguida de «mándame el catálogo» pregunta', async () => {
+    const { turno } = montar();
+    await turno(CLIENTA, { texto: 'hola' }, [{ texto: '¿En qué te ayudo?' }]);
+    const t = await turno(CLIENTA, { texto: 'mándame el catálogo' }, [
+      { tool: 'listarServicios', args: { busqueda: 'catálogo' } },
+      { texto: '¿Qué servicio estás buscando?' },
+    ]);
+    expect(lineasDeServicio(t)).toEqual([]);
+    expect(texto(t)).not.toContain(CATEGORIA);
   });
 
   it('«Me interesa» en «Capas en U» da un servicio, con una foto y sin carrusel', async () => {
@@ -596,6 +604,53 @@ describe('Catálogo por WhatsApp, cableado de punta a punta', () => {
     ]);
     expect(lineasDeServicio(t)).toEqual(baratos('Capas en U'));
     expect(carrusel(t)).toBeUndefined();
+  });
+
+  it('A la marca en singular, copiada por el modelo, no llega a la clienta', async () => {
+    const { turno, historial } = montar();
+    const t = await turno(CLIENTA, { texto: 'hola' }, [
+      {
+        texto:
+          'Claro.\n\n[Se le envió aparte, con foto si la hay: 1. Mohawk con trenzas: $ 40.000 (45 min)]',
+      },
+    ]);
+    expect(texto(t)).toContain('Claro.');
+    expect(texto(t)).not.toContain('Mohawk');
+    expect(historial(CLIENTA)).toBe('Claro.');
+  });
+
+  it.each([
+    ['busca el concepto', { busqueda: 'corte' }],
+    ['llama sin concepto', {}],
+  ])(
+    'B tras R7 responde con el nombre y el modelo %s: solo ese servicio',
+    async (_n, args) => {
+      const { turno } = montar();
+      await turno(CLIENTA, { texto: '¿Cuánto vale un corte?' }, [
+        { tool: 'listarServicios', args: { busqueda: 'corte' } },
+        { texto: '¿Qué opción de corte te interesa?' },
+      ]);
+      const t = await turno(CLIENTA, { texto: 'Corte midi con cortina' }, [
+        { tool: 'listarServicios', args },
+        { texto: 'Perfecto, ¿para qué día?' },
+      ]);
+      expect(lineasDeServicio(t)).toEqual(baratos('Corte midi con cortina'));
+      expect(texto(t)).not.toContain(SEIS);
+      expect(carrusel(t)).toBeUndefined();
+    },
+  );
+
+  it('B «Quiero reservar Corte midi con cortina…» en un mensaje no pregunta por corte', async () => {
+    const { turno } = montar();
+    const t = await turno(
+      CLIENTA,
+      { texto: 'Quiero reservar Corte midi con cortina el viernes a las 3' },
+      [
+        { tool: 'listarServicios', args: { busqueda: 'corte' } },
+        { texto: 'Claro, ¿a nombre de quién?' },
+      ],
+    );
+    expect(lineasDeServicio(t)).toEqual(baratos('Corte midi con cortina'));
   });
 
   it('ninguna URL de imagen llega al modelo ni al historial; las fotos sí salen', async () => {

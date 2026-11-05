@@ -791,6 +791,10 @@ describe('SendMessageUseCase · marcas copiadas por el modelo (N5)', () => {
     '[Se le preguntó para acotar: corte]',
     '[Se le preguntó qué busca]',
     '[Se le enviaron aparte, con foto si la hay: 1. Corte: $ 35.000 (45 min)]',
+    '[Se le envió aparte, con foto si la hay: 1. Mohawk con trenzas: $ 40.000 (45 min)]',
+    '[Se le mostró aparte la lista de sus reservas.]',
+    '[SE LE ENVIÓ ALGO]',
+    '[Sé lé envió aparte: x]',
   ])('%s no llega a la clienta ni se guarda', async (marca) => {
     const { useCase, repo } = montar({
       guion: [respuesta(`Claro, dime.\n\n${marca}`)],
@@ -814,9 +818,8 @@ describe('SendMessageUseCase · marcas copiadas por el modelo (N5)', () => {
     expect(r.reply).toContain('Dime.');
   });
 
-  it('solo esas: otros corchetes y el resto del texto quedan tal cual', async () => {
-    const texto =
-      '  Ver [nota] y [Mostrado aparte: x] y [Se le mostró aparte la lista.]  ';
+  it('solo las que empiezan por «[Se le »: otros corchetes y el resto quedan tal cual', async () => {
+    const texto = '  Ver [nota] y [Mostrado aparte: x] y [Se lo dije]  ';
     const { useCase } = montar({ guion: [respuesta(texto)] });
     const r = await useCase.execute({ ...wa, message: 'hola' });
     expect(r.reply).toBe(texto);

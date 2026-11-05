@@ -21,6 +21,9 @@ import {
   esElNombreExacto,
   sinPalabrasDeTodo,
   estaAnclado,
+  leDaIgualTrasUnaPregunta,
+  nombreCitado,
+  ultimoDeLaClienta,
   yaPreguntoQueBusca,
   yaPreguntoSobre,
 } from '../../domain/catalogo-acotado';
@@ -170,7 +173,8 @@ export function conCatalogoAcotado(
       // de menor precio de cada categoría, y `presentar` lleva la línea que lo dice.
       const concepto = conceptoDe(busqueda);
       if (concepto.length === 0) {
-        return yaPreguntoQueBusca(recientes)
+        return yaPreguntoQueBusca(recientes) ||
+          leDaIgualTrasUnaPregunta(recientes)
           ? porCategoria()
           : pregunta('falta_concepto', PREGUNTA_CONCEPTO, CATEGORIAS_SUGERIDAS);
       }
@@ -196,6 +200,12 @@ export function conCatalogoAcotado(
         esElNombreExacto(s.nombre, busqueda),
       );
       if (exacto) return entregar([exacto]);
+
+      // Si ella misma escribió el nombre completo, ese: el modelo puede haber
+      // buscado solo el concepto («corte») o nada, y acabaría preguntando otra vez
+      // por lo que ya dijo.
+      const citado = nombreCitado(servicios, ultimoDeLaClienta(recientes));
+      if (citado) return entregar([citado]);
 
       const porPrecio = analizarBusqueda(busqueda).porPrecio;
       // R3: un único nombre que lleva todas las palabras, si caben todas. Con más

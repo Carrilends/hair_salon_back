@@ -615,7 +615,7 @@ describe('conCatalogoAcotado', () => {
     it('sin la marca no entrega, aunque el último mensaje sea una pregunta', async () => {
       const r = await tool.execute(
         {},
-        ctx(['hola', asistente('¿Qué servicio estás buscando?'), 'todo']),
+        ctx(['hola', asistente('¿Qué servicio estás buscando?'), 'el menú']),
       );
       expect(r).toMatchObject({ ok: false, motivo: 'falta_concepto' });
       expect(search).not.toHaveBeenCalled();
@@ -878,6 +878,205 @@ describe('conCatalogoAcotado', () => {
       expect(r.servicios.map((s: any) => s.nombre)).toEqual(['Capas en U']);
     },
   );
+
+  describe('B el nombre completo de un servicio en su último mensaje', () => {
+    const CORTES = () => [svc(1, 'Corte midi con cortina'), ...lista(7, 2)];
+    const nombres = (r: any) => r.servicios?.map((s: any) => s.nombre);
+
+    it('tras preguntar para acotar y el modelo busca el concepto: solo ese', async () => {
+      servicios = CORTES();
+      const r = (await tool.execute(
+        { busqueda: 'corte' },
+        ctx(['un corte', preguntoAcotar('corte'), 'Corte midi con cortina']),
+      )) as any;
+      expect(nombres(r)).toEqual(['Corte midi con cortina']);
+      expect(r.parcial).toBeUndefined();
+      expect(search).not.toHaveBeenCalled();
+    });
+
+    it('tras preguntar para acotar y el modelo llama sin concepto: solo ese', async () => {
+      servicios = CORTES();
+      const r = (await tool.execute(
+        {},
+        ctx(['un corte', preguntoAcotar('corte'), 'Corte midi con cortina']),
+      )) as any;
+      expect(nombres(r)).toEqual(['Corte midi con cortina']);
+      expect(r.parcial).toBeUndefined();
+    });
+
+    it('todo en un mensaje: no pregunta', async () => {
+      servicios = CORTES();
+      const r = (await tool.execute(
+        { busqueda: 'corte' },
+        ctx(['Quiero reservar Corte midi con cortina el viernes a las 3']),
+      )) as any;
+      expect(nombres(r)).toEqual(['Corte midi con cortina']);
+    });
+
+    it('sin tildes, mayúsculas ni puntuación que estorben', async () => {
+      servicios = [svc(1, 'Peinado clásico (largo)'), ...lista(7, 2)];
+      const r = await tool.execute(
+        { busqueda: 'peinado' },
+        ctx(['PEINADO CLASICO, LARGO.']),
+      );
+      expect(nombres(r)).toEqual(['Peinado clásico (largo)']);
+    });
+
+    it('compara palabras enteras: un nombre no encaja dentro de otra palabra', async () => {
+      servicios = [svc(1, 'Bob'), ...lista(7, 2)];
+      const r = await tool.execute(
+        { busqueda: 'bobina' },
+        ctx(['quiero bobina de corte']),
+      );
+      expect(r).toMatchObject({ motivo: 'demasiados' });
+    });
+
+    it('un trozo del nombre no basta', async () => {
+      servicios = CORTES();
+      const r = await tool.execute(
+        { busqueda: 'corte' },
+        ctx(['un corte midi con flequillo']),
+      );
+      expect(r).toMatchObject({ motivo: 'demasiados' });
+    });
+
+    it('si encajan varios, el más largo', async () => {
+      servicios = [
+        svc(1, 'Undercut'),
+        svc(2, 'Undercut mujer'),
+        ...lista(6, 3),
+      ];
+      const r = await tool.execute(
+        { busqueda: 'corte' },
+        ctx(['un corte: Undercut mujer']),
+      );
+      expect(nombres(r)).toEqual(['Undercut mujer']);
+    });
+
+    it('si empatan, no aplica', async () => {
+      servicios = [svc(1, 'Capas en U'), svc(2, 'Capas en V'), ...lista(6, 3)];
+      const r = await tool.execute(
+        { busqueda: 'corte' },
+        ctx(['un corte: Capas en U o Capas en V']),
+      );
+      expect(r).toMatchObject({ motivo: 'demasiados' });
+    });
+
+    it('respeta R8', async () => {
+      const c = ctx(['un corte y Corte midi con cortina']);
+      c.serviciosDelTurno = new Set(['x1', 'x2', 'x3', 'x4', 'x5', 'x6']);
+      servicios = CORTES();
+      expect(await tool.execute({ busqueda: 'corte' }, c)).toMatchObject({
+        motivo: 'tope_del_turno',
+      });
+    });
+
+    it('solo cuenta su ÚLTIMO mensaje, y no lo que dijo el asistente', async () => {
+      servicios = CORTES();
+      const r = await tool.execute(
+        { busqueda: 'corte' },
+        ctx([
+          'Corte midi con cortina',
+          asistente('Corte midi con cortina es buena opción.'),
+          'mejor otro corte',
+        ]),
+      );
+      expect(r).toMatchObject({ motivo: 'demasiados' });
+    });
+
+    it('la búsqueda con el nombre exacto sigue mandando', async () => {
+      servicios = [svc(1, 'Capas en U'), svc(2, 'Capas largas')];
+      const r = await tool.execute(
+        { busqueda: 'Capas en U' },
+        ctx(['esa: Capas largas']),
+      );
+      expect(nombres(r)).toEqual(['Capas en U']);
+    });
+  });
+
+  describe('C «me da igual» a una pregunta que el modelo hizo por su cuenta', () => {
+    beforeEach(() => {
+      search.mockImplementation(async (c: { texto: string }) =>
+        categoria(c.texto),
+      );
+    });
+    const pregunto = asistente('¿Qué te interesa: cabello, uñas o maquillaje?');
+
+    it.each([
+      'Me da igual',
+      'cualquiera',
+      'sí, cualquiera',
+      'lo que sea',
+      'todo',
+      'todas',
+      'muéstrame todos',
+      'sí, me da igual',
+    ])('«%s» sale por categoría, sin marca', async (msg) => {
+      const r = await tool.execute(
+        {},
+        ctx(['Mándame el catálogo', pregunto, msg]),
+      );
+      expect(r).toMatchObject({
+        parcial: true,
+        criterio: 'menor_precio_por_categoria',
+      });
+    });
+
+    it.each([
+      'mándame el catálogo',
+      'la carta',
+      'el menú',
+      'la lista',
+      'muéstrame',
+      'hola',
+    ])('«%s» sigue preguntando', async (msg) => {
+      const r = await tool.execute(
+        {},
+        ctx([asistente('¿Te gustaría reservar?'), msg]),
+      );
+      expect(r).toMatchObject({ ok: false, motivo: 'falta_concepto' });
+      expect(search).not.toHaveBeenCalled();
+    });
+
+    it('sin «?» en el último mensaje del asistente, pregunta', async () => {
+      const r = await tool.execute(
+        {},
+        ctx(['hola', asistente('Hola, soy el asistente.'), 'me da igual']),
+      );
+      expect(r).toMatchObject({ ok: false, motivo: 'falta_concepto' });
+    });
+
+    it('con un concepto en su mensaje no aplica, aunque el modelo no lo pase', async () => {
+      const r = await tool.execute(
+        {},
+        ctx([pregunto, 'cualquiera de manicure']),
+      );
+      expect(r).toMatchObject({ ok: false, motivo: 'falta_concepto' });
+    });
+
+    it('con la marca de acotar, «me da igual» sigue siendo R6 de ese concepto', async () => {
+      servicios = lista(8);
+      const r = await tool.execute(
+        {},
+        ctx(['un corte', preguntoAcotar('corte'), 'me da igual']),
+      );
+      expect(r).toMatchObject({ parcial: true, criterio: 'menor_precio' });
+      expect(listar.execute).toHaveBeenCalledWith(
+        { busqueda: 'corte' },
+        expect.anything(),
+      );
+    });
+
+    it('no reutiliza el «?» para R6: con concepto y sin marca, R7', async () => {
+      servicios = lista(8);
+      const r = await tool.execute(
+        { busqueda: 'corte' },
+        ctx(['un corte', asistente('¿De qué tipo de corte?'), 'me da igual']),
+      );
+      expect(r).toMatchObject({ motivo: 'demasiados' });
+      expect(search).not.toHaveBeenCalled();
+    });
+  });
 
   it('Review Focus 2: un argumento extra no salta las reglas', async () => {
     servicios = lista(8);

@@ -149,6 +149,23 @@ describe('listarServicios acotado por WhatsApp (catálogo real)', () => {
     expect(r.servicios?.map((s) => s.id)).toEqual(conOrden.map((s) => s.id));
   });
 
+  it('B «Corte midi con cortina» cae en la ventana de «corte» y se entrega solo ese', async () => {
+    const ventana = await adapter.search({ texto: 'corte' }, 8);
+    expect(ventana.map((s) => s.name)).toContain('Corte midi con cortina');
+    const r = await listar(
+      'corte',
+      ctx(
+        clienta('un corte'),
+        asistente('¿Cuál?\n\n[Se le preguntó para acotar: corte]'),
+        clienta('Quiero reservar Corte midi con cortina el viernes'),
+      ),
+    );
+    expect(r.servicios?.map((s) => s.nombre)).toEqual([
+      'Corte midi con cortina',
+    ]);
+    expect(r.parcial).toBeUndefined();
+  });
+
   it('N3 el género escrito en la búsqueda filtra el listado por categoría', async () => {
     const r = (await tool.execute(
       { busqueda: 'para niños' },

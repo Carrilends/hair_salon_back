@@ -172,7 +172,7 @@ describe('sinMarcasCopiadas', () => {
   });
 
   it('un texto sin marcas queda intacto, espacios incluidos', () => {
-    const texto = '  a  b\n\n\n[Se le mostró aparte] [nota] ';
+    const texto = '  a  b\n\n\n[Se lo mostré] [nota] ';
     expect(sinMarcasCopiadas(texto)).toBe(texto);
   });
 });

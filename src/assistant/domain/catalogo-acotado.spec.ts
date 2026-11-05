@@ -3,7 +3,9 @@ import {
   conceptoDe,
   sinPalabrasDeTodo,
   estaAnclado,
+  leDaIgualTrasUnaPregunta,
   marcaDeAcotar,
+  nombreCitado,
   MARCA_PREGUNTO_QUE_BUSCA,
   yaPreguntoQueBusca,
   yaPreguntoSobre,
@@ -146,6 +148,47 @@ describe('catalogo-acotado', () => {
       ).toBe(false);
       expect(yaPreguntoQueBusca([r(MARCA_PREGUNTO_QUE_BUSCA)])).toBe(false);
       expect(yaPreguntoQueBusca([])).toBe(false);
+    });
+  });
+  describe('nombreCitado (B)', () => {
+    const sv = (...n: string[]) => n.map((nombre) => ({ nombre }));
+    it('encuentra el nombre completo, por palabras enteras', () => {
+      const lista = sv('Corte midi con cortina', 'Bob');
+      expect(nombreCitado(lista, 'quiero corte MIDI con cortina, porfa')).toBe(
+        lista[0],
+      );
+      expect(nombreCitado(lista, 'una bobina')).toBeUndefined();
+      expect(nombreCitado(lista, 'corte midi')).toBeUndefined();
+      expect(nombreCitado(lista, undefined)).toBeUndefined();
+    });
+    it('el más largo gana; empatados, ninguno', () => {
+      const lista = sv(
+        'Undercut',
+        'Undercut mujer',
+        'Capas en U',
+        'Capas en V',
+      );
+      expect(nombreCitado(lista, 'undercut mujer')).toBe(lista[1]);
+      expect(nombreCitado(lista, 'capas en u y capas en v')).toBeUndefined();
+    });
+  });
+  describe('leDaIgualTrasUnaPregunta (C)', () => {
+    const conPregunta = (msg: string) => [
+      r('¿Qué buscas?', 'asistente'),
+      r(msg),
+    ];
+    it('exige «?», una palabra de «me da igual» y ningún concepto', () => {
+      expect(leDaIgualTrasUnaPregunta(conPregunta('Me da igual'))).toBe(true);
+      expect(leDaIgualTrasUnaPregunta(conPregunta('todas'))).toBe(true);
+      expect(leDaIgualTrasUnaPregunta(conPregunta('el catálogo'))).toBe(false);
+      expect(leDaIgualTrasUnaPregunta(conPregunta('la carta'))).toBe(false);
+      expect(leDaIgualTrasUnaPregunta(conPregunta('igual un corte'))).toBe(
+        false,
+      );
+      expect(
+        leDaIgualTrasUnaPregunta([r('Hola.', 'asistente'), r('me da igual')]),
+      ).toBe(false);
+      expect(leDaIgualTrasUnaPregunta([r('me da igual')])).toBe(false);
     });
   });
   it('coincidenEnNombre exige todas las palabras', () => {
