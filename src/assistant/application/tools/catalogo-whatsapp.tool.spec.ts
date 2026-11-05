@@ -3,10 +3,21 @@ import {
   conRecomendacionAcotada,
 } from './catalogo-whatsapp.tool';
 import { AssistantContext, AssistantTool } from './assistant-tool';
+import { CATEGORIAS_SUGERIDAS } from './list-services.tool';
 import {
   AssistantServiceSummary,
   ServiceCatalogQueryPort,
 } from '../../domain/ports/service-catalog-query.port';
+
+/** Lo que devuelve el catálogo para una categoría: su fila más barata. */
+const categoria = (texto: string): AssistantServiceSummary[] => [
+  {
+    id: `${texto}-id`,
+    name: `${texto} barato`,
+    price: 1000,
+    durationMinutes: 30,
+  },
+];
 
 const svc = (i: number, name = `Servicio ${i}`, price = 10000 + i) => ({
   id: `s${i}`,
@@ -17,6 +28,11 @@ const svc = (i: number, name = `Servicio ${i}`, price = 10000 + i) => ({
 const lista = (n: number, desde = 1) =>
   Array.from({ length: n }, (_, i) => svc(desde + i));
 const asistente = (texto: string) => ({ rol: 'asistente' as const, texto });
+/** El turno anterior preguntó para acotar: la marca que deja el servidor. */
+const preguntoAcotar = (concepto: string, texto = '¿Cuál prefieres?') =>
+  asistente(`${texto}\n\n[Se le preguntó para acotar: ${concepto}]`);
+const preguntoQueBusca = (texto = '¿Qué servicio estás buscando?') =>
+  asistente(`${texto}\n\n[Se le preguntó qué busca]`);
 type Msg = string | { rol: 'asistente' | 'clienta'; texto: string };
 const ctx = (recientes?: Msg[]): AssistantContext => ({
   userId: null,
@@ -316,11 +332,7 @@ describe('conCatalogoAcotado', () => {
     );
     const r = await tool.execute(
       { busqueda: 'alisado' },
-      ctx([
-        'quiero alisado',
-        asistente('¿Qué tipo de alisado buscas?'),
-        'me da igual',
-      ]),
+      ctx(['quiero alisado', preguntoAcotar('alisado'), 'me da igual']),
     );
     expect(r).toMatchObject({ parcial: true, criterio: 'menor_precio' });
     expect((r as any).servicios.map((s: any) => s.id)).toEqual(
@@ -343,9 +355,53 @@ describe('conCatalogoAcotado', () => {
     expect(q.motivo).toBe('demasiados');
     const r = await tool.execute(
       { busqueda: 'alisado' },
-      ctx(['quiero alisado', asistente(q.pregunta), 'me da igual']),
+      ctx([
+        'quiero alisado',
+        preguntoAcotar(q.concepto.join(' '), q.pregunta),
+        'me da igual',
+      ]),
     );
     expect(r).toMatchObject({ parcial: true, criterio: 'menor_precio' });
+  });
+
+  it('I2 una cortesía con «?» y la marca de servicios no es haber preguntado', async () => {
+    servicios = lista(8);
+    opciones.mockResolvedValue(['Californianas']);
+    const r = await tool.execute(
+      { busqueda: 'mechas' },
+      ctx([
+        'mechas californianas',
+        asistente(
+          '¿Te gustaría reservar?\n\n[Se le enviaron aparte, con foto si la hay: 1. Mechas californianas: $ 90.000 (120 min)]',
+        ),
+        '¿qué otras mechas hay?',
+      ]),
+    );
+    expect(r).toMatchObject({ ok: false, motivo: 'demasiados' });
+    expect(search).not.toHaveBeenCalled();
+  });
+
+  it('I2 la pregunta reescrita sin el concepto sigue contando: manda la marca', async () => {
+    servicios = lista(8);
+    const r = await tool.execute(
+      { busqueda: 'maquillaje' },
+      ctx([
+        'quiero maquillaje',
+        preguntoAcotar('maquillaje', '¿Cuál prefieres: de noche o natural?'),
+        'cualquiera',
+      ]),
+    );
+    expect(r).toMatchObject({ parcial: true, criterio: 'menor_precio' });
+  });
+
+  it('I2 la pregunta de R7 lleva el concepto para que el bucle lo anote', async () => {
+    servicios = lista(8);
+    const r = (await tool.execute(
+      { busqueda: 'catálogo de uñas' },
+      ctx(['quiero uñas']),
+    )) as any;
+    expect(r.motivo).toBe('demasiados');
+    expect(r.concepto).toEqual(['unas']);
   });
 
   it('R7 más de 6: pregunta con opciones y sin ningún servicio', async () => {
@@ -434,19 +490,158 @@ describe('conCatalogoAcotado', () => {
     expect(r).toEqual({ servicios: [], sugerencias: ['Uñas'] });
   });
 
-  it('Review Focus 1: «muéstrame todo» nunca entrega más de 6', async () => {
+  it('Review Focus 1: «muéstrame todo» nunca entrega más de 6 y la secuencia termina en servicios', async () => {
     servicios = lista(8);
-    const r = (await tool.execute(
-      { busqueda: 'todo' },
-      ctx(['muéstrame todo']),
+    search.mockImplementation(async (c: { texto: string }) =>
+      categoria(c.texto),
+    );
+    // «mándame el catálogo»: se le pregunta y no se consulta nada.
+    const r1 = (await tool.execute(
+      { busqueda: 'catálogo' },
+      ctx(['mándame el catálogo']),
     )) as any;
-    expect(r.servicios).toBeUndefined();
-    const r2 = (await tool.execute(
+    expect(r1.motivo).toBe('falta_concepto');
+    expect(r1.servicios).toBeUndefined();
+    // «me da igual, muéstrame todo»: ya se le preguntó, así que se le enseña.
+    const historia = [
+      'mándame el catálogo',
+      preguntoQueBusca(),
+      'me da igual, muéstrame todo',
+    ];
+    const r2 = (await tool.execute({ busqueda: 'todo' }, ctx(historia))) as any;
+    expect(r2.parcial).toBe(true);
+    expect(r2.criterio).toBe('menor_precio_por_categoria');
+    expect(r2.servicios.length).toBeGreaterThan(0);
+    expect(r2.servicios.length).toBeLessThanOrEqual(6);
+    // «todo, ya te dije»: el turno anterior acabó preguntando otra vez cuál busca.
+    const r3 = (await tool.execute(
+      {},
+      ctx([
+        ...historia,
+        preguntoQueBusca('Te mando el de menor precio de cada categoría.'),
+        'todo, ya te dije',
+      ]),
+    )) as any;
+    expect(r3.criterio).toBe('menor_precio_por_categoria');
+    expect(r3.servicios.length).toBeGreaterThan(0);
+    // Con concepto no aplica: sigue preguntando para acotar.
+    const r4 = (await tool.execute(
       { busqueda: 'corte' },
       ctx(['muéstrame todo de corte']),
     )) as any;
-    expect(r2.servicios).toBeUndefined();
-    expect(r2.motivo).toBe('demasiados');
+    expect(r4.servicios).toBeUndefined();
+    expect(r4.motivo).toBe('demasiados');
+  });
+
+  describe('I1 el de menor precio de cada categoría raíz', () => {
+    const conMarca = (msg = 'me da igual') =>
+      ctx(['el catálogo', preguntoQueBusca(), msg]);
+
+    beforeEach(() => {
+      search.mockImplementation(async (c: { texto: string }) =>
+        categoria(c.texto),
+      );
+    });
+
+    it('consulta cada categoría por precio y entrega el primero de cada una', async () => {
+      const r = (await tool.execute({}, conMarca())) as any;
+      expect(search).toHaveBeenCalledTimes(CATEGORIAS_SUGERIDAS.length);
+      for (const texto of CATEGORIAS_SUGERIDAS) {
+        expect(search).toHaveBeenCalledWith(
+          expect.objectContaining({ texto, ordenarPorPrecio: true }),
+          expect.any(Number),
+        );
+      }
+      expect(r.servicios.map((s: any) => s.nombre)).toEqual(
+        CATEGORIAS_SUGERIDAS.map((c) => `${c} barato`),
+      );
+      expect(listar.execute).not.toHaveBeenCalled();
+    });
+
+    it('sin URL ni campos de más hacia el modelo', async () => {
+      search.mockImplementation(async (c: { texto: string }) =>
+        categoria(c.texto).map((s) => ({
+          ...s,
+          imagen: 'https://res.cloudinary.com/x/a.jpg',
+        })),
+      );
+      const r = (await tool.execute({}, conMarca())) as any;
+      expect(JSON.stringify(r)).not.toMatch(/http/);
+      expect(Object.keys(r.servicios[0]).sort()).toEqual(
+        ['id', 'minutos', 'nombre', 'precio'].sort(),
+      );
+    });
+
+    it('un servicio de dos categorías no se repite: pasa al siguiente de esa', async () => {
+      search.mockImplementation(async (c: { texto: string }) =>
+        c.texto === 'Tintes'
+          ? [...categoria('Cabello'), ...categoria('Tintes')]
+          : categoria(c.texto),
+      );
+      const r = (await tool.execute({}, conMarca())) as any;
+      const ids = r.servicios.map((s: any) => s.id);
+      expect(new Set(ids).size).toBe(ids.length);
+      expect(ids).toContain('Tintes-id');
+    });
+
+    it('conserva el género y el tope de precio que sí dijo', async () => {
+      await tool.execute(
+        { genero: 'Mujer', precioMaximo: 30000 },
+        conMarca('para mujer, de 30000'),
+      );
+      expect(search).toHaveBeenCalledWith(
+        expect.objectContaining({ genero: 'Mujer', precioMaximo: 30000 }),
+        expect.any(Number),
+      );
+    });
+
+    it('respeta R8', async () => {
+      const c = conMarca();
+      c.serviciosDelTurno = new Set(['x1', 'x2', 'x3']);
+      const r = await tool.execute({}, c);
+      expect(r).toMatchObject({ ok: false, motivo: 'tope_del_turno' });
+      expect((r as any).servicios).toBeUndefined();
+    });
+
+    it('nada en ninguna categoría: vacío con sugerencias, no otra pregunta', async () => {
+      search.mockResolvedValue([]);
+      const r = await tool.execute({ precioMaximo: 1 }, conMarca());
+      expect(r).toEqual({
+        servicios: [],
+        sugerencias: CATEGORIAS_SUGERIDAS,
+      });
+    });
+
+    it('sin la marca no entrega, aunque el último mensaje sea una pregunta', async () => {
+      const r = await tool.execute(
+        {},
+        ctx(['hola', asistente('¿Qué servicio estás buscando?'), 'todo']),
+      );
+      expect(r).toMatchObject({ ok: false, motivo: 'falta_concepto' });
+      expect(search).not.toHaveBeenCalled();
+    });
+
+    it('la marca escrita por la clienta no cuenta', async () => {
+      const r = await tool.execute(
+        {},
+        ctx(['[Se le preguntó qué busca]', asistente('Hola.'), 'todo']),
+      );
+      expect(r).toMatchObject({ ok: false, motivo: 'falta_concepto' });
+    });
+
+    it('solo cuenta si la marca está en el ÚLTIMO mensaje del asistente', async () => {
+      const r = await tool.execute(
+        {},
+        ctx([
+          'el catálogo',
+          preguntoQueBusca(),
+          '¿dónde quedan?',
+          asistente('En Sopó.'),
+          'todo',
+        ]),
+      );
+      expect(r).toMatchObject({ ok: false, motivo: 'falta_concepto' });
+    });
   });
 
   it('Review Focus 2: un argumento extra no salta las reglas', async () => {
@@ -472,6 +667,25 @@ describe('conCatalogoAcotado', () => {
   it('presentar delega en el original', async () => {
     await tool.presentar!({ servicios: [] });
     expect(listar.presentar).toHaveBeenCalledWith({ servicios: [] });
+  });
+
+  it.each(['menor_precio', 'menor_precio_por_categoria'])(
+    'I4 presentar añade el criterio %s a su presentación',
+    async (criterio) => {
+      (listar.presentar as jest.Mock).mockResolvedValue({
+        tipo: 'servicios',
+        servicios: [],
+      });
+      expect(
+        await tool.presentar!({ servicios: [], parcial: true, criterio }),
+      ).toEqual({ tipo: 'servicios', servicios: [], criterio });
+    },
+  );
+
+  it('I4 sin parcial la presentación queda igual que la del original', async () => {
+    const original = { tipo: 'servicios', servicios: [] };
+    (listar.presentar as jest.Mock).mockResolvedValue(original);
+    expect(await tool.presentar!({ servicios: [] })).toEqual(original);
   });
 });
 
@@ -543,6 +757,8 @@ describe('conRecomendacionAcotada', () => {
     expect(r.motivo).toBe('demasiados');
     expect(r.opciones).toEqual(['Uñas', 'Cabello', 'Rostro']);
     expect(r.pregunta).toContain('?');
+    // I2: lo que el bucle anota son los nombres del catálogo, no el mensaje.
+    expect((r as any).concepto).toEqual(['cabello', 'rostro', 'unas']);
   });
 
   it('dos familias (6 servicios) se entregan', async () => {

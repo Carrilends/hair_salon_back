@@ -92,15 +92,48 @@ export function estaAnclado(
   return palabras.some((p) => mencionadas.has(raiz(p)));
 }
 
-/** El último mensaje del asistente es una pregunta que nombra el concepto. */
+type Reciente = { rol: 'clienta' | 'asistente'; texto: string };
+
+/** Lo que el servidor anota en el historial al preguntar «¿qué buscas?». */
+export const MARCA_PREGUNTO_QUE_BUSCA = '[Se le preguntó qué busca]';
+
+/**
+ * Lo que el servidor anota al preguntar para acotar. Solo lleva palabras de
+ * `conceptoDe` y va en el mensaje guardado, nunca en el que se envía.
+ */
+export function marcaDeAcotar(concepto: string[]): string {
+  return `[Se le preguntó para acotar: ${concepto.join(' ')}]`;
+}
+
+const MARCA_DE_ACOTAR = /\[Se le preguntó para acotar: ([^\]]*)\]/g;
+
+function ultimoDelAsistente(recientes: Reciente[]): string | undefined {
+  return [...recientes].reverse().find((m) => m.rol === 'asistente')?.texto;
+}
+
+/**
+ * El ÚLTIMO mensaje del asistente lleva la marca de haber preguntado para acotar
+ * este concepto (por raíz). Es un hecho que anota el servidor: no depende de cómo
+ * redacte el modelo, y una cortesía con «?» no cuenta.
+ */
 export function yaPreguntoSobre(
   palabras: string[],
-  recientes: { rol: 'clienta' | 'asistente'; texto: string }[],
+  recientes: Reciente[],
 ): boolean {
-  const ultimo = [...recientes].reverse().find((m) => m.rol === 'asistente');
-  if (!ultimo || !ultimo.texto.includes('?')) return false;
-  const raices = raicesDe(ultimo.texto);
+  const ultimo = ultimoDelAsistente(recientes);
+  if (!ultimo) return false;
+  const raices = new Set<string>();
+  for (const [, concepto] of ultimo.matchAll(MARCA_DE_ACOTAR)) {
+    for (const r of raicesDe(concepto)) raices.add(r);
+  }
   return palabras.some((p) => raices.has(raiz(p)));
+}
+
+/** El ÚLTIMO mensaje del asistente lleva la marca de haber preguntado qué busca. */
+export function yaPreguntoQueBusca(recientes: Reciente[]): boolean {
+  return (
+    ultimoDelAsistente(recientes)?.includes(MARCA_PREGUNTO_QUE_BUSCA) ?? false
+  );
 }
 
 /** Servicios cuyo nombre contiene todas las palabras (por raíz). */

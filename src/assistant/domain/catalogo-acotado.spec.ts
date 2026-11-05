@@ -3,6 +3,9 @@ import {
   conceptoDe,
   sinPalabrasDeTodo,
   estaAnclado,
+  marcaDeAcotar,
+  MARCA_PREGUNTO_QUE_BUSCA,
+  yaPreguntoQueBusca,
   yaPreguntoSobre,
   MAX_SERVICIOS_WHATSAPP,
 } from './catalogo-acotado';
@@ -45,25 +48,91 @@ describe('catalogo-acotado', () => {
   it('sin mensajes recientes no ancla: falla cerrado', () => {
     expect(estaAnclado(['corte'], [])).toBe(false);
   });
-  it('ya preguntó solo si el ÚLTIMO del asistente tiene «?» y el concepto', () => {
-    expect(
-      yaPreguntoSobre(
-        ['alisado'],
-        [r('¿Qué tipo de alisado?', 'asistente'), r('cualquiera')],
-      ),
-    ).toBe(true);
-    expect(
-      yaPreguntoSobre(
-        ['alisado'],
-        [r('¿Cómo te llamas?', 'asistente'), r('Ana, alisado')],
-      ),
-    ).toBe(false);
-    expect(
-      yaPreguntoSobre(
-        ['alisado'],
-        [r('Tenemos alisado.', 'asistente'), r('ok')],
-      ),
-    ).toBe(false);
+  describe('yaPreguntoSobre (I2): lee la marca del servidor', () => {
+    const marca = (c: string) => `[Se le preguntó para acotar: ${c}]`;
+
+    it('la marca del último mensaje del asistente cuenta, por raíz', () => {
+      const m = [
+        r(`¿Cuál prefieres?\n\n${marca('corte')}`, 'asistente'),
+        r('ok'),
+      ];
+      expect(yaPreguntoSobre(['corte'], m)).toBe(true);
+      expect(yaPreguntoSobre(['cortes'], m)).toBe(true);
+      expect(yaPreguntoSobre(['cortes', 'clasicos'], m)).toBe(true);
+    });
+    it('falso positivo: una cortesía con «?» y el concepto en otra marca', () => {
+      expect(
+        yaPreguntoSobre(
+          ['mechas'],
+          [
+            r(
+              '¿Te gustaría reservar?\n\n[Se le enviaron aparte, con foto si la hay: 1. Mechas: $ 90.000 (120 min)]',
+              'asistente',
+            ),
+            r('¿qué otras mechas hay?'),
+          ],
+        ),
+      ).toBe(false);
+    });
+    it('falso negativo: la pregunta reescrita sin el concepto sigue contando', () => {
+      expect(
+        yaPreguntoSobre(
+          ['maquillaje'],
+          [r(`¿Cuál prefieres?\n\n${marca('maquillaje')}`, 'asistente')],
+        ),
+      ).toBe(true);
+    });
+    it('ya no basta con que el texto lleve «?» y el concepto', () => {
+      expect(
+        yaPreguntoSobre(['alisado'], [r('¿Qué tipo de alisado?', 'asistente')]),
+      ).toBe(false);
+    });
+    it('una marca de otro concepto no cuenta', () => {
+      expect(yaPreguntoSobre(['tinte'], [r(marca('corte'), 'asistente')])).toBe(
+        false,
+      );
+    });
+    it('varias marcas en el mismo mensaje cuentan todas', () => {
+      const texto = `${marca('corte')}\n${marca('tinte')}`;
+      expect(yaPreguntoSobre(['tinte'], [r(texto, 'asistente')])).toBe(true);
+    });
+    it('una marca de un mensaje anterior no cuenta', () => {
+      expect(
+        yaPreguntoSobre(
+          ['corte'],
+          [r(marca('corte'), 'asistente'), r('ok'), r('Listo.', 'asistente')],
+        ),
+      ).toBe(false);
+    });
+    it('la escrita por la clienta no cuenta', () => {
+      expect(
+        yaPreguntoSobre(['corte'], [r('Hola', 'asistente'), r(marca('corte'))]),
+      ).toBe(false);
+    });
+    it('marcaDeAcotar produce lo que yaPreguntoSobre lee', () => {
+      expect(marcaDeAcotar(['corte', 'clasico'])).toBe(marca('corte clasico'));
+      expect(
+        yaPreguntoSobre(
+          ['clasico'],
+          [r(marcaDeAcotar(['corte', 'clasico']), 'asistente')],
+        ),
+      ).toBe(true);
+    });
+  });
+  describe('yaPreguntoQueBusca (I1)', () => {
+    it('solo con la marca en el último mensaje del asistente', () => {
+      const conMarca = r(
+        `¿Qué buscas?\n\n${MARCA_PREGUNTO_QUE_BUSCA}`,
+        'asistente',
+      );
+      expect(yaPreguntoQueBusca([conMarca, r('todo')])).toBe(true);
+      expect(yaPreguntoQueBusca([r('¿Qué buscas?', 'asistente')])).toBe(false);
+      expect(
+        yaPreguntoQueBusca([conMarca, r('x'), r('Hola', 'asistente')]),
+      ).toBe(false);
+      expect(yaPreguntoQueBusca([r(MARCA_PREGUNTO_QUE_BUSCA)])).toBe(false);
+      expect(yaPreguntoQueBusca([])).toBe(false);
+    });
   });
   it('coincidenEnNombre exige todas las palabras', () => {
     const s = [

@@ -1,7 +1,13 @@
 import { AssistantContext, AssistantTool } from './assistant-tool';
-import { AssistantPresentation } from './assistant-presentation';
+import {
+  AssistantPresentation,
+  CriterioParcial,
+} from './assistant-presentation';
 import { CATEGORIAS_SUGERIDAS } from './list-services.tool';
-import { ServiceCatalogQueryPort } from '../../domain/ports/service-catalog-query.port';
+import {
+  AssistantServiceSummary,
+  ServiceCatalogQueryPort,
+} from '../../domain/ports/service-catalog-query.port';
 import { analizarBusqueda } from '../../domain/catalog-search';
 import {
   MAX_SERVICIOS_WHATSAPP,
@@ -11,12 +17,12 @@ import {
   esElNombreExacto,
   sinPalabrasDeTodo,
   estaAnclado,
+  yaPreguntoQueBusca,
   yaPreguntoSobre,
 } from '../../domain/catalogo-acotado';
 import { coerceOptionalNumber } from './coerce';
 
 const PREGUNTA_CONCEPTO = '¿Qué servicio estás buscando?';
-// Las de R7 nombran el concepto: así `yaPreguntoSobre` (R6) las reconoce.
 const preguntaOpciones = (concepto: string, opciones: string[]) =>
   `¿Qué opción de ${concepto} te interesa: ${opciones.join(', ')}?`;
 const preguntaPrecio = (concepto: string) =>
@@ -36,11 +42,21 @@ const pregunta = (
   motivo: string,
   texto: string,
   opciones?: string[],
+  concepto?: string[],
 ): Record<string, unknown> => ({
   ok: false,
   motivo,
   pregunta: texto,
   ...(opciones && opciones.length > 0 ? { opciones } : {}),
+  // Lo lee el bucle para anotar en el historial sobre qué se preguntó (R6).
+  ...(concepto ? { concepto } : {}),
+});
+
+const aServicio = (s: AssistantServiceSummary): Servicio => ({
+  id: s.id,
+  nombre: s.name,
+  precio: s.price,
+  minutos: s.durationMinutes,
 });
 
 /**
@@ -61,11 +77,17 @@ export function conCatalogoAcotado(
         `${listar.definition.description} En WhatsApp puede responder con ` +
         'una pregunta en lugar de servicios: si es así, hazla',
     },
-    presentar: (result: unknown) =>
-      listar.presentar?.(result) as
-        | AssistantPresentation
-        | null
-        | Promise<AssistantPresentation | null>,
+    // Solo aquí se marca un listado como parcial: la web no recibe el campo.
+    presentar: async (result: unknown) => {
+      const p = (await listar.presentar?.(result)) ?? null;
+      const { parcial, criterio } = (result ?? {}) as {
+        parcial?: boolean;
+        criterio?: CriterioParcial;
+      };
+      return p?.tipo === 'servicios' && parcial === true && criterio
+        ? { ...p, criterio }
+        : p;
+    },
 
     async execute(args, context: AssistantContext) {
       // Sin conversación no hay con qué anclar el concepto: falla cerrado.
@@ -87,28 +109,6 @@ export function conCatalogoAcotado(
         ...(precioMaximo !== undefined ? { precioMaximo } : {}),
       };
 
-      // R1: sin concepto no se consulta. Garantiza `concepto` no vacío abajo
-      // (con palabras vacías `coincidenEnNombre` devolvería todo).
-      const concepto = conceptoDe(busqueda);
-      if (concepto.length === 0) {
-        return pregunta(
-          'falta_concepto',
-          PREGUNTA_CONCEPTO,
-          CATEGORIAS_SUGERIDAS,
-        );
-      }
-      // R2: el concepto tiene que haberlo dicho alguien en la conversación.
-      if (!estaAnclado(concepto, recientes)) {
-        return pregunta('sin_pedirlo', PREGUNTA_CONCEPTO, CATEGORIAS_SUGERIDAS);
-      }
-
-      const original = (await listar.execute(limpios, context)) as {
-        servicios?: Servicio[];
-        sugerencias?: string[];
-      };
-      const servicios = original?.servicios ?? [];
-      if (servicios.length === 0) return original;
-
       const turno = (context.serviciosDelTurno ??= new Set<string>());
       // R8 se evalúa sobre lo que se entregaría; solo si pasa se anotan los ids.
       const entregar = (
@@ -129,6 +129,42 @@ export function conCatalogoAcotado(
         union.forEach((id) => turno.add(id));
         return { servicios: lote, ...extra };
       };
+
+      // R1: sin concepto no se consulta. Garantiza `concepto` no vacío abajo
+      // (con palabras vacías `coincidenEnNombre` devolvería todo). Pero si ya se
+      // le preguntó y sigue sin decirlo, repetir sería un bucle: se le enseña lo
+      // de menor precio de cada categoría, y `presentar` lleva la línea que lo dice.
+      const concepto = conceptoDe(busqueda);
+      if (concepto.length === 0) {
+        if (!yaPreguntoQueBusca(recientes)) {
+          return pregunta(
+            'falta_concepto',
+            PREGUNTA_CONCEPTO,
+            CATEGORIAS_SUGERIDAS,
+          );
+        }
+        const lote = await menorPrecioPorCategoria(catalog, {
+          genero,
+          precioMaximo,
+        });
+        return lote.length > 0
+          ? entregar(lote, {
+              parcial: true,
+              criterio: 'menor_precio_por_categoria',
+            })
+          : { servicios: [], sugerencias: CATEGORIAS_SUGERIDAS };
+      }
+      // R2: el concepto tiene que haberlo dicho alguien en la conversación.
+      if (!estaAnclado(concepto, recientes)) {
+        return pregunta('sin_pedirlo', PREGUNTA_CONCEPTO, CATEGORIAS_SUGERIDAS);
+      }
+
+      const original = (await listar.execute(limpios, context)) as {
+        servicios?: Servicio[];
+        sugerencias?: string[];
+      };
+      const servicios = original?.servicios ?? [];
+      if (servicios.length === 0) return original;
 
       // Nombre exacto de un servicio («Me interesa» en «Capas en U»): solo ese,
       // aunque «en» y «U» no cuenten como palabras y «capas» dé varios.
@@ -162,12 +198,9 @@ export function conCatalogoAcotado(
         ordenarPorPrecio: true,
       };
       const masBaratos = async (): Promise<Servicio[]> =>
-        (await catalog.search(criterios, MAX_SERVICIOS_WHATSAPP)).map((s) => ({
-          id: s.id,
-          nombre: s.name,
-          precio: s.price,
-          minutos: s.durationMinutes,
-        }));
+        (await catalog.search(criterios, MAX_SERVICIOS_WHATSAPP)).map(
+          aServicio,
+        );
 
       // R5: ella fijó el orden.
       if (porPrecio) {
@@ -187,10 +220,35 @@ export function conCatalogoAcotado(
       );
       const nombre = conceptoLegible(busqueda);
       return opciones.length > 0
-        ? pregunta('demasiados', preguntaOpciones(nombre, opciones), opciones)
-        : pregunta('demasiados', preguntaPrecio(nombre));
+        ? pregunta(
+            'demasiados',
+            preguntaOpciones(nombre, opciones),
+            opciones,
+            concepto,
+          )
+        : pregunta('demasiados', preguntaPrecio(nombre), undefined, concepto);
     },
   };
+}
+
+/**
+ * El de menor precio de cada categoría raíz, respetando los filtros que sí dijo.
+ * Un servicio de dos categorías no se repite: esa categoría pasa al siguiente.
+ */
+async function menorPrecioPorCategoria(
+  catalog: Pick<ServiceCatalogQueryPort, 'search'>,
+  filtros: { genero?: string; precioMaximo?: number },
+): Promise<Servicio[]> {
+  const lote: Servicio[] = [];
+  for (const texto of CATEGORIAS_SUGERIDAS) {
+    const filas = await catalog.search(
+      { ...filtros, texto, ordenarPorPrecio: true },
+      MAX_SERVICIOS_WHATSAPP,
+    );
+    const siguiente = filas.find((f) => !lote.some((s) => s.id === f.id));
+    if (siguiente) lote.push(aServicio(siguiente));
+  }
+  return lote.slice(0, MAX_SERVICIOS_WHATSAPP);
 }
 
 const MAX_POR_FAMILIA = 3;
@@ -298,6 +356,7 @@ export function conRecomendacionAcotada(
           'demasiados',
           preguntaOpciones('servicios', nombres),
           nombres,
+          conceptoDe(nombres.join(' ')),
         );
       }
       const turno = (context.serviciosDelTurno ??= new Set<string>());

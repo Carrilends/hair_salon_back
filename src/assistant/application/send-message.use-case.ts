@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
-import { marcaDeServicios } from './tools/servicios-del-turno';
+import { marcaDeServicios, marcasDeAcotado } from './tools/servicios-del-turno';
 import { LlmMessage, LlmPort, LlmToolCall } from '../domain/ports/llm.port';
 import { ConversationRepositoryPort } from '../domain/ports/conversation-repository.port';
 import { PhoneConversationRepositoryPort } from '../domain/ports/phone-conversation-repository.port';
@@ -311,14 +311,19 @@ export class SendMessageUseCase {
       // con qué comparar la reserva que se va a crear. Se manda un mensaje más
       // de los que caben en el estado a propósito: quien arma la pregunta es
       // quien decide cuántos entran, y el nuevo es el que nunca puede faltar.
+      // En WhatsApp son tantos como ve el modelo: el acotado del catálogo ancla
+      // ahí lo que se nombró, y con menos interrumpía reservas de algo que el
+      // modelo aún tenía delante. La verificación recorta a su propio tamaño.
       recientes: [
-        ...conversation.window(RECIENTES_EN_EL_ESTADO).map((m) => ({
-          rol:
-            m.role === 'assistant'
-              ? ('asistente' as const)
-              : ('clienta' as const),
-          texto: m.content,
-        })),
+        ...conversation
+          .window(porWhatsApp ? WINDOW_SIZE : RECIENTES_EN_EL_ESTADO)
+          .map((m) => ({
+            rol:
+              m.role === 'assistant'
+                ? ('asistente' as const)
+                : ('clienta' as const),
+            texto: m.content,
+          })),
         { rol: 'clienta' as const, texto: input.message },
       ],
     };
@@ -474,6 +479,7 @@ export class SendMessageUseCase {
     // Salvo también lo que SÍ se escribió (revisión final, M-203): si el turno
     // canceló o movió una cita y luego se torció, la clienta tiene que leer la
     // confirmación del sistema igual; callarla sería peor que la disculpa.
+    const sinRespuestaDelModelo = !reply;
     if (!reply) {
       const escrituras = presentaciones.filter(esEscritura);
       reply =
@@ -498,6 +504,19 @@ export class SendMessageUseCase {
     if (porWhatsApp) {
       const marcaServicios = marcaDeServicios(presentaciones);
       if (marcaServicios) marcas.push(marcaServicios);
+      // Si el modelo no contestó, solo se le preguntó lo que de verdad se envía:
+      // la pregunta que el bucle rescató. La disculpa no anota nada.
+      const resultados = [...resultadosDelTurno.values()];
+      marcas.push(
+        ...marcasDeAcotado(
+          sinRespuestaDelModelo
+            ? resultados.filter(
+                (r) => (r as { pregunta?: unknown })?.pregunta === reply,
+              )
+            : resultados,
+          presentaciones,
+        ),
+      );
     }
     const paraElHistorial = marcas.length
       ? `${reply}\n\n${marcas.join('\n')}`

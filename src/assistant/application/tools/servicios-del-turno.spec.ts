@@ -1,6 +1,7 @@
 import {
   lineaDeServicio,
   marcaDeServicios,
+  marcasDeAcotado,
   pideConfirmacion,
   serviciosDelTurno,
 } from './servicios-del-turno';
@@ -63,5 +64,80 @@ describe('servicios del turno', () => {
   it('sin marca si el turno pide confirmación o no hay servicios', () => {
     expect(marcaDeServicios([lista(s('a')), confirmar])).toBe('');
     expect(marcaDeServicios([])).toBe('');
+  });
+});
+
+describe('marcasDeAcotado', () => {
+  const porCategoria: AssistantPresentation = {
+    tipo: 'servicios',
+    servicios: [],
+    criterio: 'menor_precio_por_categoria',
+  };
+
+  it('«demasiados» anota el concepto; «falta_concepto», el hecho', () => {
+    expect(
+      marcasDeAcotado(
+        [
+          { ok: false, motivo: 'demasiados', concepto: ['corte'] },
+          { ok: false, motivo: 'falta_concepto' },
+        ],
+        [],
+      ),
+    ).toEqual([
+      '[Se le preguntó para acotar: corte]',
+      '[Se le preguntó qué busca]',
+    ]);
+  });
+
+  it('otros motivos, resultados normales y nulos no anotan nada', () => {
+    expect(
+      marcasDeAcotado(
+        [
+          { ok: false, motivo: 'sin_pedirlo', pregunta: '¿?' },
+          { ok: false, motivo: 'tope_del_turno', pregunta: '¿?' },
+          { servicios: [] },
+          { ok: true, motivo: 'demasiados', concepto: ['corte'] },
+          { ok: false, motivo: 'demasiados' },
+          null,
+        ],
+        [],
+      ),
+    ).toEqual([]);
+  });
+
+  it('dos preguntas iguales se anotan una vez', () => {
+    const r = { ok: false, motivo: 'demasiados', concepto: ['corte'] };
+    expect(marcasDeAcotado([r, { ...r }], [])).toHaveLength(1);
+  });
+
+  it('el listado por categoría cuenta como preguntar qué busca', () => {
+    expect(marcasDeAcotado([], [porCategoria])).toEqual([
+      '[Se le preguntó qué busca]',
+    ]);
+  });
+
+  it('el de los 6 de menor precio no, y con botón de confirmar tampoco', () => {
+    expect(
+      marcasDeAcotado(
+        [],
+        [{ tipo: 'servicios', servicios: [], criterio: 'menor_precio' }],
+      ),
+    ).toEqual([]);
+    expect(
+      marcasDeAcotado(
+        [],
+        [
+          porCategoria,
+          {
+            tipo: 'confirmar-reserva',
+            propuestaId: 'p',
+            nombre: 'Ana',
+            servicios: [],
+            fecha: 'f',
+            hora: 'h',
+          },
+        ],
+      ),
+    ).toEqual([]);
   });
 });

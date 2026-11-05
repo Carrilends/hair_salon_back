@@ -586,3 +586,198 @@ describe('SendMessageUseCase · servicios del turno (catálogo con imágenes)', 
     expect(guardado).not.toContain('Se le enviaron aparte');
   });
 });
+
+describe('SendMessageUseCase · marcas del acotado (I2)', () => {
+  const wa = { canal: 'whatsapp' as const, phoneE164: NUMERO, userId: null };
+  const MARCA_ACOTAR = '[Se le preguntó para acotar: corte]';
+  const MARCA_QUE_BUSCA = '[Se le preguntó qué busca]';
+
+  /** Devuelve los resultados dados en orden; el último se repite. */
+  class HerramientaConGuion extends HerramientaEspia {
+    constructor(
+      private readonly resultados: ({ ok: boolean } & Record<
+        string,
+        unknown
+      >)[],
+    ) {
+      super();
+    }
+    async execute() {
+      return this.resultados.length > 1
+        ? this.resultados.shift()!
+        : this.resultados[0];
+    }
+  }
+  const demasiados = {
+    ok: false,
+    motivo: 'demasiados',
+    pregunta: '¿Qué opción de corte te interesa: Fade, Bob?',
+    opciones: ['Fade', 'Bob'],
+    concepto: ['corte'],
+  };
+  const guardado = (repo: RepoDoble) =>
+    repo.guardada!.window(10).at(-1)!.content;
+  const sinFin = (): LlmCompletion[] =>
+    Array.from({ length: 8 }, (_, i) => ({
+      message: {
+        role: 'assistant' as const,
+        content: '',
+        toolCalls: [{ id: `t${i}`, name: 'listarServicios', arguments: { i } }],
+      },
+      usage: TokenUsage.of(10, 5),
+    }));
+
+  it('«demasiados» anota el concepto aunque el modelo reescriba la pregunta', async () => {
+    const { useCase, repo } = montar({
+      herramienta: new HerramientaConGuion([demasiados]),
+      guion: [llamaYResponde()[0], respuesta('¿Cuál prefieres?')],
+    });
+    await useCase.execute({ ...wa, message: 'un corte' });
+    expect(guardado(repo)).toBe(`¿Cuál prefieres?\n\n${MARCA_ACOTAR}`);
+  });
+
+  it('«falta_concepto» anota que se preguntó, sin ningún texto de la clienta', async () => {
+    const { useCase, repo } = montar({
+      herramienta: new HerramientaConGuion([
+        { ok: false, motivo: 'falta_concepto', pregunta: '¿Qué buscas?' },
+      ]),
+      guion: [llamaYResponde()[0], respuesta('¿Qué servicio buscas?')],
+    });
+    await useCase.execute({ ...wa, message: 'soy Ana, mi 3001234567' });
+    const texto = guardado(repo);
+    expect(texto).toBe(`¿Qué servicio buscas?\n\n${MARCA_QUE_BUSCA}`);
+    expect(texto).not.toMatch(/Ana|3001234567/);
+  });
+
+  it('otro motivo no anota nada', async () => {
+    const { useCase, repo } = montar({
+      herramienta: new HerramientaConGuion([
+        { ok: false, motivo: 'sin_pedirlo', pregunta: '¿Qué buscas?' },
+      ]),
+      guion: [llamaYResponde()[0], respuesta('¿Qué buscas?')],
+    });
+    await useCase.execute({ ...wa, message: 'hola' });
+    expect(guardado(repo)).toBe('¿Qué buscas?');
+  });
+
+  it('el turno que acaba en disculpa no anota nada', async () => {
+    const { useCase, repo } = montar({
+      // Sin `pregunta`: el bucle no tiene nada que decir y se disculpa.
+      herramienta: new HerramientaConGuion([
+        { ok: false, motivo: 'demasiados', concepto: ['corte'] },
+      ]),
+      guion: sinFin(),
+    });
+    const r = await useCase.execute({ ...wa, message: 'un corte' });
+    expect(r.reply).toMatch(/Disculpa/);
+    expect(guardado(repo)).not.toContain('Se le preguntó');
+  });
+
+  it('si el turno se corta y sale la pregunta de acotar, sí se le preguntó', async () => {
+    const { useCase, repo } = montar({
+      herramienta: new HerramientaConGuion([demasiados]),
+      guion: sinFin(),
+    });
+    const r = await useCase.execute({ ...wa, message: 'un corte' });
+    expect(r.reply).toBe(demasiados.pregunta);
+    expect(guardado(repo)).toContain(MARCA_ACOTAR);
+  });
+
+  it('si el turno se corta y sale OTRA pregunta, la de acotar no se hizo', async () => {
+    const { useCase, repo } = montar({
+      herramienta: new HerramientaConGuion([
+        { ok: false, motivo: 'x', pregunta: '¿Cómo te llamas?' },
+        demasiados,
+      ]),
+      guion: sinFin(),
+    });
+    const r = await useCase.execute({ ...wa, message: 'un corte' });
+    expect(r.reply).toBe('¿Cómo te llamas?');
+    expect(guardado(repo)).not.toContain('Se le preguntó');
+  });
+
+  it('la web no anota nada', async () => {
+    const { useCase, repo } = montar({
+      herramienta: new HerramientaConGuion([demasiados]),
+      guion: [llamaYResponde()[0], respuesta('¿Cuál prefieres?')],
+    });
+    await useCase.execute({ userId: 'u-1', message: 'un corte' });
+    expect(guardado(repo)).toBe('¿Cuál prefieres?');
+  });
+
+  it('el modelo ve la marca en el turno siguiente', async () => {
+    const repo = new RepoDoble();
+    const herramienta = new HerramientaConGuion([demasiados]);
+    const { useCase, llm } = montar({
+      repo,
+      herramienta,
+      guion: [
+        llamaYResponde()[0],
+        respuesta('¿Cuál prefieres?'),
+        respuesta('Listo.'),
+      ],
+    });
+    await useCase.execute({ ...wa, message: 'un corte' });
+    repo.activaDelNumero = repo.guardada!;
+    await useCase.execute({ ...wa, message: 'me da igual' });
+    expect(JSON.stringify(llm.calls.at(-1)!.messages)).toContain(MARCA_ACOTAR);
+  });
+});
+
+describe('SendMessageUseCase · ventana de recientes (I3)', () => {
+  const conMensajes = (c: Conversation, n: number) => {
+    for (let i = 0; i < n; i++) {
+      c.append(
+        i % 2 === 0 ? Message.user(`m${i}`) : Message.assistant(`m${i}`),
+      );
+    }
+    return c;
+  };
+
+  it('en WhatsApp ve tanto como el modelo: 8 mensajes más el nuevo', async () => {
+    const repo = new RepoDoble();
+    repo.activaDelNumero = conMensajes(
+      Conversation.fromPersistence({ id: 'c-wa', phoneE164: NUMERO }),
+      10,
+    );
+    const { useCase, herramienta, llm } = montar({
+      repo,
+      guion: llamaYResponde(),
+    });
+    await useCase.execute({
+      canal: 'whatsapp',
+      phoneE164: NUMERO,
+      userId: null,
+      message: 'nuevo',
+    });
+    const textos = herramienta.contexto!.recientes!.map((m) => m.texto);
+    expect(textos).toEqual([
+      ...Array.from({ length: 8 }, (_, i) => `m${i + 2}`),
+      'nuevo',
+    ]);
+    // Lo mismo que el modelo: el mensaje más viejo que ve sigue anclando.
+    expect(JSON.stringify(llm.calls[0].messages)).toContain('m2');
+    expect(JSON.stringify(llm.calls[0].messages)).not.toContain('"m1"');
+  });
+
+  it('la web sigue con los mismos: 4 más el nuevo', async () => {
+    const repo = new RepoDoble();
+    repo.porId = conMensajes(
+      Conversation.fromPersistence({ id: 'c-web', userId: 'u-1' }),
+      10,
+    );
+    const { useCase, herramienta } = montar({ repo, guion: llamaYResponde() });
+    await useCase.execute({
+      conversationId: 'c-web',
+      userId: 'u-1',
+      message: 'nuevo',
+    });
+    expect(herramienta.contexto!.recientes!.map((m) => m.texto)).toEqual([
+      'm6',
+      'm7',
+      'm8',
+      'm9',
+      'nuevo',
+    ]);
+  });
+});

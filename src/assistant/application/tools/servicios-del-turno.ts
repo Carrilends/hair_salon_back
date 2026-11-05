@@ -2,7 +2,11 @@ import {
   AssistantPresentation,
   PresentedService,
 } from './assistant-presentation';
-import { MAX_SERVICIOS_WHATSAPP } from '../../domain/catalogo-acotado';
+import {
+  MARCA_PREGUNTO_QUE_BUSCA,
+  MAX_SERVICIOS_WHATSAPP,
+  marcaDeAcotar,
+} from '../../domain/catalogo-acotado';
 
 export const PESOS = new Intl.NumberFormat('es-CO', {
   style: 'currency',
@@ -52,4 +56,44 @@ export function marcaDeServicios(p: AssistantPresentation[]): string {
   if (ss.length === 0) return '';
   const lineas = ss.map(lineaDeServicio).join(' ; ');
   return `[Se le enviaron aparte, con foto si la hay: ${lineas}]`;
+}
+
+/**
+ * Qué se anota en el historial por lo que el servidor le hizo preguntar: el hecho
+ * del que dependen R1 y R6, sin depender de cómo redacte el modelo. Sin ids, sin
+ * URL y sin más texto que las palabras de `conceptoDe`.
+ *
+ * El listado por categoría también cuenta como «qué busca», porque acaba en
+ * «si buscas otro, dime cuál»: quien responde «todo» otra vez lo vuelve a recibir
+ * en lugar de caer de nuevo en la pregunta.
+ */
+export function marcasDeAcotado(
+  resultados: unknown[],
+  presentaciones: AssistantPresentation[],
+): string[] {
+  const marcas = new Set<string>();
+  for (const resultado of resultados) {
+    const r = resultado as {
+      ok?: unknown;
+      motivo?: unknown;
+      concepto?: unknown;
+    };
+    if (r?.ok !== false) continue;
+    if (r.motivo === 'falta_concepto') marcas.add(MARCA_PREGUNTO_QUE_BUSCA);
+    if (
+      r.motivo === 'demasiados' &&
+      Array.isArray(r.concepto) &&
+      r.concepto.length > 0
+    ) {
+      marcas.add(marcaDeAcotar(r.concepto as string[]));
+    }
+  }
+  const listoPorCategoria = presentaciones.some(
+    (p) =>
+      p.tipo === 'servicios' && p.criterio === 'menor_precio_por_categoria',
+  );
+  if (listoPorCategoria && !pideConfirmacion(presentaciones)) {
+    marcas.add(MARCA_PREGUNTO_QUE_BUSCA);
+  }
+  return [...marcas];
 }

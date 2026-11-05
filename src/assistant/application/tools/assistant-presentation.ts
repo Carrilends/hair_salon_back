@@ -52,10 +52,21 @@ export interface PresentedService {
   imagen?: string;
 }
 
+/**
+ * Por qué un listado de WhatsApp es solo una parte: los 6 de menor precio tras
+ * preguntar, o el de menor precio de cada categoría.
+ */
+export type CriterioParcial = 'menor_precio' | 'menor_precio_por_categoria';
+
 /** Listado de servicios del catálogo, como el que devuelve `listarServicios`. */
 export interface ServicesPresentation {
   tipo: 'servicios';
   servicios: PresentedService[];
+  /**
+   * Solo lo pone el envoltorio de WhatsApp (`conCatalogoAcotado`), y con él
+   * `mensajesDeLaRespuesta` añade la línea que lo dice. La web no lo recibe.
+   */
+  criterio?: CriterioParcial;
 }
 
 /**
