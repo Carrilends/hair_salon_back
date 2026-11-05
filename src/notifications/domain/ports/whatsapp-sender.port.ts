@@ -79,7 +79,36 @@ export type WhatsAppMessage =
       /** Máximo 1024 caracteres (límite de Meta). */
       caption?: string;
     }
+  | {
+      /**
+       * Carrusel de tarjetas con foto, dentro de la ventana de 24 h (catálogo
+       * con imágenes). Meta exige de 2 a 10 tarjetas; texto de tarjeta hasta
+       * 160 caracteres, título de botón hasta 20, id hasta 256 y cuerpo
+       * principal hasta 1024. La pulsación llega por el webhook como botón.
+       */
+      kind: 'carousel';
+      to: string;
+      body: string;
+      cards: {
+        imageUrl: string;
+        body: string;
+        buttonId: string;
+        buttonTitle: string;
+      }[];
+    }
   | { kind: 'text'; to: string; body: string };
+
+/**
+ * Meta rechazó el envío por límite de mensajes entre el mismo par de números
+ * (código 131056). No es un fallo del mensaje: conviene esperar y no reintentar
+ * de inmediato.
+ */
+export class WhatsAppPairRateLimitError extends Error {
+  constructor(message?: string) {
+    super(message ?? 'Límite de mensajes por par de números (131056).');
+    this.name = 'WhatsAppPairRateLimitError';
+  }
+}
 
 export interface WhatsAppSenderPort {
   send(message: WhatsAppMessage): Promise<void>;

@@ -52,6 +52,19 @@ export class ConsoleWhatsAppSender implements WhatsAppSenderPort {
           (message.caption ? `\nPie: ${message.caption}` : '')
         );
 
+      case 'carousel':
+        return (
+          `Carrusel: ${message.body}\n` +
+          message.cards
+            .map(
+              (c, i) =>
+                `    #${i} ${c.imageUrl}\n` +
+                `       ${c.body}\n` +
+                `       [${c.buttonId}] ${c.buttonTitle}`,
+            )
+            .join('\n')
+        );
+
       case 'interactive-buttons':
         return (
           `Botones: ${message.body}\n` +

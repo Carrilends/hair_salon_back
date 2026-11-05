@@ -114,4 +114,38 @@ describe('ConsoleWhatsAppSender', () => {
     expect(impreso).toContain('Pie: Corte');
     log.mockRestore();
   });
+
+  it('imprime URL, texto e id de cada tarjeta del carrusel', async () => {
+    const log = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+
+    await new ConsoleWhatsAppSender().send({
+      kind: 'carousel',
+      to: '573001234567',
+      body: 'Estos son los servicios',
+      cards: [
+        {
+          imageUrl: 'https://res.cloudinary.com/x/a.jpg',
+          body: '1. Corte: $ 35.000 (45 min)',
+          buttonId: 'SERVICE|a',
+          buttonTitle: 'Me interesa',
+        },
+        {
+          imageUrl: 'https://res.cloudinary.com/x/b.jpg',
+          body: '2. Tinte: $ 40.000 (60 min)',
+          buttonId: 'SERVICE|b',
+          buttonTitle: 'Me interesa',
+        },
+      ],
+    });
+
+    const impreso = String(log.mock.calls[0][0]);
+    expect(impreso).toContain('Estos son los servicios');
+    expect(impreso).toContain('https://res.cloudinary.com/x/a.jpg');
+    expect(impreso).toContain('2. Tinte: $ 40.000 (60 min)');
+    expect(impreso).toContain('[SERVICE|a]');
+    expect(impreso).toContain('[SERVICE|b] Me interesa');
+    log.mockRestore();
+  });
 });

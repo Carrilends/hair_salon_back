@@ -2,7 +2,10 @@ import {
   CloudApiWhatsAppConfig,
   CloudApiWhatsAppSender,
 } from './cloud-api-whatsapp-sender.adapter';
-import { WhatsAppMessage } from '../../domain/ports/whatsapp-sender.port';
+import {
+  WhatsAppMessage,
+  WhatsAppPairRateLimitError,
+} from '../../domain/ports/whatsapp-sender.port';
 
 /**
  * Adaptador real contra la Cloud API de Meta. Envía una plantilla aprobada por
@@ -389,5 +392,115 @@ describe('CloudApiWhatsAppSender', () => {
 
     const body = JSON.parse(captured.init?.body ?? '{}');
     expect(body.image).toEqual({ link: 'https://res.cloudinary.com/x/a.jpg' });
+  });
+  describe('carrusel y errores de Graph', () => {
+    const URL_1 = 'https://res.cloudinary.com/x/a.jpg';
+    const URL_2 = 'https://res.cloudinary.com/x/b.jpg';
+    const tarjeta = (i: number) => ({
+      imageUrl: i === 2 ? URL_2 : URL_1,
+      body: `${i}. Tinte: $ 40.000 (60 min)`,
+      buttonId: i === 2 ? 'SERVICE|x' : `SERVICE|${i}`,
+      buttonTitle: 'Me interesa',
+    });
+    const carrusel = (n: number): WhatsAppMessage => ({
+      kind: 'carousel',
+      to: '573001234567',
+      body: 'Estos son los servicios',
+      cards: Array.from({ length: n }, (_, i) => tarjeta(i + 1)),
+    });
+
+    it('el carrusel sale con la forma de Graph', async () => {
+      const captured: Captured = {};
+      const sender = new CloudApiWhatsAppSender(
+        baseConfig,
+        fakeFetch(captured, { ok: true, status: 200 }),
+      );
+      await sender.send(carrusel(2));
+      const body = JSON.parse(captured.init?.body ?? '{}');
+      expect(body.messaging_product).toBe('whatsapp');
+      expect(body.recipient_type).toBe('individual');
+      expect(body.to).toBe('573001234567');
+      expect(body.type).toBe('interactive');
+      expect(body.interactive.type).toBe('carousel');
+      expect(body.interactive.body).toEqual({
+        text: 'Estos son los servicios',
+      });
+      expect(body.interactive.action.cards[1]).toEqual({
+        card_index: 1,
+        type: 'cta_url',
+        header: { type: 'image', image: { link: URL_2 } },
+        body: { text: '2. Tinte: $ 40.000 (60 min)' },
+        action: {
+          buttons: [
+            {
+              type: 'quick_reply',
+              quick_reply: { id: 'SERVICE|x', title: 'Me interesa' },
+            },
+          ],
+        },
+      });
+    });
+
+    it.each([1, 11])(
+      'con %i tarjetas falla con un error legible, sin llamar a la red',
+      async (n) => {
+        const captured: Captured = {};
+        const sender = new CloudApiWhatsAppSender(
+          baseConfig,
+          fakeFetch(captured, { ok: true, status: 200 }),
+        );
+        await expect(sender.send(carrusel(n))).rejects.toThrow(
+          /de 2 a 10 tarjetas/,
+        );
+        expect(captured.url).toBeUndefined();
+      },
+    );
+
+    it('131056 lanza WhatsAppPairRateLimitError', async () => {
+      const sender = new CloudApiWhatsAppSender(
+        baseConfig,
+        fakeFetch(
+          {},
+          {
+            ok: false,
+            status: 400,
+            body: '{"error":{"code":131056,"message":"pair rate limit"}}',
+          },
+        ),
+      );
+      await expect(sender.send(PLANTILLA)).rejects.toBeInstanceOf(
+        WhatsAppPairRateLimitError,
+      );
+    });
+
+    it('otro error sigue siendo un Error normal, con estado y detalle', async () => {
+      const sender = new CloudApiWhatsAppSender(
+        baseConfig,
+        fakeFetch(
+          {},
+          {
+            ok: false,
+            status: 400,
+            body: '{"error":{"code":131053,"message":"media"}}',
+          },
+        ),
+      );
+      const error = await sender.send(PLANTILLA).catch((e) => e);
+      expect(error).toBeInstanceOf(Error);
+      expect(error).not.toBeInstanceOf(WhatsAppPairRateLimitError);
+      expect(error.message).toContain('400');
+      expect(error.message).toContain('131053');
+    });
+
+    it('el cuerpo no JSON no rompe', async () => {
+      const sender = new CloudApiWhatsAppSender(
+        baseConfig,
+        fakeFetch({}, { ok: false, status: 502, body: '<html>Bad gateway' }),
+      );
+      const error = await sender.send(PLANTILLA).catch((e) => e);
+      expect(error).not.toBeInstanceOf(WhatsAppPairRateLimitError);
+      expect(error.message).toContain('502');
+      expect(error.message).toContain('Bad gateway');
+    });
   });
 });

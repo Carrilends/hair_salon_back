@@ -1,5 +1,6 @@
 import {
   WhatsAppMessage,
+  WhatsAppPairRateLimitError,
   WhatsAppSenderPort,
 } from '../../domain/ports/whatsapp-sender.port';
 
@@ -16,6 +17,13 @@ export interface CloudApiWhatsAppConfig {
 
 /** Máximo de filas por sección de una lista interactiva (límite de Meta). */
 const MAX_LIST_ROWS = 10;
+
+/** Tarjetas de un carrusel (límites de Meta). */
+const MIN_CAROUSEL_CARDS = 2;
+const MAX_CAROUSEL_CARDS = 10;
+
+/** Código de Graph: límite de mensajes entre el mismo par de números. */
+const PAIR_RATE_LIMIT_CODE = 131056;
 
 /**
  * Adaptador real: habla con la Cloud API de Meta. Único archivo que conoce el
@@ -51,6 +59,8 @@ export class CloudApiWhatsAppSender implements WhatsAppSenderPort {
     const url = `https://graph.facebook.com/${this.config.apiVersion}/${this.config.phoneNumberId}/messages`;
     const payload = {
       messaging_product: 'whatsapp',
+      // El carrusel exige `recipient_type`; el resto de formas no lo llevan.
+      ...(message.kind === 'carousel' ? { recipient_type: 'individual' } : {}),
       to: message.to,
       ...this.toGraphPayload(message),
     };
@@ -66,6 +76,18 @@ export class CloudApiWhatsAppSender implements WhatsAppSenderPort {
 
     if (!response.ok) {
       const detail = await response.text().catch(() => '');
+      let code: unknown;
+      try {
+        code = (JSON.parse(detail) as { error?: { code?: unknown } })?.error
+          ?.code;
+      } catch {
+        // Cuerpo que no es JSON: se informa tal cual abajo.
+      }
+      if (code === PAIR_RATE_LIMIT_CODE) {
+        throw new WhatsAppPairRateLimitError(
+          `Límite por par de números de la Cloud API de WhatsApp (${response.status}): ${detail}`,
+        );
+      }
       throw new Error(
         `Error de la Cloud API de WhatsApp (${response.status}): ${detail}`,
       );
@@ -138,6 +160,40 @@ export class CloudApiWhatsAppSender implements WhatsAppSenderPort {
             ...(message.caption ? { caption: message.caption } : {}),
           },
         };
+
+      case 'carousel': {
+        const n = message.cards.length;
+        if (n < MIN_CAROUSEL_CARDS || n > MAX_CAROUSEL_CARDS) {
+          throw new Error(
+            `Un carrusel de WhatsApp admite de ${MIN_CAROUSEL_CARDS} a ${MAX_CAROUSEL_CARDS} tarjetas y llegaron ${n}.`,
+          );
+        }
+        return {
+          type: 'interactive',
+          interactive: {
+            type: 'carousel',
+            body: { text: message.body },
+            action: {
+              cards: message.cards.map((c, i) => ({
+                card_index: i,
+                // Verificado en un envío real: con botones quick_reply la
+                // tarjeta sigue llevando `cta_url`.
+                type: 'cta_url',
+                header: { type: 'image', image: { link: c.imageUrl } },
+                body: { text: c.body },
+                action: {
+                  buttons: [
+                    {
+                      type: 'quick_reply',
+                      quick_reply: { id: c.buttonId, title: c.buttonTitle },
+                    },
+                  ],
+                },
+              })),
+            },
+          },
+        };
+      }
 
       case 'interactive-buttons':
         return {
