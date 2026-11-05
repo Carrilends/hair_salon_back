@@ -8,6 +8,10 @@ import {
   AssistantTool,
   WhatsAppToolSets,
 } from './application/tools/assistant-tool';
+import {
+  conCatalogoAcotado,
+  conRecomendacionAcotada,
+} from './application/tools/catalogo-whatsapp.tool';
 import { MyReservationsTool } from './application/tools/my-reservations.tool';
 import { ViewAgendaTool } from './application/tools/view-agenda.tool';
 import { ConfirmReservationTool } from './application/tools/confirm-reservation.tool';
@@ -57,7 +61,10 @@ export function buildWhatsAppTools(
   listActive: ListActiveReservationsUseCase,
   confirm: ConfirmReservationUseCase,
   pendientes: PendingBookingRepositoryPort,
-  catalog: Pick<ServiceCatalogQueryPort, 'findNamesByIds'>,
+  catalog: Pick<
+    ServiceCatalogQueryPort,
+    'findNamesByIds' | 'search' | 'findNarrowingOptions'
+  >,
   getReservation: GetReservationUseCase,
   contacto: OwnerContactPort,
 ): WhatsAppToolSets {
@@ -71,7 +78,9 @@ export function buildWhatsAppTools(
     return tool;
   };
 
-  const listar = de('listarServicios');
+  // Una sola instancia de cada envoltorio para los dos juegos.
+  const listar = conCatalogoAcotado(de('listarServicios'), catalog);
+  const recomendar = conRecomendacionAcotada(de('recomendarServicios'));
   const disponibilidad = de('consultarDisponibilidad');
 
   // Plan 06, F4 (D4): en WhatsApp las cuatro que escribían ahora PROPONEN, y
@@ -146,7 +155,7 @@ export function buildWhatsAppTools(
     clienta: [
       listar,
       disponibilidad,
-      de('recomendarServicios'),
+      recomendar,
       de('componerPaquete'),
       crear,
       paquete,

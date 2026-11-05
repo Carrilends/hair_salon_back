@@ -1,4 +1,7 @@
-import { conCatalogoAcotado } from './catalogo-whatsapp.tool';
+import {
+  conCatalogoAcotado,
+  conRecomendacionAcotada,
+} from './catalogo-whatsapp.tool';
 import { AssistantContext, AssistantTool } from './assistant-tool';
 import {
   AssistantServiceSummary,
@@ -371,5 +374,126 @@ describe('conCatalogoAcotado', () => {
   it('presentar delega en el original', async () => {
     await tool.presentar!({ servicios: [] });
     expect(listar.presentar).toHaveBeenCalledWith({ servicios: [] });
+  });
+});
+
+describe('conRecomendacionAcotada', () => {
+  // categoría -> [familia, servicios]
+  const mapa: Record<string, [string, ReturnType<typeof svc>[]]> = {
+    Manicure: ['Uñas', lista(3, 1)],
+    Pedicure: ['Uñas', lista(3, 4)],
+    Mechas: ['Cabello', lista(3, 10)],
+    Cejas: ['Rostro', lista(3, 20)],
+  };
+  let original: AssistantTool;
+  let tool: AssistantTool;
+
+  beforeEach(() => {
+    original = {
+      name: 'recomendarServicios',
+      definition: {
+        name: 'recomendarServicios',
+        description: 'Sugiere servicios.',
+        parameters: { type: 'object', properties: {} },
+      },
+      execute: jest.fn(async (args: Record<string, unknown>) => {
+        const cats = (args.categorias as string[]) ?? [];
+        if (cats.length === 0) return { ok: false, motivo: 'sin_categorias' };
+        const recomendaciones: unknown[] = [];
+        const categoriasDesconocidas: string[] = [];
+        for (const c of cats) {
+          const e = mapa[c];
+          if (!e) categoriasDesconocidas.push(c);
+          else recomendaciones.push({ categoria: e[0], servicios: e[1] });
+        }
+        return { recomendaciones, categoriasDesconocidas };
+      }),
+      presentar: jest.fn(async () => null),
+    } as unknown as AssistantTool;
+    tool = conRecomendacionAcotada(original);
+  });
+
+  it('«uñas» ancla la categoría Manicure por su familia', async () => {
+    const r = (await tool.execute(
+      { categorias: ['Manicure'] },
+      ctx(['quiero algo para mis uñas']),
+    )) as { recomendaciones: { servicios: unknown[] }[] };
+    expect(r.recomendaciones).toHaveLength(1);
+    expect(r.recomendaciones[0].servicios).toHaveLength(3);
+  });
+
+  it('una categoría que nadie mencionó no se recomienda', async () => {
+    const r = await tool.execute(
+      { categorias: ['Mechas'] },
+      ctx(['quiero algo para mis uñas']),
+    );
+    expect(r).toMatchObject({ ok: false, motivo: 'sin_pedirlo' });
+    expect(r).not.toHaveProperty('recomendaciones');
+  });
+
+  it('sin conversación falla cerrado', async () => {
+    expect(
+      await tool.execute({ categorias: ['Manicure'] }, ctx()),
+    ).toMatchObject({ ok: false, motivo: 'sin_pedirlo' });
+  });
+
+  it('tres familias (9 servicios) preguntan con las familias', async () => {
+    const r = (await tool.execute(
+      { categorias: ['Manicure', 'Mechas', 'Cejas'] },
+      ctx(['uñas, cabello y rostro']),
+    )) as { motivo: string; opciones: string[]; pregunta: string };
+    expect(r.motivo).toBe('demasiados');
+    expect(r.opciones).toEqual(['Uñas', 'Cabello', 'Rostro']);
+    expect(r.pregunta).toContain('?');
+  });
+
+  it('dos familias (6 servicios) se entregan', async () => {
+    const r = (await tool.execute(
+      { categorias: ['Manicure', 'Mechas'] },
+      ctx(['uñas y cabello']),
+    )) as { recomendaciones: unknown[] };
+    expect(r.recomendaciones).toHaveLength(2);
+  });
+
+  it('dos categorías de una familia se unen con tope de 3', async () => {
+    const r = (await tool.execute(
+      { categorias: ['Manicure', 'Pedicure'] },
+      ctx(['uñas']),
+    )) as { recomendaciones: { categoria: string; servicios: unknown[] }[] };
+    expect(r.recomendaciones).toHaveLength(1);
+    expect(r.recomendaciones[0].servicios).toHaveLength(3);
+  });
+
+  it('sin_categorias conserva el motivo y añade pregunta', async () => {
+    const r = await tool.execute({ categorias: [] }, ctx(['uñas']));
+    expect(r).toMatchObject({ ok: false, motivo: 'sin_categorias' });
+    expect((r as { pregunta: string }).pregunta).toContain('?');
+  });
+
+  it('categoriasDesconocidas pasan igual', async () => {
+    const r = (await tool.execute(
+      { categorias: ['Manicure', 'Zzz'] },
+      ctx(['uñas']),
+    )) as { categoriasDesconocidas: string[] };
+    expect(r.categoriasDesconocidas).toEqual(['Zzz']);
+  });
+
+  it('R8: no supera 6 servicios distintos en el turno', async () => {
+    const c = ctx(['uñas y cabello']);
+    c.serviciosDelTurno = new Set(['x1', 'x2', 'x3', 'x4']);
+    const r = await tool.execute({ categorias: ['Manicure'] }, c);
+    expect(r).toMatchObject({ ok: false, motivo: 'tope_del_turno' });
+  });
+
+  it('no deja pasar campos extra al modelo y anota el turno', async () => {
+    const c = ctx(['uñas']);
+    await tool.execute({ categorias: ['Manicure'] }, c);
+    expect(c.serviciosDelTurno?.size).toBe(3);
+  });
+
+  it('mantiene definición y delega presentar', async () => {
+    expect(tool.definition.parameters).toBe(original.definition.parameters);
+    await tool.presentar!({ recomendaciones: [] });
+    expect(original.presentar).toHaveBeenCalledWith({ recomendaciones: [] });
   });
 });

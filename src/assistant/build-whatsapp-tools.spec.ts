@@ -154,3 +154,40 @@ describe('buildWhatsAppTools · D4 (plan 06, F4)', () => {
     }
   });
 });
+
+describe('buildWhatsAppTools · catálogo acotado', () => {
+  it('clienta y dueña usan el envoltorio; la web y MCP, el original', () => {
+    const { base, juegos } = montar();
+    const original = base.find((t) => t.name === 'listarServicios')!;
+    const copia = { ...original };
+    const deClienta = juegos.clienta.find((t) => t.name === 'listarServicios')!;
+    expect(deClienta).not.toBe(original);
+    expect(juegos.duena.find((t) => t.name === 'listarServicios')).toBe(
+      deClienta,
+    );
+    expect(deClienta.definition.parameters).toEqual(
+      original.definition.parameters,
+    );
+    expect(base.find((t) => t.name === 'listarServicios')).toBe(original);
+    expect(original).toEqual(copia);
+  });
+
+  it('recomendarServicios va envuelto para la clienta y el original queda intacto', () => {
+    const { base, juegos } = montar();
+    const original = base.find((t) => t.name === 'recomendarServicios')!;
+    const deClienta = juegos.clienta.find(
+      (t) => t.name === 'recomendarServicios',
+    )!;
+    expect(deClienta).not.toBe(original);
+    expect(deClienta.definition.parameters).toEqual(
+      original.definition.parameters,
+    );
+  });
+
+  it('componerPaquete sigue siendo el original', () => {
+    const { base, juegos } = montar();
+    expect(juegos.clienta.find((t) => t.name === 'componerPaquete')).toBe(
+      base.find((t) => t.name === 'componerPaquete'),
+    );
+  });
+});

@@ -177,3 +177,121 @@ export function conCatalogoAcotado(
     },
   };
 }
+
+const MAX_POR_FAMILIA = 3;
+
+interface Grupo {
+  categoria: string;
+  servicios: Servicio[];
+}
+
+/**
+ * Envuelve `recomendarServicios` para WhatsApp. Una categoría solo se
+ * recomienda si ella o su familia salió en la conversación («uñas» ancla
+ * «Manicure»); entrega como mucho 6 servicios (2 familias de 3) y respeta el
+ * tope del turno (R8). Si hay más, pregunta con las familias. No añade
+ * argumentos. Consulta la herramienta original una vez por categoría para
+ * saber a qué familia pertenece cada una.
+ */
+export function conRecomendacionAcotada(
+  recomendar: AssistantTool,
+): AssistantTool {
+  return {
+    name: recomendar.name,
+    definition: {
+      ...recomendar.definition,
+      description:
+        `${recomendar.definition.description} En WhatsApp puede responder con ` +
+        'una pregunta en lugar de servicios: si es así, hazla',
+    },
+    presentar: (result: unknown) =>
+      recomendar.presentar?.(result) as
+        | AssistantPresentation
+        | null
+        | Promise<AssistantPresentation | null>,
+
+    async execute(args, context: AssistantContext) {
+      const categorias = Array.isArray(args.categorias)
+        ? [
+            ...new Set(
+              args.categorias.filter((c): c is string => typeof c === 'string'),
+            ),
+          ]
+        : [];
+      if (categorias.length === 0) {
+        return pregunta(
+          'sin_categorias',
+          PREGUNTA_CONCEPTO,
+          CATEGORIAS_SUGERIDAS,
+        );
+      }
+      const recientes = context.recientes;
+      if (!recientes || recientes.length === 0) {
+        return pregunta('sin_pedirlo', PREGUNTA_CONCEPTO, CATEGORIAS_SUGERIDAS);
+      }
+
+      const familias = new Map<string, Servicio[]>();
+      const categoriasDesconocidas: string[] = [];
+      for (const categoria of categorias) {
+        const r = (await recomendar.execute(
+          { ...args, categorias: [categoria] },
+          context,
+        )) as {
+          recomendaciones?: Grupo[];
+          categoriasDesconocidas?: string[];
+        };
+        categoriasDesconocidas.push(...(r?.categoriasDesconocidas ?? []));
+        const anclada = estaAnclado(conceptoDe(categoria), recientes);
+        for (const g of r?.recomendaciones ?? []) {
+          // R2 por categoría o por familia: nadie la mencionó ⇒ no se ofrece.
+          if (!anclada && !estaAnclado(conceptoDe(g.categoria), recientes)) {
+            continue;
+          }
+          familias.set(g.categoria, [
+            ...(familias.get(g.categoria) ?? []),
+            ...g.servicios,
+          ]);
+        }
+      }
+
+      if (
+        familias.size === 0 &&
+        categoriasDesconocidas.length < categorias.length
+      ) {
+        return pregunta('sin_pedirlo', PREGUNTA_CONCEPTO, CATEGORIAS_SUGERIDAS);
+      }
+
+      const recomendaciones = [...familias].map(([categoria, lista]) => {
+        const vistos = new Set<string>();
+        const servicios = lista
+          .filter((s) => !vistos.has(s.id) && !!vistos.add(s.id))
+          .sort((a, b) => a.precio - b.precio)
+          .slice(0, MAX_POR_FAMILIA)
+          .map(({ id, nombre, precio, minutos }) => ({
+            id,
+            nombre,
+            precio,
+            minutos,
+          }));
+        return { categoria, servicios };
+      });
+
+      const ids = recomendaciones.flatMap((g) => g.servicios.map((s) => s.id));
+      if (ids.length > MAX_SERVICIOS_WHATSAPP) {
+        const nombres = recomendaciones.map((g) => g.categoria);
+        return pregunta(
+          'demasiados',
+          preguntaOpciones('servicios', nombres),
+          nombres,
+        );
+      }
+      const turno = (context.serviciosDelTurno ??= new Set<string>());
+      const union = new Set([...turno, ...ids]);
+      if (union.size > MAX_SERVICIOS_WHATSAPP) {
+        return pregunta('tope_del_turno', PREGUNTA_TURNO);
+      }
+      union.forEach((id) => turno.add(id));
+      return { recomendaciones, categoriasDesconocidas };
+    },
+  };
+}
