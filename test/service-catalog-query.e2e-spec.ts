@@ -364,21 +364,28 @@ describe('ServiceCatalogQueryAdapter#search (integración, BD sembrada)', () => 
       { texto: 'corte', ordenarPorPrecio: true },
       6,
     );
-    expect(r.map((s) => s.price)).toEqual(
-      [...r.map((s) => s.price)].sort((a, b) => a - b),
-    );
+    const masBaratos = (await serviciosQueContienen('corte'))
+      .map((c) => c.price)
+      .sort((a, b) => a - b)
+      .slice(0, 6);
+    expect(r).toHaveLength(6);
+    expect(r.map((s) => s.price)).toEqual(masBaratos);
+    // Sin ordenar por precio, el primero es el que lo lleva en el nombre.
+    const sinOrden = await adapter.search({ texto: 'corte' }, 6);
+    expect(sinOrden.map((s) => s.id)).not.toEqual(r.map((s) => s.id));
   });
 
   it('las opciones no incluyen raíces, género ni la etiqueta que cubre todo', async () => {
     const o = await adapter.findNarrowingOptions({ texto: 'uñas' }, 6);
+    expect(o.length).toBeGreaterThan(0);
     expect(o).not.toEqual(expect.arrayContaining(['Uñas']));
     expect(o).not.toEqual(expect.arrayContaining(['Mujer']));
     expect(o.length).toBeLessThanOrEqual(6);
   });
 
   it('la etiqueta que cubre todas las coincidencias no se ofrece', async () => {
-    expect(
-      await adapter.findNarrowingOptions({ texto: 'alisado' }, 6),
-    ).not.toContain('Alisados');
+    const o = await adapter.findNarrowingOptions({ texto: 'alisado' }, 6);
+    expect(o).toEqual(expect.arrayContaining(['Keratina', 'Progresivo']));
+    expect(o).not.toContain('Alisados');
   });
 });

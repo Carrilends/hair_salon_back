@@ -15,6 +15,7 @@ import {
   analizarBusqueda,
   etiquetasDeGenero,
 } from '../../domain/catalog-search';
+import { MAX_SERVICIOS_WHATSAPP } from '../../domain/catalogo-acotado';
 
 /**
  * El mismo plegado, pero dentro de Postgres. `translate()` es nativo: `unaccent`
@@ -88,8 +89,8 @@ export class ServiceCatalogQueryAdapter implements ServiceCatalogQueryPort {
       .map((f) => ({ name: f.name, n: Number(f.n) }))
       .filter((f) => f.n < ids.length)
       .sort((x, y) => {
-        const xa = x.n <= 6 ? 0 : 1;
-        const ya = y.n <= 6 ? 0 : 1;
+        const xa = x.n <= MAX_SERVICIOS_WHATSAPP ? 0 : 1;
+        const ya = y.n <= MAX_SERVICIOS_WHATSAPP ? 0 : 1;
         return xa - ya || y.n - x.n || x.name.localeCompare(y.name, 'es');
       })
       .slice(0, limit)

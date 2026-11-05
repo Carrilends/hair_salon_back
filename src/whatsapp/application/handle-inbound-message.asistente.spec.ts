@@ -52,13 +52,25 @@ function montar(opts: {
       );
     },
   };
+  // Apunta cualquier método llamado en un puerto de agenda, sin ejecutar nada.
+  const tocados: string[] = [];
+  const espia = (puerto: string, base: object = {}) =>
+    new Proxy(base, {
+      get: (destino, metodo: string) =>
+        metodo in destino
+          ? destino[metodo as keyof typeof destino]
+          : async () => {
+              tocados.push(`${puerto}.${metodo}`);
+              return { ok: false, motivo: 'vencida' };
+            },
+    });
   const sut = new HandleInboundMessageUseCase(
-    {
+    espia('reservas', {
       findActionableByPhone: async (phone: string) => {
         consultasDeCitas.push(phone);
         return [];
       },
-    } as never,
+    }) as never,
     {
       send: async (m: WhatsAppMessage) => {
         if (opts.fallaElEnvio?.(m)) throw new Error('Meta dijo que no');
@@ -79,11 +91,12 @@ function montar(opts: {
       },
     },
     { now: () => new Date('2026-10-14T15:00:00Z') } as never,
-    undefined,
+    espia('propuestas') as never,
     opts.sinAsistente ? null : asistente,
   );
   return {
     sut,
+    tocados,
     enviados,
     llamadas,
     consultasDeCitas,
@@ -427,9 +440,11 @@ describe('HandleInboundMessage · asistente (plan 06, F5)', () => {
     });
 
     it('no crea ninguna reserva ni propuesta', async () => {
-      const { sut, consultasDeCitas } = montar({});
+      const { sut, consultasDeCitas, tocados } = montar({});
       await sut.handle(pulsa(`SERVICE|${SID}`));
       expect(consultasDeCitas).toHaveLength(0);
+      // Ningún método, de lectura ni de escritura, de los dos puertos de agenda.
+      expect(tocados).toEqual([]);
     });
   });
 });

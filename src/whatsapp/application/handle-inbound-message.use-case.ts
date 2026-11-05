@@ -74,9 +74,6 @@ const SOLO_TEXTO =
  * que este canal todavía no sabe atender. Antes caía en la rama del texto y
  * le respondía con sus citas, sin relación con lo que pulsó.
  */
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 const BOTON_DESCONOCIDO =
   'Ese botón ya no está disponible. Escríbeme lo que necesitas y te ayudo.';
 
@@ -287,7 +284,7 @@ export class HandleInboundMessageUseCase {
     from: string,
     esDuena: boolean,
   ): Promise<void> {
-    if (!this.asistente || !UUID_RE.test(serviceId)) {
+    if (!this.asistente) {
       await this.texto(from, BOTON_DESCONOCIDO);
       return;
     }
