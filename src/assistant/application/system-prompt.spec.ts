@@ -63,22 +63,57 @@ describe('SYSTEM_PROMPT_WHATSAPP (clienta y dueña)', () => {
     ['dueña', SYSTEM_PROMPT_WHATSAPP_DUENA],
   ] as const;
 
-  it.each(whatsapp)('el prompt de la %s manda preguntar primero y presentar como mucho seis', (_, p) => {
-    expect(p).toMatch(/pregunta primero/i);
-    expect(p).toMatch(/como mucho seis/i);
-    expect(p).not.toMatch(/como mucho cinco/i);
-  });
+  it.each(whatsapp)(
+    'el prompt de la %s manda preguntar primero y presentar como mucho seis',
+    (_, p) => {
+      expect(p).toMatch(/pregunta primero/i);
+      expect(p).toMatch(/como mucho seis/i);
+      expect(p).not.toMatch(/como mucho cinco/i);
+    },
+  );
 
-  it.each(whatsapp)('el prompt de la %s pide mantener el servicio al repetir una pregunta', (_, p) => {
-    expect(p).toContain('sin quitar el servicio que nombra');
-  });
+  it.each(whatsapp)(
+    'el prompt de la %s pide mantener el servicio al repetir una pregunta',
+    (_, p) => {
+      expect(p).toContain('sin quitar el servicio que nombra');
+    },
+  );
+
+  it.each(whatsapp)(
+    'el prompt de la %s no pide decir lo que ya dice la línea fija del sistema',
+    (_, p) => {
+      expect(p).not.toMatch(/\(parcial\), dilo/);
+      expect(p).toMatch(/parcial/);
+      expect(p).toMatch(/no lo repitas/i);
+    },
+  );
+
+  it.each(whatsapp)(
+    'el prompt de la %s dice cómo salir del «me da igual»',
+    (_, p) => {
+      expect(p).toMatch(/le da igual/i);
+      expect(p).toMatch(/listarServicios sin busqueda/);
+    },
+  );
+
+  it.each(whatsapp)(
+    'el prompt de la %s prohíbe copiar las notas entre corchetes',
+    (_, p) => {
+      expect(p).toMatch(/corchetes/);
+    },
+  );
 
   it('el prompt de la web no lleva las reglas de WhatsApp', () => {
-    expect(SYSTEM_PROMPT).not.toMatch(/como mucho seis|pregunta primero|sin quitar el servicio que nombra/i);
+    expect(SYSTEM_PROMPT).not.toMatch(
+      /como mucho seis|pregunta primero|sin quitar el servicio que nombra/i,
+    );
     expect(SYSTEM_PROMPT).toMatch(/tarjeta/i);
   });
 
-  it.each(whatsapp)('el prompt de la %s sigue siendo constante: sin fechas', (_, p) => {
-    expect(p).not.toMatch(/\d{4}-\d{2}-\d{2}/);
-  });
+  it.each(whatsapp)(
+    'el prompt de la %s sigue siendo constante: sin fechas',
+    (_, p) => {
+      expect(p).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+    },
+  );
 });

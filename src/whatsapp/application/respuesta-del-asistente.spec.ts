@@ -493,3 +493,119 @@ describe('mensajesDeLaRespuesta · texto presentado', () => {
     expect(t.join('\n').split('\n')).toEqual(lineas);
   });
 });
+
+describe('I4 la línea fija de un listado parcial', () => {
+  const serviciosParciales = (
+    criterio?: 'menor_precio' | 'menor_precio_por_categoria',
+  ): AssistantPresentation => ({
+    tipo: 'servicios',
+    servicios: [1, 2, 3].map((i) => ({
+      id: `s-${i}`,
+      nombre: `Servicio ${i}`,
+      precio: 1000 * i,
+      minutos: 30,
+    })),
+    ...(criterio ? { criterio } : {}),
+  });
+  const SEIS = 'Son los 6 de menor precio; si buscas otro, dime cuál.';
+  const CATEGORIA =
+    'Es el de menor precio de cada categoría; si buscas otro, dime cuál.';
+
+  it('tras la lista con los 6 de menor precio', () => {
+    const [m] = textos(
+      mensajesDeLaRespuesta(
+        {
+          reply: 'Aquí tienes.',
+          presentaciones: [serviciosParciales('menor_precio')],
+        },
+        TO,
+        null,
+      ),
+    );
+    expect(m.indexOf(SEIS)).toBeGreaterThan(m.indexOf('3. Servicio 3'));
+    expect(m).not.toContain(CATEGORIA);
+  });
+
+  it('tras la lista con el de menor precio por categoría', () => {
+    const [m] = textos(
+      mensajesDeLaRespuesta(
+        {
+          reply: 'Aquí tienes.',
+          presentaciones: [serviciosParciales('menor_precio_por_categoria')],
+        },
+        TO,
+        null,
+      ),
+    );
+    expect(m.indexOf(CATEGORIA)).toBeGreaterThan(m.indexOf('3. Servicio 3'));
+    expect(m).not.toContain(SEIS);
+  });
+
+  it('sin criterio no sale ninguna línea', () => {
+    const [m] = textos(
+      mensajesDeLaRespuesta(
+        { reply: 'Aquí tienes.', presentaciones: [serviciosParciales()] },
+        TO,
+        null,
+      ),
+    );
+    expect(m).not.toMatch(/dime cuál/);
+  });
+
+  it('si el turno pide confirmación, no sale', () => {
+    const todos = textos(
+      mensajesDeLaRespuesta(
+        {
+          reply: 'Confírmame.',
+          presentaciones: [
+            serviciosParciales('menor_precio'),
+            {
+              tipo: 'confirmar-reserva',
+              propuestaId: PID_1,
+              nombre: 'Ana',
+              servicios: ['Servicio 1'],
+              fecha: 'viernes',
+              hora: '3:00 p. m.',
+            },
+          ],
+        },
+        TO,
+        null,
+      ),
+    ).join('\n');
+    expect(todos).not.toMatch(/dime cuál/);
+  });
+
+  it('con una respuesta enorme la línea sigue saliendo, tras la lista', () => {
+    const partes = textos(
+      mensajesDeLaRespuesta(
+        {
+          reply: 'x'.repeat(4090),
+          presentaciones: [serviciosParciales('menor_precio')],
+        },
+        TO,
+        null,
+      ),
+    );
+    const todo = partes.join('\n');
+    expect(todo.indexOf(SEIS)).toBeGreaterThan(todo.indexOf('3. Servicio 3'));
+    expect(partes.every((p) => p.length <= 4096)).toBe(true);
+  });
+
+  it('dos listados con el mismo criterio dicen la línea una vez', () => {
+    const [m] = textos(
+      mensajesDeLaRespuesta(
+        {
+          reply: 'Aquí tienes.',
+          presentaciones: [
+            serviciosParciales('menor_precio'),
+            serviciosParciales('menor_precio'),
+          ],
+        },
+        TO,
+        null,
+      ),
+    );
+    expect(m.split(SEIS)).toHaveLength(2);
+  });
+});

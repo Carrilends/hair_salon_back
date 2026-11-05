@@ -1,7 +1,10 @@
 import { WhatsAppMessage } from 'src/notifications/domain/ports/whatsapp-sender.port';
-import { AssistantPresentation } from 'src/assistant/application/tools/assistant-presentation';
+import {
+  AssistantPresentation,
+  CriterioParcial,
+  PresentedService,
+} from 'src/assistant/application/tools/assistant-presentation';
 import { toWhatsAppImageUrl } from 'src/common/whatsapp-image-url';
-import { PresentedService } from 'src/assistant/application/tools/assistant-presentation';
 import {
   PESOS,
   lineaDeServicio,
@@ -25,6 +28,12 @@ const MAX_PIE = 1024;
 const MAX_TARJETA = 160;
 const CUERPO_CARRUSEL = 'Desliza para ver las opciones.';
 const BOTON_TARJETA = 'Me interesa';
+/** Lo que se dice siempre que el listado es solo una parte (D2). */
+const LINEA_DE_PARCIAL: Record<CriterioParcial, string> = {
+  menor_precio: 'Son los 6 de menor precio; si buscas otro, dime cuál.',
+  menor_precio_por_categoria:
+    'Es el de menor precio de cada categoría; si buscas otro, dime cuál.',
+};
 
 /**
  * El prompt de WhatsApp pide texto plano, pero el modelo a veces escribe
@@ -121,14 +130,17 @@ export function mensajesDeLaRespuesta(
   // Con un botón de confirmación pendiente no se lista nada: la lista
   // distraería del único paso que importa.
   const lista = confirma ? [] : servicios.map(lineaDeServicio);
+  const parcial = confirma ? [] : lineasDeParcial(respuesta.presentaciones);
   const reply = aFormatoWhatsApp(respuesta.reply);
-  const junto = [reply, lista.join('\n')].filter(Boolean).join('\n\n');
+  const junto = [reply, lista.join('\n'), parcial.join('\n')]
+    .filter(Boolean)
+    .join('\n\n');
   // Si cabe, va en un mensaje. Si no, la respuesta se parte aparte y la lista
   // por líneas: una línea de servicio no se reparte en dos mensajes.
   const partes =
     junto.length <= MAX_TEXTO
       ? partirTexto(junto)
-      : [...partirTexto(reply), ...partirLineas(lista)];
+      : [...partirTexto(reply), ...partirLineas([...lista, ...parcial])];
   const botones = conBotones(respuesta.presentaciones)
     .map((p) => mensajeDeConfirmacion(p, to))
     .filter((m): m is WhatsAppMessage => m !== null);
@@ -170,6 +182,17 @@ function conBotones(
   return presentaciones.filter(
     (p) => p.tipo !== 'confirmar-reserva' || p === ultimaReserva,
   );
+}
+
+/** La línea fija de cada listado parcial del turno, sin repetirla. */
+function lineasDeParcial(presentaciones: AssistantPresentation[]): string[] {
+  const lineas = new Set<string>();
+  for (const p of presentaciones) {
+    if (p.tipo === 'servicios' && p.criterio) {
+      lineas.add(LINEA_DE_PARCIAL[p.criterio]);
+    }
+  }
+  return [...lineas];
 }
 
 /** `lineaDeServicio` recortada al tope de una tarjeta. */
