@@ -358,4 +358,27 @@ describe('ServiceCatalogQueryAdapter#search (integración, BD sembrada)', () => 
     expect(rows.length).toBeGreaterThan(0);
     for (const r of rows) expect(ninos.has(r.id)).toBe(true);
   });
+
+  it('ordenarPorPrecio devuelve los más baratos aunque el nombre vaya después', async () => {
+    const r = await adapter.search(
+      { texto: 'corte', ordenarPorPrecio: true },
+      6,
+    );
+    expect(r.map((s) => s.price)).toEqual(
+      [...r.map((s) => s.price)].sort((a, b) => a - b),
+    );
+  });
+
+  it('las opciones no incluyen raíces, género ni la etiqueta que cubre todo', async () => {
+    const o = await adapter.findNarrowingOptions({ texto: 'uñas' }, 6);
+    expect(o).not.toEqual(expect.arrayContaining(['Uñas']));
+    expect(o).not.toEqual(expect.arrayContaining(['Mujer']));
+    expect(o.length).toBeLessThanOrEqual(6);
+  });
+
+  it('la etiqueta que cubre todas las coincidencias no se ofrece', async () => {
+    expect(
+      await adapter.findNarrowingOptions({ texto: 'alisado' }, 6),
+    ).not.toContain('Alisados');
+  });
 });

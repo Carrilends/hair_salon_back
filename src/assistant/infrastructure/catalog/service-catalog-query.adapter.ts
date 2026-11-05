@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Service } from 'src/service/entities/service.entity';
 import {
   AssistantServiceSummary,
@@ -42,6 +42,72 @@ export class ServiceCatalogQueryAdapter implements ServiceCatalogQueryPort {
     criteria: ServiceSearchCriteria,
     limit: number,
   ): Promise<AssistantServiceSummary[]> {
+    return this.conAmbiguas(criteria, async (palabras, generos, porPrecio) => {
+      const qb = this.repo
+        .createQueryBuilder('s')
+        .select(['s.id', 's.name', 's.price', 's.duration'])
+        .take(limit);
+      this.aplicarFiltros(qb, palabras, generos, criteria.precioMaximo);
+      this.ordenar(qb, palabras, porPrecio);
+      const rows = await qb.getMany();
+      return rows.map((s) => ({
+        id: s.id,
+        name: s.name,
+        price: Number(s.price),
+        durationMinutes: s.duration,
+      }));
+    });
+  }
+
+  async findNarrowingOptions(
+    criteria: ServiceSearchCriteria,
+    limit: number,
+  ): Promise<string[]> {
+    const ids = await this.conAmbiguas(criteria, async (palabras, generos) => {
+      const qb = this.repo.createQueryBuilder('s').select('s.id', 'id');
+      this.aplicarFiltros(qb, palabras, generos, criteria.precioMaximo);
+      const rows = await qb.getRawMany<{ id: string }>();
+      return rows.map((r) => r.id);
+    });
+    if (ids.length === 0) return [];
+
+    // Etiquetas de los coincidentes con cuántos cubre cada una. Se excluyen las
+    // raíces, las hijas de «Género» y las que cubren todos (no acotan).
+    const filas: { name: string; n: string }[] = await this.repo.query(
+      `SELECT t.name AS name, COUNT(DISTINCT st."serviceId") AS n
+       FROM service_tags_tag st
+       INNER JOIN tag t ON t.id = st."tagId"
+       LEFT JOIN tag p ON p.id = t."parentId"
+       WHERE st."serviceId" = ANY($1)
+         AND t."parentId" IS NOT NULL
+         AND p.name IS DISTINCT FROM 'Género'
+       GROUP BY t.name`,
+      [ids],
+    );
+    return filas
+      .map((f) => ({ name: f.name, n: Number(f.n) }))
+      .filter((f) => f.n < ids.length)
+      .sort((x, y) => {
+        const xa = x.n <= 6 ? 0 : 1;
+        const ya = y.n <= 6 ? 0 : 1;
+        return xa - ya || y.n - x.n || x.name.localeCompare(y.name, 'es');
+      })
+      .slice(0, limit)
+      .map((f) => f.name);
+  }
+
+  /**
+   * Resuelve palabras y género y ejecuta `consulta`; si con las ambiguas no hay
+   * nada, reintenta sin ellas (solo si queda alguna palabra con contenido).
+   */
+  private async conAmbiguas<T>(
+    criteria: ServiceSearchCriteria,
+    consulta: (
+      palabras: string[],
+      generos: string[],
+      porPrecio: boolean,
+    ) => Promise<T[]>,
+  ): Promise<T[]> {
     const analisis = analizarBusqueda(criteria.texto);
 
     // Precedencia del género: manda el parámetro explícito **cuando el catálogo
@@ -49,15 +115,14 @@ export class ServiceCatalogQueryAdapter implements ServiceCatalogQueryPort {
     // modelo emitió una variante inexistente («masculino»), donde quedarse sin
     // ningún filtro sería peor que usar el que la clienta escribió.
     const explicito = etiquetasDeGenero(criteria.genero);
-    const etiquetasGenero =
+    const generos =
       explicito.length > 0 ? explicito : etiquetasDeGenero(analisis.genero);
+    const porPrecio = analisis.porPrecio || criteria.ordenarPorPrecio === true;
 
-    const filas = await this.ejecutar(
+    const filas = await consulta(
       [...analisis.palabras, ...analisis.ambiguas],
-      etiquetasGenero,
-      criteria.precioMaximo,
-      analisis.porPrecio,
-      limit,
+      generos,
+      porPrecio,
     );
 
     // Segundo intento soltando las ambiguas: «unas mechas» no puede volver vacía
@@ -69,29 +134,16 @@ export class ServiceCatalogQueryAdapter implements ServiceCatalogQueryPort {
       analisis.ambiguas.length > 0 &&
       analisis.palabras.length > 0;
     if (!conviene) return filas;
-
-    return this.ejecutar(
-      analisis.palabras,
-      etiquetasGenero,
-      criteria.precioMaximo,
-      analisis.porPrecio,
-      limit,
-    );
+    return consulta(analisis.palabras, generos, porPrecio);
   }
 
-  /** Una pasada de la consulta con el juego de palabras que se le entregue. */
-  private async ejecutar(
+  /** Filtros compartidos por la búsqueda y las opciones para acotar. */
+  private aplicarFiltros(
+    qb: SelectQueryBuilder<Service>,
     palabras: string[],
     etiquetasGenero: string[],
     precioMaximo: number | undefined,
-    porPrecio: boolean,
-    limit: number,
-  ): Promise<AssistantServiceSummary[]> {
-    const qb = this.repo
-      .createQueryBuilder('s')
-      .select(['s.id', 's.name', 's.price', 's.duration'])
-      .take(limit);
-
+  ): void {
     // Una frase natural («corte para hombre») no es una subcadena del catálogo:
     // se parte en palabras y se exige que **todas** encajen, cada una por nombre
     // **o** por etiqueta, comparando sin diacríticos a ambos lados. Quien
@@ -124,7 +176,13 @@ export class ServiceCatalogQueryAdapter implements ServiceCatalogQueryPort {
     if (typeof precioMaximo === 'number' && Number.isFinite(precioMaximo)) {
       qb.andWhere('s.price <= :precioMaximo', { precioMaximo });
     }
+  }
 
+  private ordenar(
+    qb: SelectQueryBuilder<Service>,
+    palabras: string[],
+    porPrecio: boolean,
+  ): void {
     if (porPrecio) {
       // Pedir «algo barato» **sustituye** la precedencia por nombre, no la
       // pospone: con el tope de ocho de RF56, posponerla dejaba fuera el
@@ -145,14 +203,6 @@ export class ServiceCatalogQueryAdapter implements ServiceCatalogQueryPort {
     } else {
       qb.orderBy('s.name', 'ASC');
     }
-
-    const rows = await qb.getMany();
-    return rows.map((s) => ({
-      id: s.id,
-      name: s.name,
-      price: Number(s.price),
-      durationMinutes: s.duration,
-    }));
   }
 
   async findByTagNames(

@@ -20,6 +20,8 @@ export interface ServiceSearchCriteria {
   genero?: string;
   /** Tope de precio en pesos, inclusive. */
   precioMaximo?: number;
+  /** Ordena por precio ascendente aunque el texto no lo pida («barato»). */
+  ordenarPorPrecio?: boolean;
 }
 
 /**
@@ -33,6 +35,17 @@ export interface ServiceCatalogQueryPort {
     criteria: ServiceSearchCriteria,
     limit: number,
   ): Promise<AssistantServiceSummary[]>;
+
+  /**
+   * Etiquetas que servirían para acotar una búsqueda demasiado amplia: las de
+   * los servicios coincidentes, sin raíces, sin las hijas de «Género» y sin las
+   * que cubren **todas** las coincidencias (no acotan). Primero las que dejan
+   * 6 o menos servicios, luego por número de servicios descendente.
+   */
+  findNarrowingOptions(
+    criteria: ServiceSearchCriteria,
+    limit: number,
+  ): Promise<string[]>;
 
   /**
    * Candidatos por nombre de etiqueta (recuperación acotada, §6.2): hasta

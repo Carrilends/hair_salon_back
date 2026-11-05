@@ -22,6 +22,10 @@ class FakeCatalog implements ServiceCatalogQueryPort {
     this.lastLimit = limit;
     return this.items.slice(0, limit);
   }
+  /** Se ejercita por unidad en la Tarea 5. */
+  async findNarrowingOptions(): Promise<string[]> {
+    return [];
+  }
   /** Solo la usa la verificación previa a reservar (plan 04, T5). */
   async findNamesByIds(ids: string[]): Promise<Map<string, string>> {
     return new Map(
