@@ -7,14 +7,18 @@ import {
   MAX_SERVICIOS_WHATSAPP,
   coincidenEnNombre,
   conceptoDe,
+  sinPalabrasDeTodo,
   estaAnclado,
   yaPreguntoSobre,
 } from '../../domain/catalogo-acotado';
 import { coerceOptionalNumber } from './coerce';
 
 const PREGUNTA_CONCEPTO = '¿Qué servicio estás buscando?';
-const PREGUNTA_OPCIONES = '¿Cuál de estas opciones te interesa?';
-const PREGUNTA_PRECIO = '¿Hasta qué precio te gustaría?';
+// Las de R7 nombran el concepto: así `yaPreguntoSobre` (R6) las reconoce.
+const preguntaOpciones = (concepto: string, opciones: string[]) =>
+  `¿Qué opción de ${concepto} te interesa: ${opciones.join(', ')}?`;
+const preguntaPrecio = (concepto: string) =>
+  `¿Hasta qué precio te gustaría para ${concepto}?`;
 const PREGUNTA_TURNO = '¿Por cuál empezamos?';
 
 const MAX_OPCIONES = 6;
@@ -72,8 +76,11 @@ export function conCatalogoAcotado(
         typeof args.busqueda === 'string' ? args.busqueda : undefined;
       const genero = typeof args.genero === 'string' ? args.genero : undefined;
       const precioMaximo = coerceOptionalNumber(args.precioMaximo);
+      // Las palabras de «dame todo» no se buscan: el catálogo exige que cada
+      // palabra encaje y devolvería vacío.
+      const texto = sinPalabrasDeTodo(busqueda);
       const limpios: Record<string, unknown> = {
-        ...(busqueda !== undefined ? { busqueda } : {}),
+        ...(texto ? { busqueda: texto } : {}),
         ...(genero !== undefined ? { genero } : {}),
         ...(precioMaximo !== undefined ? { precioMaximo } : {}),
       };
@@ -106,6 +113,13 @@ export function conCatalogoAcotado(
         lote: Servicio[],
         extra: Record<string, unknown> = {},
       ) => {
+        // Proyección explícita: ningún campo extra (URL) llega al modelo.
+        lote = lote.map(({ id, nombre, precio, minutos }) => ({
+          id,
+          nombre,
+          precio,
+          minutos,
+        }));
         const union = new Set([...turno, ...lote.map((s) => s.id)]);
         if (union.size > MAX_SERVICIOS_WHATSAPP) {
           return pregunta('tope_del_turno', PREGUNTA_TURNO);
@@ -114,8 +128,10 @@ export function conCatalogoAcotado(
         return { servicios: lote, ...extra };
       };
 
-      // R3: un único nombre que lleva todas las palabras.
-      if (servicios.length > 1) {
+      const porPrecio = analizarBusqueda(busqueda).porPrecio;
+      // R3: un único nombre que lleva todas las palabras. No con orden por
+      // precio: la ventana ya son los más baratos, no todas las coincidencias.
+      if (servicios.length > 1 && !porPrecio) {
         const porNombre = coincidenEnNombre(servicios, concepto);
         if (porNombre.length === 1) return entregar(porNombre);
       }
@@ -125,7 +141,7 @@ export function conCatalogoAcotado(
       }
 
       const criterios = {
-        texto: busqueda,
+        texto,
         genero,
         precioMaximo,
         ordenarPorPrecio: true,
@@ -139,7 +155,7 @@ export function conCatalogoAcotado(
         }));
 
       // R5: ella fijó el orden.
-      if (analizarBusqueda(busqueda).porPrecio) {
+      if (porPrecio) {
         return entregar(await masBaratos());
       }
       // R6: ya se le preguntó y sigue siendo amplio.
@@ -151,12 +167,13 @@ export function conCatalogoAcotado(
       }
       // R7: preguntar, con subcategorías reales o por precio.
       const opciones = await catalog.findNarrowingOptions(
-        { texto: busqueda, genero, precioMaximo },
+        { texto, genero, precioMaximo },
         MAX_OPCIONES,
       );
+      const nombre = concepto.join(' ');
       return opciones.length > 0
-        ? pregunta('demasiados', PREGUNTA_OPCIONES, opciones)
-        : pregunta('demasiados', PREGUNTA_PRECIO);
+        ? pregunta('demasiados', preguntaOpciones(nombre, opciones), opciones)
+        : pregunta('demasiados', preguntaPrecio(nombre));
     },
   };
 }

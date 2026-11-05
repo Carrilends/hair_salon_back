@@ -38,6 +38,24 @@ export function conceptoDe(busqueda?: string): string[] {
   return [...palabras, ...ambiguas].filter((p) => !PEDIR_TODO.has(p));
 }
 
+/**
+ * La búsqueda sin las palabras de «dame todo» («catálogo de uñas» ⇒ «de uñas»).
+ * El resto (género, precio) se conserva tal cual: solo se quitan esas palabras.
+ */
+export function sinPalabrasDeTodo(busqueda?: string): string | undefined {
+  if (busqueda === undefined) return undefined;
+  return busqueda
+    .split(/\s+/)
+    .filter((t) => {
+      const limpio = sinDiacriticos(
+        t.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''),
+      );
+      return !PEDIR_TODO.has(limpio);
+    })
+    .join(' ')
+    .trim();
+}
+
 /** Alguna de las palabras fue mencionada (por raíz) en los mensajes recientes. */
 export function estaAnclado(
   palabras: string[],

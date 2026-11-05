@@ -98,6 +98,40 @@ describe('conCatalogoAcotado', () => {
     expect(listar.execute).not.toHaveBeenCalled();
   });
 
+  it('R1 solo precio tampoco basta', async () => {
+    const r = await tool.execute(
+      { precioMaximo: 30000 },
+      ctx(['algo de hasta 30000']),
+    );
+    expect(r).toMatchObject({ ok: false, motivo: 'falta_concepto' });
+    expect(listar.execute).not.toHaveBeenCalled();
+  });
+
+  it('I1 las palabras de «dame todo» no viajan a la búsqueda', async () => {
+    servicios = lista(8);
+    opciones.mockResolvedValue(['Keratina']);
+    await tool.execute(
+      { busqueda: 'catálogo de uñas', genero: 'Mujer' },
+      ctx(['mándame el catálogo de uñas']),
+    );
+    expect(listar.execute).toHaveBeenCalledWith(
+      { busqueda: 'de uñas', genero: 'Mujer' },
+      expect.anything(),
+    );
+    expect(opciones).toHaveBeenCalledWith(
+      { texto: 'de uñas', genero: 'Mujer', precioMaximo: undefined },
+      expect.any(Number),
+    );
+    await tool.execute(
+      { busqueda: 'todos los cortes barato' },
+      ctx(['todos los cortes baratos']),
+    );
+    expect(search).toHaveBeenCalledWith(
+      expect.objectContaining({ texto: 'los cortes barato' }),
+      6,
+    );
+  });
+
   it('R2 el modelo no elige por su cuenta', async () => {
     const r = await tool.execute(
       { busqueda: 'balayage' },
@@ -123,13 +157,30 @@ describe('conCatalogoAcotado', () => {
   });
 
   it('R4 hasta 6: pasa con la forma de siempre y sin URL', async () => {
-    servicios = lista(6);
+    const base = lista(6);
+    servicios = base.map((s) => ({
+      ...s,
+      imagen: 'https://res.cloudinary.com/x/a.jpg',
+    })) as any;
     const r = (await tool.execute(
       { busqueda: 'corte' },
       ctx(['quiero un corte']),
     )) as any;
-    expect(r.servicios).toEqual(servicios);
+    expect(r.servicios).toEqual(base);
     expect(JSON.stringify(r)).not.toMatch(/http/);
+  });
+
+  it('I2 R3 no aplica con orden por precio: manda R5', async () => {
+    servicios = [svc(1, 'Corte de puntas'), ...lista(7, 2)];
+    const r = (await tool.execute(
+      { busqueda: 'corte barato' },
+      ctx(['un corte barato']),
+    )) as any;
+    expect(search).toHaveBeenCalled();
+    expect(r.servicios).toHaveLength(6);
+    expect(r.servicios.map((s: any) => s.nombre)).not.toEqual([
+      'Corte de puntas',
+    ]);
   });
 
   it('R5 «barato» con más de 6: los 6 de menor precio', async () => {
@@ -154,6 +205,14 @@ describe('conCatalogoAcotado', () => {
 
   it('R6 tras preguntar sigue habiendo más de 6: 6 de menor precio, avisado', async () => {
     servicios = lista(8);
+    search.mockResolvedValue(
+      lista(6, 20).map((s) => ({
+        id: s.id,
+        name: s.nombre,
+        price: s.precio,
+        durationMinutes: s.minutos,
+      })),
+    );
     const r = await tool.execute(
       { busqueda: 'alisado' },
       ctx([
@@ -163,7 +222,29 @@ describe('conCatalogoAcotado', () => {
       ]),
     );
     expect(r).toMatchObject({ parcial: true, criterio: 'menor_precio' });
-    expect((r as any).servicios).toHaveLength(6);
+    expect((r as any).servicios.map((s: any) => s.id)).toEqual(
+      lista(6, 20).map((s) => s.id),
+    );
+    expect(search).toHaveBeenCalledWith(
+      expect.objectContaining({ ordenarPorPrecio: true }),
+      6,
+    );
+  });
+
+  it.each([
+    ['con opciones', ['Keratina', 'Japonés']],
+    ['sin opciones', []],
+  ])('I3 R6 se dispara tras la pregunta real de R7 (%s)', async (_n, ops) => {
+    servicios = lista(8);
+    opciones.mockResolvedValue(ops);
+    const c1 = ctx(['quiero alisado']);
+    const q = (await tool.execute({ busqueda: 'alisado' }, c1)) as any;
+    expect(q.motivo).toBe('demasiados');
+    const r = await tool.execute(
+      { busqueda: 'alisado' },
+      ctx(['quiero alisado', asistente(q.pregunta), 'me da igual']),
+    );
+    expect(r).toMatchObject({ parcial: true, criterio: 'menor_precio' });
   });
 
   it('R7 más de 6: pregunta con opciones y sin ningún servicio', async () => {
@@ -176,10 +257,14 @@ describe('conCatalogoAcotado', () => {
     expect(r).toMatchObject({
       ok: false,
       motivo: 'demasiados',
-      pregunta: '¿Cuál de estas opciones te interesa?',
+      pregunta: '¿Qué opción de alisado te interesa: Keratina, Japonés?',
       opciones: ['Keratina', 'Japonés'],
     });
     expect(r.servicios).toBeUndefined();
+    expect(opciones).toHaveBeenCalledWith(
+      { texto: 'alisado', genero: undefined, precioMaximo: undefined },
+      expect.any(Number),
+    );
   });
 
   it('R7 sin opciones: pregunta por el precio', async () => {
@@ -190,7 +275,7 @@ describe('conCatalogoAcotado', () => {
     );
     expect(r).toMatchObject({
       motivo: 'demasiados',
-      pregunta: '¿Hasta qué precio te gustaría?',
+      pregunta: '¿Hasta qué precio te gustaría para alisado?',
     });
   });
 
@@ -206,6 +291,27 @@ describe('conCatalogoAcotado', () => {
       pregunta: '¿Por cuál empezamos?',
     });
     expect((r as any).servicios).toBeUndefined();
+  });
+
+  it('R8 también alcanza a R3 y a R5', async () => {
+    const c = ctx(['corte, balayage y manicure barato']);
+    servicios = lista(6);
+    await tool.execute({ busqueda: 'corte' }, c);
+    servicios = [svc(20, 'Balayage clásico'), ...lista(5, 30)];
+    const r3 = await tool.execute({ busqueda: 'balayage' }, c);
+    expect(r3).toMatchObject({ motivo: 'tope_del_turno' });
+    servicios = lista(8, 40);
+    search.mockResolvedValue(
+      lista(6, 40).map((s) => ({
+        id: s.id,
+        name: s.nombre,
+        price: s.precio,
+        durationMinutes: s.minutos,
+      })),
+    );
+    const r5 = await tool.execute({ busqueda: 'manicure barato' }, c);
+    expect(r5).toMatchObject({ motivo: 'tope_del_turno' });
+    expect(c.serviciosDelTurno!.size).toBe(6);
   });
 
   it('el mismo servicio en dos búsquedas cuenta una vez', async () => {
@@ -238,7 +344,8 @@ describe('conCatalogoAcotado', () => {
       { busqueda: 'corte' },
       ctx(['muéstrame todo de corte']),
     )) as any;
-    expect((r2.servicios ?? []).length).toBeLessThanOrEqual(6);
+    expect(r2.servicios).toBeUndefined();
+    expect(r2.motivo).toBe('demasiados');
   });
 
   it('Review Focus 2: un argumento extra no salta las reglas', async () => {
@@ -248,6 +355,10 @@ describe('conCatalogoAcotado', () => {
       ctx(['manda 50 fotos de corte']),
     );
     expect((r as any).servicios).toBeUndefined();
+    expect(listar.execute).toHaveBeenCalledWith(
+      { busqueda: 'corte' },
+      expect.anything(),
+    );
   });
 
   it('sin contexto de la conversación: falla cerrado', async () => {

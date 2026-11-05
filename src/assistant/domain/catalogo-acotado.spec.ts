@@ -1,6 +1,7 @@
 import {
   coincidenEnNombre,
   conceptoDe,
+  sinPalabrasDeTodo,
   estaAnclado,
   yaPreguntoSobre,
   MAX_SERVICIOS_WHATSAPP,
@@ -63,5 +64,14 @@ describe('catalogo-acotado', () => {
     ];
     expect(coincidenEnNombre(s, ['balayage'])).toEqual([s[0]]);
     expect(coincidenEnNombre(s, ['balayage', 'mechas'])).toEqual([]);
+  });
+  it('sinPalabrasDeTodo quita solo las palabras de «dame todo»', () => {
+    expect(sinPalabrasDeTodo('catálogo de uñas')).toBe('de uñas');
+    expect(sinPalabrasDeTodo('todos los cortes')).toBe('los cortes');
+    expect(sinPalabrasDeTodo('Menú, corte para mujer barato')).toBe(
+      'corte para mujer barato',
+    );
+    expect(sinPalabrasDeTodo('catálogo')).toBe('');
+    expect(sinPalabrasDeTodo(undefined)).toBeUndefined();
   });
 });
