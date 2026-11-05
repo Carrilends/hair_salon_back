@@ -316,6 +316,11 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
   // (F5); el presupuesto y la telemetria siguen siendo asunto de este modulo.
   // El botón «Confirmar» de las propuestas (F4) lo atiende el webhook, así que
   // su caso de uso sale también.
-  exports: [ASSISTANT_TOOLS, SendMessageUseCase, ConfirmPendingBookingUseCase],
+  exports: [
+    ASSISTANT_TOOLS,
+    SendMessageUseCase,
+    ConfirmPendingBookingUseCase,
+    ServiceCatalogQueryAdapter,
+  ],
 })
 export class AssistantModule {}

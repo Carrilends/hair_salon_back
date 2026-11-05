@@ -74,6 +74,9 @@ const SOLO_TEXTO =
  * que este canal todavía no sabe atender. Antes caía en la rama del texto y
  * le respondía con sus citas, sin relación con lo que pulsó.
  */
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const BOTON_DESCONOCIDO =
   'Ese botón ya no está disponible. Escríbeme lo que necesitas y te ayudo.';
 
@@ -267,10 +270,33 @@ export class HandleInboundMessageUseCase {
       case 'book_no':
         return this.descartarPropuesta(payload.bookingId, from);
 
-      // «Me interesa» de una tarjeta del carrusel: se atiende en la Tarea 12.
       case 'service':
-        return this.texto(from, BOTON_DESCONOCIDO);
+        return this.meInteresa(payload.serviceId, from, esDuena);
     }
+  }
+
+  // ----------------------------------------------- «Me interesa» (catálogo)
+
+  /**
+   * «Me interesa» de una tarjeta del carrusel: la conversación sigue con el
+   * servicio ya elegido. El modelo recibe el nombre leído del catálogo, nunca
+   * el texto del botón ni el id; no escribe nada en la agenda.
+   */
+  private async meInteresa(
+    serviceId: string,
+    from: string,
+    esDuena: boolean,
+  ): Promise<void> {
+    if (!this.asistente || !UUID_RE.test(serviceId)) {
+      await this.texto(from, BOTON_DESCONOCIDO);
+      return;
+    }
+    const nombre = await this.asistente.nombreDelServicio(serviceId);
+    if (!nombre) {
+      await this.texto(from, BOTON_DESCONOCIDO);
+      return;
+    }
+    await this.conversar(from, esDuena, `Me interesa el servicio ${nombre}.`);
   }
 
   // ----------------------------------------------- propuestas (plan 06, F4)

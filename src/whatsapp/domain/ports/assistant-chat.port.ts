@@ -24,4 +24,10 @@ export interface AssistantChatPort {
     esDuena: boolean;
     texto: string;
   }): Promise<AssistantChatResult>;
+
+  /**
+   * Nombre vigente de un servicio del catálogo, para «Me interesa». `null` si
+   * ya no existe o si la consulta falla: nunca lanza.
+   */
+  nombreDelServicio(id: string): Promise<string | null>;
 }

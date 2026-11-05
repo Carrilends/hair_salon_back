@@ -4,12 +4,19 @@ import {
   DAILY_CEILING_REPLY,
   LlmUnavailableError,
 } from 'src/assistant/domain/errors';
+import { ServiceCatalogQueryAdapter } from 'src/assistant/infrastructure/catalog/service-catalog-query.adapter';
 import { AssistantChatAdapter } from './assistant-chat.adapter';
 
 const NUMERO = '573001112233';
 
-function montar(execute: jest.Mock) {
-  return new AssistantChatAdapter({ execute } as unknown as SendMessageUseCase);
+function montar(
+  execute: jest.Mock,
+  findNamesByIds: jest.Mock = jest.fn().mockResolvedValue(new Map()),
+) {
+  return new AssistantChatAdapter(
+    { execute } as unknown as SendMessageUseCase,
+    { findNamesByIds } as unknown as ServiceCatalogQueryAdapter,
+  );
 }
 
 describe('AssistantChatAdapter (plan 06, F5)', () => {
@@ -69,5 +76,27 @@ describe('AssistantChatAdapter (plan 06, F5)', () => {
       texto: 'hola',
     });
     expect(r).toEqual({ ok: false, motivo });
+  });
+
+  describe('nombreDelServicio', () => {
+    const ID = '1b2c3d4e-5f60-4a71-8b82-93a4b5c6d7e8';
+
+    it('devuelve el nombre que lee el catálogo', async () => {
+      const find = jest.fn().mockResolvedValue(new Map([[ID, 'Balayage']]));
+      const nombre = await montar(jest.fn(), find).nombreDelServicio(ID);
+      expect(nombre).toBe('Balayage');
+      expect(find).toHaveBeenCalledWith([ID]);
+    });
+
+    it('devuelve null si el servicio no existe', async () => {
+      expect(await montar(jest.fn()).nombreDelServicio(ID)).toBeNull();
+    });
+
+    it('devuelve null si falla la consulta, sin lanzar', async () => {
+      const find = jest.fn().mockRejectedValue(new Error('BD caída'));
+      await expect(
+        montar(jest.fn(), find).nombreDelServicio(ID),
+      ).resolves.toBeNull();
+    });
   });
 });

@@ -5,6 +5,7 @@ import {
   DAILY_CEILING_REPLY,
   LlmUnavailableError,
 } from 'src/assistant/domain/errors';
+import { ServiceCatalogQueryAdapter } from 'src/assistant/infrastructure/catalog/service-catalog-query.adapter';
 import {
   AssistantChatPort,
   AssistantChatResult,
@@ -19,7 +20,23 @@ import {
 export class AssistantChatAdapter implements AssistantChatPort {
   private readonly logger = new Logger(AssistantChatAdapter.name);
 
-  constructor(private readonly useCase: SendMessageUseCase) {}
+  constructor(
+    private readonly useCase: SendMessageUseCase,
+    private readonly catalogo: ServiceCatalogQueryAdapter,
+  ) {}
+
+  async nombreDelServicio(id: string): Promise<string | null> {
+    try {
+      const nombres = await this.catalogo.findNamesByIds([id]);
+      return nombres.get(id) ?? null;
+    } catch (error) {
+      this.logger.error(
+        `No se pudo leer el nombre del servicio ${id}`,
+        error as Error,
+      );
+      return null;
+    }
+  }
 
   async conversar(entrada: {
     phoneE164: string;
