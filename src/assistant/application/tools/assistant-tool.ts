@@ -59,6 +59,12 @@ export interface AssistantContext {
    * cada llamada es una petición de quien conecta, sin conversación.
    */
   citasQueNoCoincidieron?: Set<string>;
+  /**
+   * Ids de los servicios que `listarServicios` ya entregó en ESTE turno de
+   * WhatsApp (tope de 6 por turno). Lo usa solo el envoltorio del catálogo
+   * acotado; si falta, el envoltorio lo crea.
+   */
+  serviciosDelTurno?: Set<string>;
 }
 
 /**

@@ -33,7 +33,7 @@ const GENEROS = ['Hombre', 'Mujer', 'Unisex', 'Niños'];
  * tenemos», que para un catálogo de ciento sesenta servicios casi siempre es
  * falso; con ellas reconduce la conversación.
  */
-const CATEGORIAS_SUGERIDAS = [
+export const CATEGORIAS_SUGERIDAS = [
   'Cabello',
   'Cejas y pestañas',
   'Maquillajes',
