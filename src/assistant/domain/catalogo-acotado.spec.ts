@@ -48,6 +48,17 @@ describe('catalogo-acotado', () => {
     expect(conceptoDe('cualquier corte')).toEqual(['corte']);
     expect(sinPalabrasDeTodo('mándame cualquier corte')).toBe('corte');
   });
+  it('«cualquier cosa» y «cosas» no son un concepto y salen con «me da igual»', () => {
+    expect(conceptoDe('cualquier cosa')).toEqual([]);
+    expect(conceptoDe('cosas')).toEqual([]);
+    expect(sinPalabrasDeTodo('cualquier cosa')).toBe('');
+    expect(
+      leDaIgualTrasUnaPregunta([
+        r('¿Qué buscas?', 'asistente'),
+        r('cualquier cosa'),
+      ]),
+    ).toBe(true);
+  });
   it('ancla por raíz y sin tildes', () => {
     expect(estaAnclado(['corte'], [r('quiero cortarme el pelo')])).toBe(true);
     expect(estaAnclado(['cejas'], [r('me arreglo la CEJA')])).toBe(true);
