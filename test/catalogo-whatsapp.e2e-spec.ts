@@ -118,16 +118,53 @@ describe('listarServicios acotado por WhatsApp (catálogo real)', () => {
     expect(servicios).toHaveLength(160);
     const malos: string[] = [];
     for (const { name } of servicios) {
-      const r = await listar(
-        name,
-        ctx(clienta(`Me interesa el servicio ${name}.`)),
-      );
-      const nombres = r.servicios?.map((s) => s.nombre) ?? [];
-      if (nombres.length !== 1 || nombres[0] !== name) {
-        malos.push(`${name} ⇒ ${r.motivo ?? nombres.join(' | ')}`);
+      for (const busqueda of [name, `${name}.`]) {
+        const r = await listar(
+          busqueda,
+          ctx(clienta(`Me interesa el servicio ${name}.`)),
+        );
+        const nombres = r.servicios?.map((s) => s.nombre) ?? [];
+        if (nombres.length !== 1 || nombres[0] !== name) {
+          malos.push(`${busqueda} ⇒ ${r.motivo ?? nombres.join(' | ')}`);
+        }
       }
     }
     expect(malos).toEqual([]);
+  });
+
+  it('N1 sin busqueda tras preguntar por «corte»: los 6 más baratos de cortes', async () => {
+    const r = (await tool.execute(
+      {},
+      ctx(
+        clienta('¿cuánto vale un corte?'),
+        asistente('¿Cuál?\n\n[Se le preguntó para acotar: corte]'),
+        clienta('me da igual'),
+      ),
+    )) as Respuesta;
+    expect(r).toMatchObject({ parcial: true, criterio: 'menor_precio' });
+    const conOrden = await adapter.search(
+      { texto: 'corte', ordenarPorPrecio: true },
+      6,
+    );
+    expect(r.servicios?.map((s) => s.id)).toEqual(conOrden.map((s) => s.id));
+  });
+
+  it('N3 el género escrito en la búsqueda filtra el listado por categoría', async () => {
+    const r = (await tool.execute(
+      { busqueda: 'para niños' },
+      ctx(
+        clienta('mándame el catálogo'),
+        asistente('¿Qué buscas?\n\n[Se le preguntó qué busca]'),
+        clienta('lo que sea para niños'),
+      ),
+    )) as Respuesta;
+    const filas: { id: string }[] = await dataSource.query(
+      `SELECT st."serviceId" AS id FROM service_tags_tag st
+         JOIN tag t ON t.id = st."tagId" WHERE t.name = 'Niños'`,
+    );
+    const deNinos = new Set(filas.map((f) => f.id));
+    expect(r.servicios?.length).toBeGreaterThan(0);
+    for (const s of r.servicios!) expect(deNinos.has(s.id)).toBe(true);
   });
 
   it('I1 sin concepto y ya preguntado: el de menor precio de cada categoría raíz', async () => {

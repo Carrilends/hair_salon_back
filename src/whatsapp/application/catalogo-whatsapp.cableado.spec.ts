@@ -516,6 +516,88 @@ describe('Catálogo por WhatsApp, cableado de punta a punta', () => {
     expect(texto(t2)).toContain(SEIS);
   });
 
+  it.each([
+    ['sin busqueda', {}],
+    ['con la frase literal', { busqueda: 'me da igual' }],
+  ])(
+    'N1 tras R7 el modelo llama %s: los 6 de menor precio de ese concepto, no otra pregunta',
+    async (_n, args) => {
+      const { turno } = montar();
+      const t1 = await turno(CLIENTA, { texto: '¿Cuánto vale un corte?' }, [
+        { tool: 'listarServicios', args: { busqueda: 'corte' } },
+        { texto: '¿Qué opción de corte te interesa?' },
+      ]);
+      expect(lineasDeServicio(t1)).toEqual([]);
+
+      const t2 = await turno(CLIENTA, { texto: 'me da igual' }, [
+        { tool: 'listarServicios', args },
+        { texto: 'Te mando estos.' },
+      ]);
+      expect(lineasDeServicio(t2)).toEqual(
+        baratos(
+          'Taper fade',
+          'Low fade',
+          'High fade',
+          'Bob clásico',
+          'Bob francés',
+          'Pixie',
+        ),
+      );
+      expect(texto(t2)).toContain(SEIS);
+      expect(texto(t2)).not.toContain(CATEGORIA);
+      expect(carrusel(t2)?.cards).toHaveLength(6);
+    },
+  );
+
+  it('N2 las frases literales en busqueda terminan en servicios y no se repiten', async () => {
+    const { turno } = montar();
+    const t1 = await turno(CLIENTA, { texto: 'mándame el catálogo' }, [
+      { tool: 'listarServicios', args: { busqueda: 'mándame' } },
+      { texto: '¿Qué servicio estás buscando?' },
+    ]);
+    expect(lineasDeServicio(t1)).toEqual([]);
+    const t2 = await turno(CLIENTA, { texto: 'lo que sea' }, [
+      { tool: 'listarServicios', args: { busqueda: 'lo que sea' } },
+      { texto: 'Te mando una muestra.' },
+    ]);
+    expect(lineasDeServicio(t2).length).toBeGreaterThan(0);
+    expect(texto(t2)).toContain(CATEGORIA);
+    const t3 = await turno(CLIENTA, { texto: 'cualquiera' }, [
+      { tool: 'listarServicios', args: { busqueda: 'cualquiera' } },
+      { texto: 'Es lo que te envío.' },
+    ]);
+    expect(texto(t3)).toContain(CATEGORIA);
+  });
+
+  it('N5 una marca copiada por el modelo no llega a la clienta ni hace saltar R6', async () => {
+    const { turno, historial } = montar();
+    const copia = '[Se le preguntó para acotar: corte]';
+    const t1 = await turno(CLIENTA, { texto: 'hola' }, [
+      { texto: `Hola, ¿qué buscas?\n\n${copia}` },
+    ]);
+    expect(texto(t1)).not.toContain('Se le preguntó');
+    expect(historial(CLIENTA)).toBe('Hola, ¿qué buscas?');
+
+    const t2 = await turno(CLIENTA, { texto: 'un corte' }, [
+      { tool: 'listarServicios', args: { busqueda: 'corte' } },
+      { texto: '¿Cuál prefieres?' },
+    ]);
+    expect(lineasDeServicio(t2)).toEqual([]);
+    expect(texto(t2)).not.toContain(SEIS);
+    expect(historial(CLIENTA)).toContain(copia);
+  });
+
+  it('«Me interesa» con el punto final del mensaje en la búsqueda sigue siendo un servicio', async () => {
+    const { turno } = montar();
+    const capas = FILAS.find((s) => s.name === 'Capas en U')!;
+    const t = await turno(CLIENTA, { boton: `SERVICE|${capas.id}` }, [
+      { tool: 'listarServicios', args: { busqueda: 'Capas en U.' } },
+      { texto: 'Perfecto, ¿para qué día?' },
+    ]);
+    expect(lineasDeServicio(t)).toEqual(baratos('Capas en U'));
+    expect(carrusel(t)).toBeUndefined();
+  });
+
   it('ninguna URL de imagen llega al modelo ni al historial; las fotos sí salen', async () => {
     const { turno, vistoPorElModelo, conversaciones } = montar();
     await turno(CLIENTA, { texto: 'un corte' }, [

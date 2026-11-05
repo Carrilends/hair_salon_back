@@ -4,8 +4,10 @@ import { analizarBusqueda, sinDiacriticos } from './catalog-search';
 export const MAX_SERVICIOS_WHATSAPP = 6;
 
 /**
- * Palabras que piden «ver todo» y no nombran un servicio. Solo valen en
- * WhatsApp: en la web y en MCP «catálogo» conserva su comportamiento.
+ * Palabras que piden «ver todo» o «me da igual» y no nombran un servicio. Solo
+ * valen en WhatsApp: en la web y en MCP «catálogo» conserva su comportamiento.
+ * Ninguna es palabra del nombre de un servicio o etiqueta (consultado en la base
+ * sembrada el 2026-11-04): si un día lo fuera, dejaría de poder buscarse.
  */
 const PEDIR_TODO = new Set([
   'catalogo',
@@ -16,6 +18,12 @@ const PEDIR_TODO = new Set([
   'todo',
   'todos',
   'todas',
+  'igual',
+  'cualquiera',
+  'cualquier',
+  'sea',
+  'muestrame',
+  'mandame',
 ]);
 
 const LONGITUD_RAIZ = 4;
@@ -71,11 +79,17 @@ export function conceptoLegible(busqueda?: string): string {
   return (legibles.length > 0 ? legibles : concepto).join(' ');
 }
 
-/** ¿`busqueda` es exactamente este nombre? Sin tildes, mayúsculas ni espacios de más. */
+/**
+ * ¿`busqueda` es exactamente este nombre? Sin tildes, mayúsculas, espacios de más
+ * ni puntuación final: «Me interesa el servicio Capas en U.» deja el punto pegado.
+ */
 export function esElNombreExacto(nombre: string, busqueda?: string): boolean {
   if (busqueda === undefined) return false;
   const plegar = (t: string) =>
-    sinDiacriticos(t.toLowerCase()).trim().replace(/\s+/g, ' ');
+    sinDiacriticos(t.toLowerCase())
+      .replace(/[^\p{L}\p{N}]+$/u, '')
+      .trim()
+      .replace(/\s+/g, ' ');
   return plegar(nombre) === plegar(busqueda);
 }
 
@@ -127,6 +141,17 @@ export function yaPreguntoSobre(
     for (const r of raicesDe(concepto)) raices.add(r);
   }
   return palabras.some((p) => raices.has(raiz(p)));
+}
+
+/**
+ * El concepto de la última marca de acotar del ÚLTIMO mensaje del asistente, o
+ * vacío si no la lleva: sobre qué se le acaba de preguntar.
+ */
+export function conceptoPreguntado(recientes: Reciente[]): string[] {
+  const marcas = [
+    ...(ultimoDelAsistente(recientes) ?? '').matchAll(MARCA_DE_ACOTAR),
+  ];
+  return marcas.at(-1)?.[1].split(/\s+/).filter(Boolean) ?? [];
 }
 
 /** El ÚLTIMO mensaje del asistente lleva la marca de haber preguntado qué busca. */

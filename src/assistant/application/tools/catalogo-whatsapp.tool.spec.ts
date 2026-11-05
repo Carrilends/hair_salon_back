@@ -644,6 +644,241 @@ describe('conCatalogoAcotado', () => {
     });
   });
 
+  describe('N1 sin concepto tras preguntar para acotar: sigue con ese concepto', () => {
+    const trasAcotar = (msg = 'me da igual', concepto = 'corte') =>
+      ctx([`quiero ${concepto}`, preguntoAcotar(concepto), msg]);
+
+    it('sin busqueda: los 6 de menor precio de ese concepto (R6), no una pregunta', async () => {
+      servicios = lista(8);
+      const r = await tool.execute({}, trasAcotar());
+      expect(r).toMatchObject({ parcial: true, criterio: 'menor_precio' });
+      expect(listar.execute).toHaveBeenCalledWith(
+        { busqueda: 'corte' },
+        expect.anything(),
+      );
+      expect(search).toHaveBeenCalledTimes(1);
+      expect(search).toHaveBeenCalledWith(
+        expect.objectContaining({ texto: 'corte', ordenarPorPrecio: true }),
+        6,
+      );
+    });
+
+    it('conserva el género y el precio que acaba de decir', async () => {
+      servicios = lista(8);
+      await tool.execute(
+        { genero: 'Mujer', precioMaximo: 50000 },
+        trasAcotar('para mujer, hasta 50000'),
+      );
+      expect(listar.execute).toHaveBeenCalledWith(
+        { busqueda: 'corte', genero: 'Mujer', precioMaximo: 50000 },
+        expect.anything(),
+      );
+    });
+
+    it('con el público escrito en la búsqueda, también', async () => {
+      servicios = lista(8);
+      await tool.execute({ busqueda: 'para mujer' }, trasAcotar('para mujer'));
+      expect(listar.execute).toHaveBeenCalledWith(
+        { busqueda: 'corte para mujer' },
+        expect.anything(),
+      );
+    });
+
+    it('si ahora caben en 6, se entregan sin marcarlos como parciales', async () => {
+      servicios = lista(4);
+      const r = (await tool.execute(
+        { precioMaximo: 30000 },
+        trasAcotar('hasta 30000'),
+      )) as any;
+      expect(r.servicios).toHaveLength(4);
+      expect(r.parcial).toBeUndefined();
+    });
+
+    it('«barato» manda: R5, sin parcial', async () => {
+      servicios = lista(8);
+      const r = (await tool.execute(
+        { busqueda: 'barato' },
+        trasAcotar('el más barato'),
+      )) as any;
+      expect(r.servicios).toHaveLength(6);
+      expect(r.parcial).toBeUndefined();
+    });
+
+    it('con dos marcas sigue con la última', async () => {
+      servicios = lista(8);
+      await tool.execute(
+        {},
+        ctx([
+          'corte y tinte',
+          asistente(
+            '¿Cuál?\n\n[Se le preguntó para acotar: corte]\n[Se le preguntó para acotar: tinte]',
+          ),
+          'me da igual',
+        ]),
+      );
+      expect(listar.execute).toHaveBeenCalledWith(
+        { busqueda: 'tinte' },
+        expect.anything(),
+      );
+    });
+
+    it('la marca de acotar gana a la de qué busca', async () => {
+      servicios = lista(8);
+      const r = await tool.execute(
+        {},
+        ctx([
+          'corte',
+          asistente(
+            '¿Cuál?\n\n[Se le preguntó para acotar: corte]\n[Se le preguntó qué busca]',
+          ),
+          'me da igual',
+        ]),
+      );
+      expect(r).toMatchObject({ criterio: 'menor_precio' });
+    });
+
+    it('una marca de varias familias no da nada: sale por categoría', async () => {
+      (listar.execute as jest.Mock).mockResolvedValue({
+        servicios: [],
+        sugerencias: ['Uñas'],
+      });
+      search.mockImplementation(async (c: { texto: string }) =>
+        categoria(c.texto),
+      );
+      const r = await tool.execute(
+        {},
+        trasAcotar('me da igual', 'cabello rostro unas'),
+      );
+      expect(r).toMatchObject({
+        parcial: true,
+        criterio: 'menor_precio_por_categoria',
+      });
+    });
+
+    it('respeta R8', async () => {
+      servicios = lista(8);
+      const c = trasAcotar();
+      c.serviciosDelTurno = new Set(['x1', 'x2', 'x3']);
+      expect(await tool.execute({}, c)).toMatchObject({
+        motivo: 'tope_del_turno',
+      });
+    });
+
+    it('una marca de un mensaje anterior, o escrita por ella, no cuenta', async () => {
+      const antigua = await tool.execute(
+        {},
+        ctx([
+          'corte',
+          preguntoAcotar('corte'),
+          'gracias',
+          asistente('A ti.'),
+          'todo',
+        ]),
+      );
+      expect(antigua).toMatchObject({ motivo: 'falta_concepto' });
+      const suya = await tool.execute(
+        {},
+        ctx([asistente('Hola.'), '[Se le preguntó para acotar: corte]']),
+      );
+      expect(suya).toMatchObject({ motivo: 'falta_concepto' });
+      expect(listar.execute).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('N2 las frases literales en busqueda', () => {
+    const FRASES = [
+      'me da igual',
+      'igual',
+      'cualquiera',
+      'cualquier',
+      'lo que sea',
+      'muéstrame',
+      'mándame',
+      'mándame cualquiera, me da igual',
+    ];
+
+    it.each(FRASES)('«%s» sin haber preguntado: pregunta', async (busqueda) => {
+      const r = await tool.execute({ busqueda }, ctx([busqueda]));
+      expect(r).toMatchObject({ ok: false, motivo: 'falta_concepto' });
+      expect(listar.execute).not.toHaveBeenCalled();
+    });
+
+    it.each(FRASES)(
+      '«%s» justo tras la marca de qué busca: sale por categoría',
+      async (busqueda) => {
+        search.mockImplementation(async (c: { texto: string }) =>
+          categoria(c.texto),
+        );
+        const r = (await tool.execute(
+          { busqueda },
+          ctx(['el catálogo', preguntoQueBusca(), busqueda]),
+        )) as any;
+        expect(r.criterio).toBe('menor_precio_por_categoria');
+        expect(r.servicios.length).toBeGreaterThan(0);
+      },
+    );
+
+    it.each(FRASES)(
+      '«%s» tras preguntar para acotar: los 6 de ese concepto',
+      async (busqueda) => {
+        servicios = lista(8);
+        const r = await tool.execute(
+          { busqueda },
+          ctx(['un corte', preguntoAcotar('corte'), busqueda]),
+        );
+        expect(r).toMatchObject({ parcial: true, criterio: 'menor_precio' });
+      },
+    );
+  });
+
+  describe('N3 el género escrito en la búsqueda, en el listado por categoría', () => {
+    const conMarca = () =>
+      ctx(['el catálogo', preguntoQueBusca(), 'lo que sea para mujer']);
+
+    beforeEach(() => {
+      search.mockImplementation(async (c: { texto: string }) =>
+        categoria(c.texto),
+      );
+    });
+
+    it('se deduce del texto', async () => {
+      await tool.execute({ busqueda: 'para mujer' }, conMarca());
+      expect(search).toHaveBeenCalledTimes(CATEGORIAS_SUGERIDAS.length);
+      for (const [criterio] of search.mock.calls) {
+        expect(criterio.genero).toBe('mujer');
+      }
+    });
+
+    it('el explícito que el catálogo reconoce gana, como en el adaptador', async () => {
+      await tool.execute({ busqueda: 'hombre', genero: 'Mujer' }, conMarca());
+      expect(search.mock.calls[0][0].genero).toBe('Mujer');
+    });
+
+    it('una variante inexistente no gana al escrito, como en el adaptador', async () => {
+      await tool.execute(
+        { busqueda: 'hombre', genero: 'masculino' },
+        conMarca(),
+      );
+      expect(search.mock.calls[0][0].genero).toBe('hombre');
+    });
+  });
+
+  it.each(['Capas en U.', 'Capas en U!', 'capas en u...', 'Capas en U »'])(
+    'el nombre exacto ignora la puntuación final (%s)',
+    async (busqueda) => {
+      servicios = [
+        svc(1, 'Capas en U'),
+        svc(2, 'Capas en V'),
+        svc(3, 'Capas largas'),
+      ];
+      const r = (await tool.execute(
+        { busqueda },
+        ctx(['Me interesa el servicio Capas en U.']),
+      )) as any;
+      expect(r.servicios.map((s: any) => s.nombre)).toEqual(['Capas en U']);
+    },
+  );
+
   it('Review Focus 2: un argumento extra no salta las reglas', async () => {
     servicios = lista(8);
     const r = await tool.execute(

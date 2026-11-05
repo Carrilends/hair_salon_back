@@ -32,6 +32,20 @@ describe('catalogo-acotado', () => {
     expect(sinPalabrasDeTodo('todo de corte')).toBe('de corte');
     expect(sinPalabrasDeTodo('todo')).toBe('');
   });
+  it('N2 las muletillas de «me da igual» tampoco son un concepto', () => {
+    for (const frase of [
+      'me da igual',
+      'cualquiera',
+      'cualquier',
+      'lo que sea',
+      'muéstrame',
+      'mándame',
+    ]) {
+      expect(conceptoDe(frase)).toEqual([]);
+    }
+    expect(conceptoDe('cualquier corte')).toEqual(['corte']);
+    expect(sinPalabrasDeTodo('mándame cualquier corte')).toBe('corte');
+  });
   it('ancla por raíz y sin tildes', () => {
     expect(estaAnclado(['corte'], [r('quiero cortarme el pelo')])).toBe(true);
     expect(estaAnclado(['cejas'], [r('me arreglo la CEJA')])).toBe(true);

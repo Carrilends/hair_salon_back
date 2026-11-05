@@ -781,3 +781,82 @@ describe('SendMessageUseCase · ventana de recientes (I3)', () => {
     ]);
   });
 });
+
+describe('SendMessageUseCase · marcas copiadas por el modelo (N5)', () => {
+  const wa = { canal: 'whatsapp' as const, phoneE164: NUMERO, userId: null };
+  const guardado = (repo: RepoDoble) =>
+    repo.guardada!.window(10).at(-1)!.content;
+
+  it.each([
+    '[Se le preguntó para acotar: corte]',
+    '[Se le preguntó qué busca]',
+    '[Se le enviaron aparte, con foto si la hay: 1. Corte: $ 35.000 (45 min)]',
+  ])('%s no llega a la clienta ni se guarda', async (marca) => {
+    const { useCase, repo } = montar({
+      guion: [respuesta(`Claro, dime.\n\n${marca}`)],
+    });
+    const r = await useCase.execute({ ...wa, message: 'hola' });
+    expect(r.reply).toBe('Claro, dime.');
+    expect(guardado(repo)).toBe('Claro, dime.');
+  });
+
+  it('también en medio del texto y sin tilde', async () => {
+    const { useCase } = montar({
+      guion: [
+        respuesta(
+          'Hola [Se le pregunto para acotar: corte] ¿qué tal?\n\n[Se le enviaron aparte: x]\n\nDime.',
+        ),
+      ],
+    });
+    const r = await useCase.execute({ ...wa, message: 'hola' });
+    expect(r.reply).not.toMatch(/Se le|\[|\]/);
+    expect(r.reply).toContain('¿qué tal?');
+    expect(r.reply).toContain('Dime.');
+  });
+
+  it('solo esas: otros corchetes y el resto del texto quedan tal cual', async () => {
+    const texto =
+      '  Ver [nota] y [Mostrado aparte: x] y [Se le mostró aparte la lista.]  ';
+    const { useCase } = montar({ guion: [respuesta(texto)] });
+    const r = await useCase.execute({ ...wa, message: 'hola' });
+    expect(r.reply).toBe(texto);
+  });
+
+  it('si no queda nada, sigue el camino de la respuesta vacía', async () => {
+    const { useCase, repo } = montar({
+      guion: [respuesta('[Se le preguntó para acotar: corte]')],
+    });
+    const r = await useCase.execute({ ...wa, message: 'hola' });
+    expect(r.reply).toMatch(/Disculpa/);
+    expect(guardado(repo)).not.toContain('Se le preguntó');
+  });
+
+  it('la marca real del servidor se guarda una vez y no sale hacia la clienta', async () => {
+    const demasiados = {
+      ok: false,
+      motivo: 'demasiados',
+      pregunta: '¿Cuál?',
+      concepto: ['corte'],
+    };
+    class Herramienta extends HerramientaEspia {
+      async execute() {
+        return demasiados;
+      }
+    }
+    const marca = '[Se le preguntó para acotar: corte]';
+    const { useCase, repo } = montar({
+      herramienta: new Herramienta(),
+      guion: [llamaYResponde()[0], respuesta(`¿Cuál?\n\n${marca}`)],
+    });
+    const r = await useCase.execute({ ...wa, message: 'un corte' });
+    expect(r.reply).toBe('¿Cuál?');
+    expect(guardado(repo)).toBe(`¿Cuál?\n\n${marca}`);
+  });
+
+  it('la web no cambia', async () => {
+    const texto = 'Hola [Se le preguntó qué busca]';
+    const { useCase } = montar({ guion: [respuesta(texto)] });
+    const r = await useCase.execute({ userId: 'u-1', message: 'hola' });
+    expect(r.reply).toBe(texto);
+  });
+});

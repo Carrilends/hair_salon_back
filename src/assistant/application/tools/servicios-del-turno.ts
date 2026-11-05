@@ -97,3 +97,21 @@ export function marcasDeAcotado(
   }
   return [...marcas];
 }
+
+/** Las marcas de arriba, también sin la tilde con que el modelo pueda copiarlas. */
+const MARCA_COPIADA = /\[Se le (?:enviaron|pregunt[oó])[^\]]*\]/gi;
+
+/**
+ * Quita de la respuesta del modelo las marcas de servicios y de acotado: si las
+ * copia del historial, la clienta las leería y contarían como un hecho que el
+ * servidor no anotó. Solo esas, y un texto sin ellas queda intacto.
+ */
+export function sinMarcasCopiadas(texto: string): string {
+  const limpio = texto.replace(MARCA_COPIADA, '');
+  if (limpio === texto) return texto;
+  return limpio
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/[ \t]*\n[ \t]*/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}

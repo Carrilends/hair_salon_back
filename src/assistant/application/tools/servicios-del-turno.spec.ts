@@ -4,6 +4,7 @@ import {
   marcasDeAcotado,
   pideConfirmacion,
   serviciosDelTurno,
+  sinMarcasCopiadas,
 } from './servicios-del-turno';
 import {
   AssistantPresentation,
@@ -139,5 +140,39 @@ describe('marcasDeAcotado', () => {
         ],
       ),
     ).toEqual([]);
+  });
+});
+
+describe('sinMarcasCopiadas', () => {
+  it('quita exactamente lo que el servidor anota', () => {
+    const servicios: AssistantPresentation = {
+      tipo: 'servicios',
+      servicios: [{ id: 's', nombre: 'Corte [U]', precio: 1, minutos: 1 }],
+    };
+    const anotadas = [
+      ...marcasDeAcotado(
+        [
+          { ok: false, motivo: 'demasiados', concepto: ['corte'] },
+          { ok: false, motivo: 'falta_concepto' },
+        ],
+        [],
+      ),
+      marcaDeServicios([
+        {
+          ...servicios,
+          servicios: [{ ...servicios.servicios[0], nombre: 'Corte' }],
+        },
+      ]),
+    ];
+    expect(anotadas).toHaveLength(3);
+    for (const marca of anotadas) {
+      expect(sinMarcasCopiadas(`Hola.\n\n${marca}`)).toBe('Hola.');
+      expect(sinMarcasCopiadas(marca)).toBe('');
+    }
+  });
+
+  it('un texto sin marcas queda intacto, espacios incluidos', () => {
+    const texto = '  a  b\n\n\n[Se le mostró aparte] [nota] ';
+    expect(sinMarcasCopiadas(texto)).toBe(texto);
   });
 });

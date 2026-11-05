@@ -103,6 +103,14 @@ describe('SYSTEM_PROMPT_WHATSAPP (clienta y dueña)', () => {
     },
   );
 
+  it.each(whatsapp)(
+    'el prompt de la %s solo llama sin busqueda si no ha nombrado ningún servicio (N1)',
+    (_, p) => {
+      expect(p).toMatch(/no ha nombrado ningún servicio/i);
+      expect(p).toMatch(/si ya nombró uno/i);
+    },
+  );
+
   it('el prompt de la web no lleva las reglas de WhatsApp', () => {
     expect(SYSTEM_PROMPT).not.toMatch(
       /como mucho seis|pregunta primero|sin quitar el servicio que nombra/i,

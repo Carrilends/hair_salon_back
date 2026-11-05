@@ -8,12 +8,16 @@ import {
   AssistantServiceSummary,
   ServiceCatalogQueryPort,
 } from '../../domain/ports/service-catalog-query.port';
-import { analizarBusqueda } from '../../domain/catalog-search';
+import {
+  analizarBusqueda,
+  etiquetasDeGenero,
+} from '../../domain/catalog-search';
 import {
   MAX_SERVICIOS_WHATSAPP,
   coincidenEnNombre,
   conceptoDe,
   conceptoLegible,
+  conceptoPreguntado,
   esElNombreExacto,
   sinPalabrasDeTodo,
   estaAnclado,
@@ -96,8 +100,19 @@ export function conCatalogoAcotado(
         return pregunta('sin_pedirlo', PREGUNTA_CONCEPTO, CATEGORIAS_SUGERIDAS);
       }
 
-      const busqueda =
+      const pedida =
         typeof args.busqueda === 'string' ? args.busqueda : undefined;
+      // Sin concepto justo después de preguntar para acotar: la respuesta es a esa
+      // pregunta («me da igual», «para mujer»), así que sigue con su concepto y D2
+      // se cumple con R6, en lugar de preguntar qué busca como si no lo hubiera dicho.
+      const preguntado =
+        conceptoDe(pedida).length === 0 ? conceptoPreguntado(recientes) : [];
+      const busqueda =
+        preguntado.length > 0
+          ? [preguntado.join(' '), sinPalabrasDeTodo(pedida)]
+              .filter(Boolean)
+              .join(' ')
+          : pedida;
       const genero = typeof args.genero === 'string' ? args.genero : undefined;
       const precioMaximo = coerceOptionalNumber(args.precioMaximo);
       // Las palabras de «dame todo» no se buscan: el catálogo exige que cada
@@ -130,21 +145,15 @@ export function conCatalogoAcotado(
         return { servicios: lote, ...extra };
       };
 
-      // R1: sin concepto no se consulta. Garantiza `concepto` no vacío abajo
-      // (con palabras vacías `coincidenEnNombre` devolvería todo). Pero si ya se
-      // le preguntó y sigue sin decirlo, repetir sería un bucle: se le enseña lo
-      // de menor precio de cada categoría, y `presentar` lleva la línea que lo dice.
-      const concepto = conceptoDe(busqueda);
-      if (concepto.length === 0) {
-        if (!yaPreguntoQueBusca(recientes)) {
-          return pregunta(
-            'falta_concepto',
-            PREGUNTA_CONCEPTO,
-            CATEGORIAS_SUGERIDAS,
-          );
-        }
+      // El de menor precio de cada categoría. Su texto es la categoría, así que el
+      // público escrito en la búsqueda se pasa aparte, con la precedencia del
+      // adaptador: el explícito si el catálogo lo reconoce, si no el escrito.
+      const porCategoria = async () => {
         const lote = await menorPrecioPorCategoria(catalog, {
-          genero,
+          genero:
+            etiquetasDeGenero(genero).length > 0
+              ? genero
+              : (analizarBusqueda(pedida).genero ?? genero),
           precioMaximo,
         });
         return lote.length > 0
@@ -153,6 +162,17 @@ export function conCatalogoAcotado(
               criterio: 'menor_precio_por_categoria',
             })
           : { servicios: [], sugerencias: CATEGORIAS_SUGERIDAS };
+      };
+
+      // R1: sin concepto no se consulta. Garantiza `concepto` no vacío abajo
+      // (con palabras vacías `coincidenEnNombre` devolvería todo). Pero si ya se
+      // le preguntó y sigue sin decirlo, repetir sería un bucle: se le enseña lo
+      // de menor precio de cada categoría, y `presentar` lleva la línea que lo dice.
+      const concepto = conceptoDe(busqueda);
+      if (concepto.length === 0) {
+        return yaPreguntoQueBusca(recientes)
+          ? porCategoria()
+          : pregunta('falta_concepto', PREGUNTA_CONCEPTO, CATEGORIAS_SUGERIDAS);
       }
       // R2: el concepto tiene que haberlo dicho alguien en la conversación.
       if (!estaAnclado(concepto, recientes)) {
@@ -164,7 +184,11 @@ export function conCatalogoAcotado(
         sugerencias?: string[];
       };
       const servicios = original?.servicios ?? [];
-      if (servicios.length === 0) return original;
+      if (servicios.length === 0) {
+        // La marca de varias familias no encaja como búsqueda: no hay más que
+        // reutilizar, y otra pregunta sería repetirse.
+        return preguntado.length > 0 ? porCategoria() : original;
+      }
 
       // Nombre exacto de un servicio («Me interesa» en «Capas en U»): solo ese,
       // aunque «en» y «U» no cuenten como palabras y «capas» dé varios.

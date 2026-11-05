@@ -1,5 +1,9 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
-import { marcaDeServicios, marcasDeAcotado } from './tools/servicios-del-turno';
+import {
+  marcaDeServicios,
+  marcasDeAcotado,
+  sinMarcasCopiadas,
+} from './tools/servicios-del-turno';
 import { LlmMessage, LlmPort, LlmToolCall } from '../domain/ports/llm.port';
 import { ConversationRepositoryPort } from '../domain/ports/conversation-repository.port';
 import { PhoneConversationRepositoryPort } from '../domain/ports/phone-conversation-repository.port';
@@ -479,6 +483,9 @@ export class SendMessageUseCase {
     // Salvo también lo que SÍ se escribió (revisión final, M-203): si el turno
     // canceló o movió una cita y luego se torció, la clienta tiene que leer la
     // confirmación del sistema igual; callarla sería peor que la disculpa.
+    // Antes de nada: una marca copiada del historial no se envía, no se guarda y
+    // no cuenta como hecho. Si no queda texto, es una respuesta vacía como otra.
+    if (porWhatsApp) reply = sinMarcasCopiadas(reply);
     const sinRespuestaDelModelo = !reply;
     if (!reply) {
       const escrituras = presentaciones.filter(esEscritura);
