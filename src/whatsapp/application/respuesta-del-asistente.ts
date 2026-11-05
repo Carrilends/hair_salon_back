@@ -1,6 +1,7 @@
 import { WhatsAppMessage } from 'src/notifications/domain/ports/whatsapp-sender.port';
 import { AssistantPresentation } from 'src/assistant/application/tools/assistant-presentation';
 import { toWhatsAppImageUrl } from 'src/common/whatsapp-image-url';
+import { PESOS } from 'src/assistant/application/tools/servicios-del-turno';
 import { mensajeDeConfirmacion } from './mensaje-de-confirmacion';
 
 /** Tope de un mensaje de texto de WhatsApp (límite de Meta). */
@@ -13,12 +14,6 @@ const SIN_RESPUESTA =
   'Disculpa, no logré responderte. ¿Me lo escribes de otra forma?';
 /** Tope del pie de una imagen (límite de Meta). */
 const MAX_PIE = 1024;
-
-const PESOS = new Intl.NumberFormat('es-CO', {
-  style: 'currency',
-  currency: 'COP',
-  maximumFractionDigits: 0,
-});
 
 /**
  * El prompt de WhatsApp pide texto plano, pero el modelo a veces escribe

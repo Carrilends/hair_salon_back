@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { marcaDeServicios } from './tools/servicios-del-turno';
 import { LlmMessage, LlmPort, LlmToolCall } from '../domain/ports/llm.port';
 import { ConversationRepositoryPort } from '../domain/ports/conversation-repository.port';
 import { PhoneConversationRepositoryPort } from '../domain/ports/phone-conversation-repository.port';
@@ -302,6 +303,9 @@ export class SendMessageUseCase {
       // nace vacío en cada turno, así que lo que la clienta responda en el
       // siguiente vuelve a poder actuar sobre ellas.
       citasQueNoCoincidieron: new Set<string>(),
+      // Catálogo con imágenes: los servicios que las herramientas de WhatsApp
+      // llevan enviados en ESTE turno (tope de 6). Solo existe en WhatsApp.
+      ...(porWhatsApp ? { serviciosDelTurno: new Set<string>() } : {}),
       // Los últimos mensajes, el nuevo incluido y los viejos primero. Lo pide
       // la verificación previa a reservar (plan 04, T5): sin historial no hay
       // con qué comparar la reserva que se va a crear. Se manda un mensaje más
@@ -490,6 +494,11 @@ export class SendMessageUseCase {
     // siguiente le reenviaba al modelo la lista como si la hubiera escrito él
     // —enseñándole lo que el prompt le prohíbe— y la pagaba otra vez en tokens.
     const marcas = textos.map(marcaParaElHistorial).filter(Boolean);
+    // Tras el `if (!reply)`: lo que no se enviará no se anota. Solo WhatsApp.
+    if (porWhatsApp) {
+      const marcaServicios = marcaDeServicios(presentaciones);
+      if (marcaServicios) marcas.push(marcaServicios);
+    }
     const paraElHistorial = marcas.length
       ? `${reply}\n\n${marcas.join('\n')}`
       : reply;

@@ -13,6 +13,7 @@ import {
   ConversationRepositoryPort,
 } from '../domain/ports/conversation-repository.port';
 import { PhoneConversationRepositoryPort } from '../domain/ports/phone-conversation-repository.port';
+import { AssistantPresentation } from './tools/assistant-presentation';
 import { ClockPort } from '../domain/ports/clock.port';
 
 /**
@@ -118,10 +119,11 @@ function montar(opts: {
   guion?: LlmCompletion[];
   presupuesto?: AssistantBudget;
   sinPuertoDeTelefono?: boolean;
+  herramienta?: HerramientaEspia;
 }) {
   const repo = opts.repo ?? new RepoDoble();
   const llm = new FakeLlmAdapter(opts.guion ?? [respuesta('Hola.')]);
-  const herramienta = new HerramientaEspia();
+  const herramienta = opts.herramienta ?? new HerramientaEspia();
   const useCase = new SendMessageUseCase(
     llm,
     repo,
@@ -490,5 +492,97 @@ describe('SendMessageUseCase · conversación nueva (plan 06, F5, D10)', () => {
     const { useCase } = montar({});
     const r = await useCase.execute({ userId: 'u-1', message: 'hola' });
     expect(r).not.toHaveProperty('conversacionNueva');
+  });
+});
+
+describe('SendMessageUseCase · servicios del turno (catálogo con imágenes)', () => {
+  const FOTO = 'https://res.cloudinary.com/demo/image/upload/v1/corte.jpg';
+
+  class HerramientaQuePresenta extends HerramientaEspia {
+    contextos: AssistantContext[] = [];
+    constructor(private readonly p: AssistantPresentation) {
+      super();
+    }
+    async execute(a: Record<string, unknown>, c: AssistantContext) {
+      this.contextos.push(c);
+      return super.execute(a, c);
+    }
+    async presentar(): Promise<AssistantPresentation> {
+      return this.p;
+    }
+  }
+  const servicios: AssistantPresentation = {
+    tipo: 'servicios',
+    servicios: [
+      { id: 's-1', nombre: 'Corte', precio: 35000, minutos: 45, imagen: FOTO },
+      { id: 's-2', nombre: 'Tinte', precio: 90000, minutos: 120 },
+    ],
+  };
+  const wa = { canal: 'whatsapp' as const, phoneE164: NUMERO, userId: null };
+
+  it('WhatsApp: guarda en el historial qué servicios se enviaron, sin URL', async () => {
+    const herramienta = new HerramientaQuePresenta(servicios);
+    const { useCase, repo } = montar({ herramienta, guion: llamaYResponde() });
+    await useCase.execute({ ...wa, message: 'cortes?' });
+    const guardado = repo.guardada!.window(10).at(-1)!.content;
+    expect(guardado).toContain(
+      '[Se le enviaron aparte, con foto si la hay: 1. Corte',
+    );
+    expect(guardado).toContain('2. Tinte');
+    expect(guardado).not.toContain('s-1');
+    expect(guardado).not.toContain('http');
+  });
+
+  it('WhatsApp: el contexto del turno trae un Set nuevo en cada turno', async () => {
+    const herramienta = new HerramientaQuePresenta(servicios);
+    const { useCase } = montar({
+      herramienta,
+      guion: [...llamaYResponde(), ...llamaYResponde()],
+    });
+    await useCase.execute({ ...wa, message: 'uno' });
+    await useCase.execute({ ...wa, message: 'dos' });
+    const [a, b] = herramienta.contextos.map((c) => c.serviciosDelTurno);
+    expect(a).toBeInstanceOf(Set);
+    expect(b).toBeInstanceOf(Set);
+    expect(a).not.toBe(b);
+  });
+
+  it('la imagen nunca llega al modelo', async () => {
+    const herramienta = new HerramientaQuePresenta(servicios);
+    const { useCase, llm, repo } = montar({
+      herramienta,
+      guion: llamaYResponde(),
+    });
+    await useCase.execute({ ...wa, message: 'cortes?' });
+    const todo = JSON.stringify(llm.calls.flatMap((c) => c.messages));
+    expect(todo).not.toContain('res.cloudinary.com');
+    const guardado = repo.guardada!.window(10).at(-1)!.content;
+    expect(guardado).not.toContain('res.cloudinary.com');
+  });
+
+  it('un turno que acaba en disculpa no anota servicios', async () => {
+    const herramienta = new HerramientaQuePresenta(servicios);
+    const vuelta = llamaYResponde()[0];
+    // El modelo no deja de pedir herramientas con argumentos distintos.
+    const guion = Array.from({ length: 8 }, (_, i) => ({
+      ...vuelta,
+      message: {
+        ...vuelta.message,
+        toolCalls: [{ id: `t${i}`, name: 'listarServicios', arguments: { i } }],
+      },
+    }));
+    const { useCase, repo } = montar({ herramienta, guion });
+    await useCase.execute({ ...wa, message: 'cortes?' });
+    const guardado = repo.guardada!.window(10).at(-1)!.content;
+    expect(guardado).not.toContain('Se le enviaron aparte');
+  });
+
+  it('la web no cambia: ni marca ni Set', async () => {
+    const herramienta = new HerramientaQuePresenta(servicios);
+    const { useCase, repo } = montar({ herramienta, guion: llamaYResponde() });
+    await useCase.execute({ userId: 'u-1', message: 'cortes?' });
+    expect(herramienta.contextos[0].serviciosDelTurno).toBeUndefined();
+    const guardado = repo.guardada!.window(10).at(-1)!.content;
+    expect(guardado).not.toContain('Se le enviaron aparte');
   });
 });
