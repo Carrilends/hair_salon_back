@@ -1,4 +1,9 @@
-import { WhatsAppMessage } from 'src/notifications/domain/ports/whatsapp-sender.port';
+import { PESOS } from 'src/assistant/application/tools/servicios-del-turno';
+import { AssistantPresentation } from 'src/assistant/application/tools/assistant-presentation';
+import {
+  WhatsAppMessage,
+  WhatsAppPairRateLimitError,
+} from 'src/notifications/domain/ports/whatsapp-sender.port';
 import { HandleInboundMessageUseCase } from './handle-inbound-message.use-case';
 import { InboundMessage } from '../domain/inbound-message';
 import {
@@ -16,7 +21,12 @@ function montar(opts: {
   respuesta?: AssistantChatResult;
   sinAsistente?: boolean;
   fallaElEnvio?: (m: WhatsAppMessage) => boolean;
+  /** Error que lanza el envío; recibe el mensaje y el número de intento (1, 2…). */
+  errorDelEnvio?: (m: WhatsAppMessage, intento: number) => Error | null;
+  imagenPorDefecto?: string;
 }) {
+  const esperas: number[] = [];
+  const intentos = new Map<WhatsAppMessage, number>();
   const enviados: WhatsAppMessage[] = [];
   const llamadas: Parameters<AssistantChatPort['conversar']>[0][] = [];
   const consultasDeCitas: string[] = [];
@@ -43,15 +53,27 @@ function montar(opts: {
     {
       send: async (m: WhatsAppMessage) => {
         if (opts.fallaElEnvio?.(m)) throw new Error('Meta dijo que no');
+        const n = (intentos.get(m) ?? 0) + 1;
+        intentos.set(m, n);
+        const e = opts.errorDelEnvio?.(m, n);
+        if (e) throw e;
         enviados.push(m);
       },
     } as never,
-    { ownerPhone: DUENA, timeZone: 'America/Bogota', politicaUrl: POLITICA },
+    {
+      ownerPhone: DUENA,
+      timeZone: 'America/Bogota',
+      politicaUrl: POLITICA,
+      imagenPorDefecto: opts.imagenPorDefecto,
+      esperar: async (ms) => {
+        esperas.push(ms);
+      },
+    },
     { now: () => new Date('2026-10-14T15:00:00Z') } as never,
     undefined,
     opts.sinAsistente ? null : asistente,
   );
-  return { sut, enviados, llamadas, consultasDeCitas };
+  return { sut, enviados, llamadas, consultasDeCitas, esperas };
 }
 
 const escribe = (text: string, from = CLIENTA): InboundMessage => ({
@@ -161,7 +183,9 @@ describe('HandleInboundMessage · asistente (plan 06, F5)', () => {
       },
     });
     await sut.handle(escribe('ese'));
+    // la foto única de un turno que pide confirmación falla: su pie sale como texto
     expect(enviados.map((m) => m.kind)).toEqual([
+      'text',
       'text',
       'interactive-buttons',
     ]);
@@ -210,5 +234,134 @@ describe('HandleInboundMessage · asistente (plan 06, F5)', () => {
     await sut.handle(escribe('hola'));
     expect(llamadas).toHaveLength(0);
     expect(consultasDeCitas).toEqual([CLIENTA]);
+  });
+
+  describe('reintento y respaldo del envío (catálogo con imágenes)', () => {
+    const FOTO = 'https://res.cloudinary.com/demo/image/upload/v1/corte.jpg';
+    const RESPALDO =
+      'https://res.cloudinary.com/demo/image/upload/v1/respaldo.jpg';
+    const corte = (imagen?: string) => ({
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-000000000001',
+      nombre: 'Corte',
+      precio: 35000,
+      minutos: 45,
+      ...(imagen ? { imagen } : {}),
+    });
+    const catalogo = (...ss: ReturnType<typeof corte>[]) => ({
+      tipo: 'servicios' as const,
+      servicios: ss,
+    });
+    const propuesta = {
+      tipo: 'confirmar-reserva' as const,
+      propuestaId: PID,
+      nombre: 'Ana',
+      servicios: ['Corte'],
+      fecha: 'martes 20',
+      hora: '10:00 a. m.',
+    };
+    const turno = (presentaciones: AssistantPresentation[]) =>
+      ({
+        ok: true,
+        reply: 'Mira.',
+        presentaciones,
+        conversacionNueva: false,
+      }) as AssistantChatResult;
+
+    it('con 131056 reintenta a 1 y 4 s y entrega una sola vez', async () => {
+      const { sut, enviados, esperas } = montar({
+        errorDelEnvio: (_m, n) =>
+          n <= 2 ? new WhatsAppPairRateLimitError() : null,
+      });
+      await sut.handle(escribe('hola'));
+      expect(esperas).toEqual([1000, 4000]);
+      expect(enviados).toHaveLength(1);
+    });
+
+    it('tras tres reintentos se rinde y sigue con el siguiente mensaje', async () => {
+      const { sut, enviados, esperas } = montar({
+        respuesta: turno([catalogo(corte(FOTO)), propuesta]),
+        errorDelEnvio: (m) =>
+          m.kind === 'text' ? new WhatsAppPairRateLimitError() : null,
+      });
+      await sut.handle(escribe('hola'));
+      expect(esperas).toEqual([1000, 4000, 16000]);
+      expect(enviados.map((m) => m.kind)).toEqual([
+        'image',
+        'interactive-buttons',
+      ]);
+    });
+
+    it('otro error no reintenta', async () => {
+      const { sut, enviados, esperas } = montar({
+        errorDelEnvio: () => new Error('otro'),
+      });
+      await sut.handle(escribe('hola'));
+      expect(esperas).toEqual([]);
+      expect(enviados).toHaveLength(0);
+    });
+
+    it('los botones de la ráfaga también reintentan (texto())', async () => {
+      const { sut, enviados, esperas } = montar({
+        sinAsistente: true,
+        errorDelEnvio: (_m, n) =>
+          n === 1 ? new WhatsAppPairRateLimitError() : null,
+      });
+      await sut.handle(escribe('hola'));
+      expect(esperas).toEqual([1000]);
+      expect(enviados.length).toBeGreaterThan(0);
+    });
+
+    it('si falla la foto única de un turno que pide confirmación, envía su pie como texto', async () => {
+      const { sut, enviados } = montar({
+        fallaElEnvio: (m) => m.kind === 'image',
+        respuesta: turno([catalogo(corte(FOTO)), propuesta]),
+      });
+      await sut.handle(escribe('ese'));
+      expect(textos(enviados)).toContain(
+        `Corte: ${PESOS.format(35000)} (45 min)`,
+      );
+      expect(enviados.map((m) => m.kind)).toEqual([
+        'text',
+        'text',
+        'interactive-buttons',
+      ]);
+    });
+
+    it('si falla la foto única fuera de la confirmación, el pie no se repite: la lista ya lo dice', async () => {
+      const { sut, enviados } = montar({
+        fallaElEnvio: (m) => m.kind === 'image',
+        respuesta: turno([catalogo(corte(FOTO))]),
+      });
+      await sut.handle(escribe('ese'));
+      expect(textos(enviados)).toEqual([
+        `Mira.\n\n1. Corte: ${PESOS.format(35000)} (45 min)`,
+      ]);
+    });
+
+    it('si falla el carrusel, la lista ya salió y los botones salen igual', async () => {
+      const otro = {
+        ...corte(FOTO),
+        id: 'aaaaaaaa-aaaa-4aaa-8aaa-000000000002',
+      };
+      const { sut, enviados } = montar({
+        fallaElEnvio: (m) => m.kind === 'carousel',
+        respuesta: turno([catalogo(corte(FOTO), otro), propuesta]),
+      });
+      await sut.handle(escribe('ese'));
+      expect(enviados.map((m) => m.kind)).toEqual([
+        'text',
+        'interactive-buttons',
+      ]);
+    });
+
+    it('pasa la foto por defecto: un servicio sin foto sale con la de respaldo', async () => {
+      const { sut, enviados } = montar({
+        imagenPorDefecto: RESPALDO,
+        respuesta: turno([catalogo(corte())]),
+      });
+      await sut.handle(escribe('corte'));
+      const foto = enviados.find((m) => m.kind === 'image');
+      expect(foto && foto.kind === 'image' && foto.imageUrl).toBe(RESPALDO);
+    });
   });
 });

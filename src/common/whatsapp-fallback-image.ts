@@ -35,6 +35,7 @@ export function imagenDeRespaldo(raw: string | undefined): {
     error:
       `WHATSAPP_FALLBACK_IMAGE_URL no sirve como cabecera de WhatsApp (${valor}): ` +
       'tiene que ser https y JPEG/PNG, o una imagen de Cloudinary. ' +
-      'El aviso «reserva creada» saldrá SIN imagen.',
+      'El aviso «reserva creada» saldrá SIN imagen y el catálogo del asistente ' +
+      'no tendrá foto por defecto.',
   };
 }

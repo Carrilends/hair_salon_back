@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { normalizeCoPhoneToE164 } from 'src/common/phone';
 import {
   WhatsAppMessage,
+  WhatsAppPairRateLimitError,
   WhatsAppSenderPort,
 } from 'src/notifications/domain/ports/whatsapp-sender.port';
 import { WHATSAPP_SENDER } from 'src/notifications/application/tokens';
@@ -40,6 +41,7 @@ import {
 } from './tokens';
 import { AssistantChatPort } from '../domain/ports/assistant-chat.port';
 import { avisoLegal, mensajesDeLaRespuesta } from './respuesta-del-asistente';
+import { pideConfirmacion } from 'src/assistant/application/tools/servicios-del-turno';
 import { PendingBookingActionsPort } from '../domain/ports/pending-booking-actions.port';
 
 export interface WhatsAppChannelConfig {
@@ -53,7 +55,15 @@ export interface WhatsAppChannelConfig {
    * ya validada). Sin ella, ese servicio va solo en la lista de texto.
    */
   imagenPorDefecto?: string;
+  /** Espera entre reintentos del envío; por defecto, `setTimeout`. Las pruebas la sustituyen. */
+  esperar?: (ms: number) => Promise<void>;
 }
+
+/**
+ * Meta reintenta a los 4^X s cuando rechaza por el límite entre dos números
+ * (131056); con tope de tres reintentos: 1, 4 y 16 s.
+ */
+const ESPERAS_REINTENTO_MS = [1000, 4000, 16000];
 
 /** Respuesta a lo que no es texto (plan 06, F2). */
 const SOLO_TEXTO =
@@ -358,6 +368,19 @@ export class HandleInboundMessageUseCase {
           `No se pudo enviar un mensaje (${m.kind}) del asistente a ${from}`,
           error as Error,
         );
+        // En un turno que pide confirmación no sale lista: el pie de la foto
+        // única es lo único que dice qué servicio es. Fuera de él, la lista ya
+        // lo dice y no se repite.
+        if (m.kind === 'image' && pideConfirmacion(r.presentaciones)) {
+          try {
+            await this.texto(from, m.caption);
+          } catch (e) {
+            this.logger.error(
+              `No se pudo enviar el pie de la foto a ${from}`,
+              e as Error,
+            );
+          }
+        }
       }
     }
   }
@@ -770,8 +793,29 @@ export class HandleInboundMessageUseCase {
     return this.enviar({ kind: 'text', to, body });
   }
 
+  /**
+   * Envía y, si Meta rechaza por el límite entre números (131056), reintenta
+   * tras 1, 4 y 16 s. La espera ocurre dentro de la cola del número, así que
+   * el orden se conserva. Cualquier otro error sale tal cual.
+   */
   private async enviar(mensaje: WhatsAppMessage): Promise<void> {
-    await this.sender.send(mensaje);
+    const esperar =
+      this.config.esperar ??
+      ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+    for (let intento = 0; ; intento++) {
+      try {
+        await this.sender.send(mensaje);
+        return;
+      } catch (error) {
+        if (
+          !(error instanceof WhatsAppPairRateLimitError) ||
+          intento >= ESPERAS_REINTENTO_MS.length
+        ) {
+          throw error;
+        }
+        await esperar(ESPERAS_REINTENTO_MS[intento]);
+      }
+    }
   }
 
   private fechaLarga(fecha: Date): string {

@@ -121,10 +121,14 @@ export function mensajesDeLaRespuesta(
   // Con un botón de confirmación pendiente no se lista nada: la lista
   // distraería del único paso que importa.
   const lista = confirma ? [] : servicios.map(lineaDeServicio);
-  const texto = [aFormatoWhatsApp(respuesta.reply), lista.join('\n')]
-    .filter(Boolean)
-    .join('\n\n');
-  const partes = partirTexto(texto);
+  const reply = aFormatoWhatsApp(respuesta.reply);
+  const junto = [reply, lista.join('\n')].filter(Boolean).join('\n\n');
+  // Si cabe, va en un mensaje. Si no, la respuesta se parte aparte y la lista
+  // por líneas: una línea de servicio no se reparte en dos mensajes.
+  const partes =
+    junto.length <= MAX_TEXTO
+      ? partirTexto(junto)
+      : [...partirTexto(reply), ...partirLineas(lista)];
   const botones = conBotones(respuesta.presentaciones)
     .map((p) => mensajeDeConfirmacion(p, to))
     .filter((m): m is WhatsAppMessage => m !== null);

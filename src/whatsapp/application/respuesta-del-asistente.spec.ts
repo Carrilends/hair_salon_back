@@ -125,7 +125,7 @@ describe('mensajesDeLaRespuesta', () => {
   });
 
   it('la foto sale en JPG y con nombre, precio y duración en el pie', () => {
-    const [, foto] = mensajesDeLaRespuesta(
+    const ms = mensajesDeLaRespuesta(
       {
         reply: 'Este es.',
         presentaciones: [
@@ -146,6 +146,8 @@ describe('mensajesDeLaRespuesta', () => {
       TO,
       null,
     );
+    const foto = ms[1];
+    expect(textos(ms)[0]).toContain('1. Corte');
     expect(foto.kind).toBe('image');
     if (foto.kind !== 'image') return;
     expect(foto.imageUrl).toContain('f_jpg,w_800,c_limit');
@@ -304,7 +306,7 @@ describe('mensajesDeLaRespuesta', () => {
     expect(ms.map((m) => m.kind)).toEqual(['text', 'interactive-buttons']);
   });
 
-  it('aviso, texto con la línea del servicio, foto y botones con un solo servicio', () => {
+  it('con confirmación y un servicio: aviso, texto sin la línea del servicio, foto y botones', () => {
     const ms = mensajesDeLaRespuesta(
       { reply: 'Te propongo.', presentaciones: [listaDe(1), reserva(PID_1)] },
       TO,
@@ -317,6 +319,31 @@ describe('mensajesDeLaRespuesta', () => {
       'interactive-buttons',
     ]);
     expect(textos(ms)).toEqual(['AVISO', 'Te propongo.']);
+  });
+
+  it('con respuesta y lista que juntas pasan el tope, ninguna línea se parte y nada se pierde', () => {
+    const reply = 'palabra '.repeat(510).trim(); // 4079 caracteres
+    const largo = mensajesDeLaRespuesta(
+      { reply, presentaciones: [listaDe(3, () => false)] },
+      TO,
+      null,
+    );
+    const cuerpos = textos(largo);
+    expect(cuerpos.length).toBeGreaterThan(1);
+    expect(cuerpos.every((c) => c.length <= 4096)).toBe(true);
+    // nada se pierde: la respuesta entera y las tres líneas, cada una completa
+    expect(
+      cuerpos
+        .join(' ')
+        .split(/\s+/)
+        .filter((w) => w === 'palabra'),
+    ).toHaveLength(510);
+    const lineas = cuerpos.join('\n').split('\n');
+    for (const n of [1, 2, 3]) {
+      const linea = lineas.filter((l) => l.startsWith(`${n}. Servicio`));
+      expect(linea).toHaveLength(1);
+      expect(linea[0]).toMatch(/\(30 min\)$/);
+    }
   });
 
   it('el botón de cada tarjeta lleva SERVICE y el id', () => {

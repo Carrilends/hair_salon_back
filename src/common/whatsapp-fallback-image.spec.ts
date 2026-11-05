@@ -35,5 +35,6 @@ describe('imagenDeRespaldo', () => {
     const r = imagenDeRespaldo(url);
     expect(r.url).toBeUndefined();
     expect(r.error).toMatch(/WHATSAPP_FALLBACK_IMAGE_URL/);
+    expect(r.error).toMatch(/catálogo del asistente/);
   });
 });
