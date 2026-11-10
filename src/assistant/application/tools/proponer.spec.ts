@@ -105,7 +105,7 @@ describe('crearReserva / reservarPaquete en WhatsApp: proponen, no reservan', ()
     );
 
     expect(guardadas[0].scheduledAt).toEqual(new Date('2026-10-23T13:00:00Z'));
-    expect(r).toMatchObject({ resumen: { hora: '08:00' } });
+    expect(r).toMatchObject({ resumen: { hora: '8:00 a. m.' } });
   });
 
   it('una propuesta nueva anula las anteriores del mismo número (revisión de F4)', async () => {
@@ -358,7 +358,7 @@ describe('reprogramarReserva en WhatsApp: propone el botón de mover', () => {
 
     expect(tool.presentar(r)).toMatchObject({
       cuandoLocal: '2026-10-20T15:30',
-      hora: '15:30',
+      hora: '3:30 p. m.',
     });
   });
 

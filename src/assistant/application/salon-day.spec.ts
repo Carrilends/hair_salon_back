@@ -9,7 +9,7 @@ describe('fechaYHoraEnPalabras', () => {
     expect(fecha).toContain('octubre');
     expect(fecha).toContain('2026');
     expect(fecha).toContain('2');
-    expect(hora).toBe('15:00');
+    expect(hora).toBe('3:00 p. m.');
   });
 
   it('usa la zona del salón, no la del servidor', () => {
@@ -19,7 +19,17 @@ describe('fechaYHoraEnPalabras', () => {
     const { fecha, hora } = fechaYHoraEnPalabras('2026-10-03T02:00:00.000Z');
 
     expect(fecha).toContain('viernes');
-    expect(hora).toBe('21:00');
+    expect(hora).toBe('9:00 p. m.');
+  });
+
+  it('dice la hora en 12 horas, como se usa en Colombia (prueba con móvil 2026-11-10)', () => {
+    // 13:00Z = 08:00 en Bogotá; 17:00Z = mediodía.
+    expect(fechaYHoraEnPalabras('2026-11-13T13:00:00.000Z').hora).toBe(
+      '8:00 a. m.',
+    );
+    expect(fechaYHoraEnPalabras('2026-11-13T17:00:00.000Z').hora).toBe(
+      '12:00 p. m.',
+    );
   });
 
   it('una fecha ilegible no revienta: devuelve cadenas vacías', () => {

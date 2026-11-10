@@ -1,4 +1,8 @@
-import { getDatePartsInTz, salonLocalToUtcIso } from './salon-time';
+import {
+  getDatePartsInTz,
+  horaEnDoceHoras,
+  salonLocalToUtcIso,
+} from './salon-time';
 
 const TZ = 'America/Bogota'; // UTC-5 todo el año
 
@@ -65,5 +69,24 @@ describe('salonLocalToUtcIso', () => {
     ['basura', 'ayer', 'tarde'],
   ])('devuelve null ante %s', (_caso, fecha, hora) => {
     expect(salonLocalToUtcIso(fecha, hora, TZ)).toBeNull();
+  });
+});
+
+describe('horaEnDoceHoras', () => {
+  // En Colombia las citas se dicen en 12 horas (prueba con móvil del
+  // 2026-11-10: el resumen decía «08:00»). Sin cero delante y con el sufijo
+  // «a. m.» / «p. m.»; el mediodía es «12:00 p. m.» y la medianoche
+  // «12:00 a. m.» (la función es total aunque el salón no abra a esas horas).
+  it.each([
+    [0, 0, '12:00 a. m.'],
+    [0, 30, '12:30 a. m.'],
+    [8, 0, '8:00 a. m.'],
+    [10, 5, '10:05 a. m.'],
+    [11, 59, '11:59 a. m.'],
+    [12, 0, '12:00 p. m.'],
+    [15, 30, '3:30 p. m.'],
+    [23, 0, '11:00 p. m.'],
+  ])('%i:%i se dice %s', (h, m, esperado) => {
+    expect(horaEnDoceHoras(h, m)).toBe(esperado);
   });
 });

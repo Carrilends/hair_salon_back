@@ -59,7 +59,7 @@ describe('misReservas por WhatsApp', () => {
         id: RID,
         // Hora del salón, no UTC (hallazgo de la prueba de humo de F5).
         fecha: 'martes, 20 de octubre de 2026',
-        hora: '10:00',
+        hora: '10:00 a. m.',
         estado: 'pendiente',
         servicios: ['Corte'],
         minutos: 30,
@@ -148,7 +148,9 @@ describe('verAgenda · presentar', () => {
     if (p?.tipo !== 'agenda') throw new Error('no es agenda');
     const deCita = p.lineas.filter((l) => l.includes(' · '));
     expect(deCita).toHaveLength(15);
-    expect(deCita[0]).toBe('08:00 · Clienta a · Corte, Tinte · con Monica');
+    expect(deCita[0]).toBe(
+      '8:00 a. m. · Clienta a · Corte, Tinte · con Monica',
+    );
     expect(p.hayMas).toBe(true);
     expect(p.lineas[p.lineas.length - 1]).toBe(
       'Hay más citas: pídeme un día concreto.',

@@ -99,7 +99,46 @@ describe('cancelarReserva · cita pedida', () => {
     },
   );
 
-  it.each(['9h', '25:00', '09:60', '9:5', 'nueve', '009:00'])(
+  // misReservas y verAgenda dicen la hora en 12 horas («9:00 a. m.»): si el
+  // modelo la copia tal cual en horaDeLaCita, la guardia la entiende igual.
+  it.each(['9:00 a. m.', '9:00 a.m.', '9 am', '9:00 AM'])(
+    'acepta la hora en 12 horas (%s) y la entiende como 09:00',
+    async (hora) => {
+      const { llamadas, tool } = montar();
+      const res = await tool.execute(
+        { reservaId: 'r1', fechaDeLaCita: '2026-11-08', horaDeLaCita: hora },
+        ctx,
+      );
+      expect(res).toEqual({ ok: true, estado: 'cancelada' });
+      expect(llamadas).toEqual(['r1']);
+    },
+  );
+
+  it('«9:00 p. m.» no es la cita de las 09:00', async () => {
+    const { llamadas, tool } = montar();
+    expect(
+      await tool.execute(
+        {
+          reservaId: 'r1',
+          fechaDeLaCita: '2026-11-08',
+          horaDeLaCita: '9:00 p. m.',
+        },
+        ctx,
+      ),
+    ).toMatchObject({ ok: false, motivo: 'no_coincide_con_lo_pedido' });
+    expect(llamadas).toEqual([]);
+  });
+
+  it.each([
+    '9h',
+    '25:00',
+    '13:00 p. m.',
+    '0:00 a. m.',
+    '09:60',
+    '9:5',
+    'nueve',
+    '009:00',
+  ])(
     'una hora que no se entiende (%s) es un argumento inválido',
     async (hora) => {
       const { llamadas, tool } = montar();
@@ -356,8 +395,38 @@ describe('cerca de la medianoche UTC', () => {
       hora: string;
     }>;
     expect(delDia.map((r) => r.id)).toEqual(['r-tarde']);
-    expect(delDia[0].hora).toBe('19:30');
+    expect(delDia[0].hora).toBe('7:30 p. m.');
     expect(await mis().execute({ fecha: '2026-11-09' }, ctx)).toEqual([]);
+  });
+
+  it('la hora que dice misReservas, copiada tal cual, la reconoce la guardia', async () => {
+    const [cita] = (await mis().execute(
+      { fecha: '2026-11-08' },
+      ctx,
+    )) as Array<{
+      hora: string;
+    }>;
+    const escritas: string[] = [];
+    const tool = new CancelReservationTool(
+      {
+        execute: async (id: string) => {
+          escritas.push(id);
+          return { status: 'cancelada', scheduledAt: tarde.scheduledAt };
+        },
+      },
+      async (id) => (id === 'r-tarde' ? tarde : null),
+    );
+    expect(
+      await tool.execute(
+        {
+          reservaId: 'r-tarde',
+          fechaDeLaCita: '2026-11-08',
+          horaDeLaCita: cita.hora,
+        },
+        ctx,
+      ),
+    ).toMatchObject({ ok: true });
+    expect(escritas).toEqual(['r-tarde']);
   });
 
   it('la guardia la reconoce por su día y su hora del salón', async () => {
@@ -616,7 +685,7 @@ describe('cancelarReserva · confirmación escrita por el sistema', () => {
     );
     if (p?.tipo !== 'texto') throw new Error('no es texto');
     expect(p.lineas).toEqual([
-      'Cancelé tu cita del domingo, 8 de noviembre de 2026 a las 09:00.',
+      'Cancelé tu cita del domingo, 8 de noviembre de 2026 a las 9:00 a. m.',
     ]);
     expect(p.clase).toBe('escritura');
   });

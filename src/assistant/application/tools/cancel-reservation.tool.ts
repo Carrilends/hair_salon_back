@@ -16,6 +16,7 @@ import {
   LectorDeCita,
 } from './cita-pedida';
 import { AssistantPresentation } from './assistant-presentation';
+import { conPuntoFinal } from 'src/common/con-punto-final';
 import { fechaYHoraEnPalabras } from '../salon-day';
 
 /** Inicio de la cita cancelada, por objeto-respuesta: no viaja al modelo. */
@@ -87,7 +88,7 @@ export class CancelReservationTool implements AssistantTool {
     const linea = inicio
       ? (() => {
           const { fecha, hora } = fechaYHoraEnPalabras(inicio.toISOString());
-          return `Cancelé tu cita del ${fecha} a las ${hora}.`;
+          return conPuntoFinal(`Cancelé tu cita del ${fecha} a las ${hora}`);
         })()
       : 'Tu cita quedó cancelada.';
     return {

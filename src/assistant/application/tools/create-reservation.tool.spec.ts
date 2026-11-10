@@ -154,7 +154,7 @@ describe('CreateReservationTool con verificación previa (plan 04, T5)', () => {
     )) as { pregunta: string; instruccion: string };
 
     expect(res.pregunta).toContain('Corte de dama');
-    expect(res.pregunta).toContain('15:00');
+    expect(res.pregunta).toContain('3:00 p. m.');
     expect(res.pregunta).toContain('viernes');
     expect(res.pregunta).toMatch(/\?$/);
   });
@@ -264,7 +264,7 @@ describe('CreateReservationTool con verificación previa (plan 04, T5)', () => {
 
     expect(juez.peticiones[0].state).toMatchObject({
       services: ['Corte de dama'],
-      time: '15:00',
+      time: '3:00 p. m.',
     });
     expect(String(juez.peticiones[0].state.date)).toContain('viernes');
   });

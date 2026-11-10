@@ -67,7 +67,7 @@ describe('MyReservationsTool', () => {
     expect(res[0]).toEqual({
       id: 'r0',
       fecha: 'jueves, 20 de agosto de 2026',
-      hora: '09:00',
+      hora: '9:00 a. m.',
       estado: 'pendiente',
       servicios: ['Corte', 'Peinado'],
       minutos: 60,
@@ -89,7 +89,7 @@ describe('MyReservationsTool', () => {
       } as AssistantContext)) as Array<Record<string, unknown>>;
 
       expect(res[0]).toMatchObject({
-        hora: '11:00',
+        hora: '11:00 a. m.',
         fecha: 'viernes, 6 de noviembre de 2026',
       });
       expect(res[0]).not.toHaveProperty('cuando');
@@ -157,7 +157,7 @@ describe('MyReservationsTool · presentar (TC-RF54-01)', () => {
     const citas = p.lineas.filter((l) => l.includes(' · '));
     expect(citas).toHaveLength(10);
     expect(citas[0]).toBe(
-      '1. martes, 1 de septiembre de 2026 · 10:00 · Corte, Peinado · con Monica',
+      '1. martes, 1 de septiembre de 2026 · 10:00 a. m. · Corte, Peinado · con Monica',
     );
     expect(p.lineas[p.lineas.length - 1]).toBe(
       'Tienes 2 reservas más; puedes verlas todas en «Mis reservas» del portal.',

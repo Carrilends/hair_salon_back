@@ -365,6 +365,9 @@ describe('HandleInboundMessage · reprogramar', () => {
     // servidor, la cita saldría cinco horas corrida.
     expect(mover?.args[1]).toBe('2026-09-12T20:30:00.000Z');
     expect(comoTexto(enviados[0]).body).toContain('3:30 p. m.');
+    // La hora ya termina en «p. m.»: sin un segundo punto (móvil, 2026-11-10).
+    expect(comoTexto(enviados[0]).body).toMatch(/a las 3:30 p\. m\.$/);
+    expect(comoTexto(enviados[0]).body).not.toMatch(/m\.\./);
   });
 
   it('si la franja se ocupó entre medias, lo dice y vuelve a ofrecer el día', async () => {

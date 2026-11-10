@@ -95,6 +95,9 @@ describe('HandleInboundMessage · botones de la propuesta', () => {
 
     expect(llamadas).toEqual([['confirm', PID, CLIENTA]]);
     expect(texto(enviados[0])).toMatch(/^¡Listo! Tu reserva quedó registrada/);
+    // 15:00Z = 10:00 a. m. en Bogotá: la frase no cierra con «a. m..».
+    expect(texto(enviados[0])).toMatch(/10:00 a\.\s?m\. Ahora te llega/);
+    expect(texto(enviados[0])).not.toMatch(/m\.\./);
   });
 
   it.each([

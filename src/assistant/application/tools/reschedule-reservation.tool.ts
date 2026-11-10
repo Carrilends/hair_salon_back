@@ -13,6 +13,7 @@ import {
 } from 'src/reservations/domain/errors';
 import { ReservationActor } from 'src/reservations/domain/reservation-actor';
 import { actorDelContexto } from './identidad';
+import { conPuntoFinal } from 'src/common/con-punto-final';
 import { fechaYHoraEnPalabras, instanteDelSalon } from '../salon-day';
 import {
   ARGUMENTOS_DE_LA_CITA,
@@ -125,9 +126,9 @@ export class RescheduleReservationTool implements AssistantTool {
     if (r.estilistaCambio !== true) {
       return {
         tipo: 'texto',
-        lineas: [`${quedo}.`],
+        lineas: [conPuntoFinal(quedo)],
         clase: 'escritura',
-        enElHistorial: `${quedo}.`,
+        enElHistorial: conPuntoFinal(quedo),
       };
     }
     let nombre: string | null = null;

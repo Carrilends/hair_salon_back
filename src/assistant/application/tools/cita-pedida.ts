@@ -1,7 +1,11 @@
 import { Reservation } from 'src/reservations/domain/reservation';
 import { ReservationActor } from 'src/reservations/domain/reservation-actor';
 import { canActOn } from 'src/reservations/domain/reservation-authorization';
-import { fechaYHoraEnPalabras, fechaDelSalon } from '../salon-day';
+import {
+  fechaYHoraEnPalabras,
+  fechaDelSalon,
+  horaDelSalon,
+} from '../salon-day';
 
 /** Lee la cita por id (`GetReservationUseCase`, que no autoriza nada). */
 export type LectorDeCita = (id: string) => Promise<Reservation | null>;
@@ -29,6 +33,27 @@ const FECHA = /^\d{4}-\d{2}-\d{2}$/;
 // «09:00», «9:00» o «9»: el modelo suele escribir la hora como la dijo la
 // clienta, y rechazar «9:00» solo le costaría otra vuelta.
 const HORA = /^(\d{1,2})(?::(\d{2}))?$/;
+// «9:00 a. m.», «9 am», «7:30 PM»: misReservas y verAgenda dicen la hora en 12
+// horas, y el modelo puede copiarla tal cual (2026-11-10).
+const HORA_12 = /^(\d{1,2})(?::(\d{2}))?\s*([ap])\.?\s*m\.?$/i;
+
+/** `[hora, minuto]` de 24 h, o `null` si no se entiende. */
+function horaYMinuto(texto: string): [number, number] | null {
+  const doce = HORA_12.exec(texto.replace(/\u00a0/g, ' '));
+  if (doce) {
+    const h12 = Number(doce[1]);
+    const min = doce[2] === undefined ? 0 : Number(doce[2]);
+    if (h12 < 1 || h12 > 12 || min > 59) return null;
+    const tarde = doce[3].toLowerCase() === 'p';
+    return [(h12 % 12) + (tarde ? 12 : 0), min];
+  }
+  const m = HORA.exec(texto);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = m[2] === undefined ? 0 : Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return [h, min];
+}
 
 /**
  * Lee `fechaDeLaCita` y `horaDeLaCita` de los argumentos. `null` si faltan o no
@@ -42,11 +67,9 @@ export function leerCitaPedida(
   const hora = args.horaDeLaCita;
   if (typeof fecha !== 'string' || !FECHA.test(fecha)) return null;
   if (typeof hora !== 'string') return null;
-  const m = HORA.exec(hora.trim());
-  if (!m) return null;
-  const h = Number(m[1]);
-  const min = m[2] === undefined ? 0 : Number(m[2]);
-  if (h > 23 || min > 59) return null;
+  const leida = horaYMinuto(hora.trim());
+  if (!leida) return null;
+  const [h, min] = leida;
   const dos = (n: number) => String(n).padStart(2, '0');
   return { fecha, hora: `${dos(h)}:${dos(min)}` };
 }
@@ -58,7 +81,7 @@ export function esLaCitaPedida(
 ): boolean {
   return (
     fechaDelSalon(cita.scheduledAt) === pedida.fecha &&
-    fechaYHoraEnPalabras(cita.scheduledAt.toISOString()).hora === pedida.hora
+    horaDelSalon(cita.scheduledAt) === pedida.hora
   );
 }
 
@@ -162,11 +185,15 @@ export async function comprobarCitaPedida(
 
   rechazadasEnElTurno?.add(claveDeLaCita(id));
   if (cita.id) rechazadasEnElTurno?.add(claveDeLaCita(cita.id));
-  const { fecha, hora } = fechaYHoraEnPalabras(cita.scheduledAt.toISOString());
+  const { fecha } = fechaYHoraEnPalabras(cita.scheduledAt.toISOString());
   return {
     ok: false,
     motivo: 'no_coincide_con_lo_pedido',
-    laCitaConEseId: { fecha, hora },
+    // La hora va en `HH:mm` de 24 horas, no en 12 como el resto de horas que
+    // ve el modelo (2026-11-10): es el valor que el modelo vuelve a escribir
+    // en `horaDeLaCita` si la clienta dice que es esa, y la superficie MCP la
+    // fija así en `mcp-published-tools.spec.ts`, que esta corrección no toca.
+    laCitaConEseId: { fecha, hora: horaDelSalon(cita.scheduledAt) },
     queHacer:
       accion === 'cancelar'
         ? 'No se canceló nada. Pregúntale a la clienta cuál de sus citas quiere cancelar (por ejemplo, si es esta); no la canceles en este turno.'

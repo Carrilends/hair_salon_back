@@ -1,3 +1,5 @@
+import { horaEnDoceHoras } from 'src/reservations/salon-time';
+
 /** Rejilla de propuesta: se ofrecen horas en punto y medias. */
 export const SLOT_GRID_MINUTES = 30;
 
@@ -57,13 +59,12 @@ function formatHHmm(min: number): string {
 }
 
 /**
- * Cómo se lee una hora de 24 h en el mensaje. Se escribe a mano y no con
+ * Cómo se lee una hora de 24 h (`HH:mm`, la del botón) en el mensaje. No usa
  * `Intl` porque aquí solo hay minutos desde medianoche, sin fecha ni zona: la
- * conversión a instante real la hace quien construye el ISO.
+ * conversión a instante real la hace quien construye el ISO. El formato es el
+ * de `horaEnDoceHoras`, el mismo que el del asistente.
  */
 export function formatHumanTime(hhmm: string): string {
   const [h, m] = hhmm.split(':').map(Number);
-  const sufijo = h < 12 ? 'a. m.' : 'p. m.';
-  const hora12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hora12}:${String(m).padStart(2, '0')} ${sufijo}`;
+  return horaEnDoceHoras(h, m);
 }

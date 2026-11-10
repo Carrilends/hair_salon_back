@@ -31,6 +31,7 @@ import {
   ReservationActionsPort,
   ReservationSummary,
 } from '../domain/ports/reservation-actions.port';
+import { conPuntoFinal } from 'src/common/con-punto-final';
 import { formatHumanTime } from './slot-options';
 import {
   RESERVATION_ACTIONS,
@@ -312,7 +313,7 @@ export class HandleInboundMessageUseCase {
     if (r.ok === true) {
       await this.texto(
         from,
-        `¡Listo! Tu reserva quedó registrada para el ${this.fechaLarga(r.scheduledAt)}. ` +
+        `${conPuntoFinal(`¡Listo! Tu reserva quedó registrada para el ${this.fechaLarga(r.scheduledAt)}`)} ` +
           'Ahora te llega el aviso, con botones para cambiarla o cancelarla.',
       );
       return;
@@ -700,7 +701,9 @@ export class HandleInboundMessageUseCase {
       await this.reservas.reschedule(id, iso, actor);
       await this.texto(
         from,
-        `Listo, tu cita quedó para el ${this.diaCorto(dateYmd)} a las ${formatHumanTime(hhmm)}.`,
+        conPuntoFinal(
+          `Listo, tu cita quedó para el ${this.diaCorto(dateYmd)} a las ${formatHumanTime(hhmm)}`,
+        ),
       );
     } catch (error) {
       // El caso más probable —y el único que ella puede resolver sola— es que la

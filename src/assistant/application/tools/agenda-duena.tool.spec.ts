@@ -71,7 +71,7 @@ describe('verAgenda', () => {
         // En la hora del salón, no en UTC: el modelo lee literalmente, y con
         // el ISO le decía a la dueña «15:00» por una cita de las 10:00 (F5).
         fecha: 'miércoles, 14 de octubre de 2026',
-        hora: '10:00',
+        hora: '10:00 a. m.',
         estado: 'pendiente',
         clienta: 'Ana',
         servicios: ['Corte'],
@@ -80,7 +80,7 @@ describe('verAgenda', () => {
       {
         id: 'r-2',
         fecha: 'jueves, 15 de octubre de 2026',
-        hora: '15:00',
+        hora: '3:00 p. m.',
         estado: 'confirmada',
         clienta: 'Cliente registrado',
         servicios: ['Corte'],

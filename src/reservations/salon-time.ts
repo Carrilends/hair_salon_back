@@ -175,3 +175,20 @@ export function salonLocalToUtcIso(
 
   return new Date(instante).toISOString();
 }
+
+/**
+ * La hora como se dice en Colombia para una cita: 12 horas, sin cero delante y
+ * con el sufijo «a. m.» / «p. m.» (`8:00 a. m.`, `3:30 p. m.`). El mediodía es
+ * `12:00 p. m.` y la medianoche `12:00 a. m.`: la función es total aunque el
+ * salón no abra a esas horas.
+ *
+ * Única regla del formato en la API: la usan los mensajes de los botones de
+ * WhatsApp (`formatHumanTime`) y el asistente (`fechaYHoraEnPalabras`), en
+ * todos sus canales. Prueba con móvil del 2026-11-10: el resumen de una
+ * propuesta decía «08:00».
+ */
+export function horaEnDoceHoras(hour: number, minute: number): string {
+  const sufijo = hour < 12 ? 'a. m.' : 'p. m.';
+  const hora12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${hora12}:${pad2(minute)} ${sufijo}`;
+}

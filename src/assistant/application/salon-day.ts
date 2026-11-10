@@ -1,5 +1,6 @@
 import {
   getDatePartsInTz,
+  horaEnDoceHoras,
   salonLocalToUtcIso,
 } from 'src/reservations/salon-time';
 
@@ -63,8 +64,20 @@ export function instanteDelSalon(iso: string): Date | null {
 }
 
 /**
+ * La hora del salón de un instante en `HH:mm` de 24 horas, para **comparar**
+ * (la guardia de la cita pedida). Para mostrarla está `fechaYHoraEnPalabras`.
+ */
+export function horaDelSalon(instante: Date): string {
+  const { hour, minute } = getDatePartsInTz(instante, zona());
+  const dosDigitos = (n: number) => String(n).padStart(2, '0');
+  return `${dosDigitos(hour)}:${dosDigitos(minute)}`;
+}
+
+/**
  * El día y la hora de una reserva **tal como se dirían en voz alta**, en la zona
- * del salón: `«viernes, 3 de octubre de 2026»` y `«15:00»`.
+ * del salón: `«viernes, 3 de octubre de 2026»` y `«3:00 p. m.»` (12 horas, como
+ * se dicen las citas en Colombia; `horaEnDoceHoras`). Es texto para leer: nada
+ * lo vuelve a interpretar como hora.
  *
  * Existe para el juicio de correspondencia (plan 04, T5): al proveedor se le
  * pide comparar lo que se va a reservar con lo que la clienta pidió, y la
@@ -90,6 +103,5 @@ export function fechaYHoraEnPalabras(iso: string): {
     year: 'numeric',
   }).format(instante);
   const { hour, minute } = getDatePartsInTz(instante, tz);
-  const dosDigitos = (n: number) => String(n).padStart(2, '0');
-  return { fecha, hora: `${dosDigitos(hour)}:${dosDigitos(minute)}` };
+  return { fecha, hora: horaEnDoceHoras(hour, minute) };
 }

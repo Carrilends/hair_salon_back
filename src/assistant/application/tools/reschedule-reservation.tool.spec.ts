@@ -255,7 +255,8 @@ describe('mapRescheduleErrorToReason', () => {
 
 describe('RescheduleReservationTool · confirmación escrita por el sistema (TC-RF54-01)', () => {
   // 16:00Z = martes 21 de abril, 11:00 en Bogotá.
-  const QUEDO = 'Tu cita quedó el martes, 21 de abril de 2026 a las 11:00';
+  const QUEDO =
+    'Tu cita quedó el martes, 21 de abril de 2026 a las 11:00 a. m.';
   const args = { reservaId: 'r1', nuevaFecha: '2026-04-21T16:00:00.000Z' };
   const montar = (workerChanged: boolean) => {
     const uc = {
@@ -289,7 +290,8 @@ describe('RescheduleReservationTool · confirmación escrita por el sistema (TC-
     const tool = montar(false);
     const p = await tool.presentar(await tool.execute(args, ctx('u1')));
     if (p?.tipo !== 'texto') throw new Error('no es texto');
-    expect(p.lineas).toEqual([`${QUEDO}.`]);
+    // La hora ya termina en «a. m.»: sin un segundo punto.
+    expect(p.lineas).toEqual([QUEDO]);
     expect(p.lineas.join(' ')).not.toMatch(/estilista/);
   });
 
@@ -308,7 +310,7 @@ describe('RescheduleReservationTool · confirmación escrita por el sistema (TC-
     const p = await tool.presentar(await tool.execute(args, ctx('u1')));
     if (p?.tipo !== 'texto') throw new Error('no es texto');
     expect(p.lineas).toEqual([
-      'Tu cita quedó el martes, 21 de abril de 2026 a las 12:30.',
+      'Tu cita quedó el martes, 21 de abril de 2026 a las 12:30 p. m.',
     ]);
   });
 
