@@ -217,7 +217,9 @@ describe('prompts de WhatsApp', () => {
     expect(SYSTEM_PROMPT_WHATSAPP_DUENA).toMatch(/no creas reservas/i);
   });
 
-  it('el de la web no cambió (la caché del proveedor depende de ello)', () => {
+  // El prompt de la web cambió a propósito con M-325 a M-327 (datos del salón
+  // y regla de no inventar); esta regla suya no tenía que moverse con ello.
+  it('el de la web conserva su regla de iniciar sesión', () => {
     expect(SYSTEM_PROMPT).toContain(
       'Para reservar o cancelar hace falta iniciar sesión; si no la hay, invita a hacerlo.',
     );

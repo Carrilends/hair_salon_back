@@ -1,8 +1,9 @@
+import { SALON_ADDRESS } from 'src/common/salon';
+
 /** Rosa de la identidad visual (`hari_salon_front/src/css/quasar.variables.scss`). */
 export const BRAND_PINK = '#f8bbd0';
 /** Wordmark tipográfico: no hay logotipo (decisión C4 del plan de correo). */
 export const SALON_NAME = 'Peluquería Marlene';
-const SALON_ADDRESS = 'Carrera 3 #1-18, Sopó, Cundinamarca';
 
 /** Pila tipográfica del sistema: los clientes de correo no cargan fuentes remotas. */
 const FONT =
