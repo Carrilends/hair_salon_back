@@ -19,6 +19,7 @@ import { PendingBookingRepositoryPort } from '../../domain/ports/pending-booking
 import { PENDING_BOOKING_TTL_MINUTES } from '../../domain/pending-booking';
 import { getDatePartsInTz } from 'src/reservations/salon-time';
 import { CitaPedida, esLaCitaPedida, leerCitaPedida } from './cita-pedida';
+import { esUnaHoraNoDicha, HORA_NO_DICHA } from './hora-dicha';
 
 /**
  * Las herramientas de WhatsApp que **proponen** en vez de escribir (plan 06,
@@ -135,6 +136,11 @@ export class ProposeBookingTool implements AssistantTool {
     const inicio = instanteDelSalon(dto.fechaHoraIso);
     if (!inicio) return { ok: false, motivo: 'argumentos_invalidos' };
     dto.fechaHoraIso = inicio.toISOString();
+
+    // Prueba con móvil del 2026-11-10: «el viernes 10» acabó en una propuesta
+    // a las 8:00. Si ella escribió alguna hora y esta no es ninguna de ellas,
+    // no se guarda ni se anula nada: se le pregunta la hora.
+    if (esUnaHoraNoDicha(inicio, context.recientes)) return HORA_NO_DICHA;
 
     // Servicios que no existen se rechazan ya: el resumen que verá la clienta
     // tiene que nombrar lo que de verdad se va a reservar.

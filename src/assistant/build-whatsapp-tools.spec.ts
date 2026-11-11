@@ -191,3 +191,70 @@ describe('buildWhatsAppTools · catálogo acotado', () => {
     );
   });
 });
+
+describe('buildWhatsAppTools: la hora que ella no dijo (prueba con móvil 2026-11-10)', () => {
+  it.each(['crearReserva', 'reservarPaquete'])(
+    '%s no guarda una propuesta a una hora distinta de la escrita',
+    async (nombre) => {
+      const base = buildAssistantTools(
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
+      );
+      const guardadas: unknown[] = [];
+      const S1 = '11111111-1111-4111-8111-111111111111';
+      const juegos = buildWhatsAppTools(
+        base,
+        {} as never,
+        { execute: async () => [] } as never,
+        {} as never,
+        {} as never,
+        {
+          save: async (b: object) => {
+            guardadas.push(b);
+            return { ...b, id: 'p-1' };
+          },
+          supersedeActiveFor: async () => undefined,
+        } as never,
+        { findNamesByIds: async () => new Map([[S1, 'Taper fade']]) } as never,
+        {} as never,
+        { avisar: async () => 'enviado' } as never,
+      );
+      const tool = juegos.clienta.find((t) => t.name === nombre)!;
+      const contexto = {
+        userId: null,
+        isAdmin: false,
+        now: new Date('2026-11-10T23:00:00Z'),
+        canal: 'whatsapp' as const,
+        phoneE164: '573001112233',
+        canalConversacional: true,
+        recientes: [
+          {
+            rol: 'clienta' as const,
+            texto:
+              'quiero reservar el Taper Fade el viernes 10 a nombre de Luisa',
+          },
+        ],
+      };
+      const args = (hhmm: string) => ({
+        fechaHoraIso: `2026-11-13T${hhmm}:00`,
+        serviciosIds: [S1],
+        nombre: 'Luisa',
+      });
+
+      expect(await tool.execute(args('08:00'), contexto)).toMatchObject({
+        ok: false,
+        motivo: 'hora_no_dicha',
+      });
+      expect(guardadas).toEqual([]);
+
+      expect(await tool.execute(args('10:00'), contexto)).toMatchObject({
+        ok: true,
+      });
+      expect(guardadas).toHaveLength(1);
+    },
+  );
+});
