@@ -13,9 +13,15 @@ export class PendingBookingActionsAdapter implements PendingBookingActionsPort {
 
   async confirm(id: string, phoneE164: string) {
     const r = await this.useCase.confirm(id, phoneE164);
-    return r.ok === true
-      ? { ok: true as const, scheduledAt: r.scheduledAt }
-      : { ok: false as const, motivo: r.motivo };
+    if (r.ok === true) return { ok: true as const, scheduledAt: r.scheduledAt };
+    // La hora viaja con el motivo cuando el caso de uso la da (la propuesta era
+    // de este número y la agenda la rechazó): sin ella el canal no puede decir
+    // el horario de ese día (caso de aceptación tras `afd06bb`).
+    return {
+      ok: false as const,
+      motivo: r.motivo,
+      ...(r.scheduledAt ? { scheduledAt: r.scheduledAt } : {}),
+    };
   }
 
   discard(id: string, phoneE164: string) {
