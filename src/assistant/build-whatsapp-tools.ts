@@ -16,6 +16,7 @@ import { MyReservationsTool } from './application/tools/my-reservations.tool';
 import { ViewAgendaTool } from './application/tools/view-agenda.tool';
 import { ConfirmReservationTool } from './application/tools/confirm-reservation.tool';
 import {
+  AgendaParaMover,
   AgendaParaProponer,
   ProposeBookingTool,
   ProposeCancelTool,
@@ -68,6 +69,7 @@ export function buildWhatsAppTools(
   >,
   getReservation: GetReservationUseCase,
   agenda: AgendaParaProponer,
+  agendaMover: AgendaParaMover,
   contacto: OwnerContactPort,
 ): WhatsAppToolSets {
   const de = (nombre: string): AssistantTool => {
@@ -109,6 +111,9 @@ export function buildWhatsAppTools(
     deps,
   );
   const citas = { citas: getReservation };
+  // 2026-11-10: la hora nueva se comprueba con las reglas de la reprogramación
+  // (`RescheduleReservationUseCase.comprobar`) antes de enseñar el botón.
+  const paraMover = { ...citas, agenda: agendaMover };
   // Cancelar y mover las comparten la clienta y la dueña: cada una vuelve a
   // consultar el día con su propia herramienta de lista.
   const reconsultar =
@@ -137,7 +142,7 @@ export function buildWhatsAppTools(
         reconsultar,
       ),
     }).definition,
-    citas,
+    paraMover,
   );
 
   // Las citas de ESE número: las activas y no vencidas, proyectadas a la misma

@@ -15,6 +15,8 @@ import {
   ConfirmReschedulePresentation,
 } from './assistant-presentation';
 import { actorDelContexto, nombreParaElModelo } from './identidad';
+import { mapRescheduleErrorToReason } from './reschedule-reservation.tool';
+import { ReservationActor } from 'src/reservations/domain/reservation-actor';
 import { Reservation } from 'src/reservations/domain/reservation';
 import { assertCanActOn } from 'src/reservations/domain/reservation-authorization';
 import { fechaYHoraEnPalabras, instanteDelSalon } from '../salon-day';
@@ -119,9 +121,27 @@ export interface AgendaParaProponer {
   }): Promise<void>;
 }
 
-/** Qué hacer con cada motivo de agenda: lo lee el modelo, no la clienta. */
-function instruccionDeAgenda(motivo: string): string {
-  const base = 'No se guardó nada y no hay botones que pulsar.';
+/**
+ * Las reglas de agenda de la reprogramación, sin mover
+ * (`RescheduleReservationUseCase.comprobar`), con la misma firma que su
+ * `execute`.
+ */
+export interface AgendaParaMover {
+  comprobar(
+    id: string,
+    scheduledAtIso: string,
+    actor: ReservationActor,
+  ): Promise<void>;
+}
+
+const NADA_GUARDADO = 'No se guardó nada y no hay botones que pulsar.';
+const NADA_MOVIDO = 'La cita no se movió y no hay botones que pulsar.';
+
+/**
+ * Qué hacer con cada motivo de agenda: lo lee el modelo, no la clienta.
+ * `base` dice qué NO pasó (no se guardó la propuesta, no se movió la cita).
+ */
+function instruccionDeAgenda(motivo: string, base: string): string {
   switch (motivo) {
     case 'fuera_de_horario':
       return `${base} Dile que a esa hora el salón está cerrado, con el horario de ese día (horarioDelDia), y ofrécele otra hora dentro de ese horario.`;
@@ -129,6 +149,16 @@ function instruccionDeAgenda(motivo: string): string {
       return `${base} Dile que esa hora ya pasó y pregúntale qué otra hora o día le sirve.`;
     case 'hora_ocupada':
       return `${base} Dile que esa hora ya está ocupada, consulta consultarDisponibilidad para ese día y ofrécele otra hora libre.`;
+    case 'estilista_ocupada':
+      return `${base} Dile que su estilista no tiene libre esa hora, consulta consultarDisponibilidad para ese día y ofrécele otra hora.`;
+    case 'fuera_de_plazo':
+      return `${base} Dile que esa cita ya no se puede cambiar desde aquí porque su hora ya pasó o está muy cerca.`;
+    case 'estado_no_movible':
+      return `${base} Dile que esa cita ya está cerrada (cumplida o cancelada) y no se puede mover.`;
+    case 'servicios_duplicados':
+      return `${base} Repetiste un servicio en serviciosIds: quita el repetido y vuelve a llamar con la misma hora; no se lo menciones a la clienta.`;
+    case 'no_disponible':
+      return `${base} Dile que esa hora no se puede agendar y ofrécele otra; no inventes la razón.`;
     default:
       return `${base} Dile que no pudiste prepararla y ofrécele otra hora.`;
   }
@@ -216,7 +246,7 @@ export class ProposeBookingTool implements AssistantTool {
         ...(motivo === 'fuera_de_horario'
           ? { horarioDelDia: horarioDelDia(inicio, zonaDelSalon()) }
           : {}),
-        instruccion: instruccionDeAgenda(motivo),
+        instruccion: instruccionDeAgenda(motivo, NADA_GUARDADO),
       };
     }
 
@@ -322,9 +352,11 @@ export class ProposeCancelTool implements AssistantTool {
 export class ProposeRescheduleTool implements AssistantTool {
   readonly name: string;
 
+  private readonly logger = new Logger(ProposeRescheduleTool.name);
+
   constructor(
     readonly definition: LlmToolDefinition,
-    private readonly deps: { citas: CitaPorId },
+    private readonly deps: { citas: CitaPorId; agenda: AgendaParaMover },
   ) {
     this.name = definition.name;
   }
@@ -351,6 +383,32 @@ export class ProposeRescheduleTool implements AssistantTool {
       context,
     );
     if ('motivo' in actual) return { ok: false, motivo: actual.motivo };
+
+    // 2026-11-10, como la propuesta de reservar: antes de enseñar el botón, la
+    // hora nueva pasa por las MISMAS reglas que la reprogramación —estado y
+    // plazo, horario, pasado, estilista libre—, con el caso de uso real. Si no
+    // cabe, no hay botón y la cita no se toca.
+    const actor = actorDelContexto(context);
+    if (!actor) return { ok: false, motivo: 'sesion_requerida' };
+    try {
+      await this.deps.agenda.comprobar(reservaId, nueva.toISOString(), actor);
+    } catch (error) {
+      const motivo = mapRescheduleErrorToReason(error);
+      if (motivo === 'error_desconocido') {
+        this.logger.error(
+          'No se pudo comprobar la hora nueva de una cita',
+          error as Error,
+        );
+      }
+      return {
+        ok: false,
+        motivo,
+        ...(motivo === 'fuera_de_horario'
+          ? { horarioDelDia: horarioDelDia(nueva, zonaDelSalon()) }
+          : {}),
+        instruccion: instruccionDeAgenda(motivo, NADA_MOVIDO),
+      };
+    }
 
     // El botón `RSAT` lleva la hora del salón (`YYYY-MM-DDTHH:mm`), como el
     // flujo de mover que ya existía: el manejador la vuelve a pasar a UTC.

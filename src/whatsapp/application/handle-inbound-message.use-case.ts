@@ -85,6 +85,9 @@ const SOLO_TEXTO =
 const BOTON_DESCONOCIDO =
   'Ese botón ya no está disponible. Escríbeme lo que necesitas y te ayudo.';
 
+/** Texto fijo de siempre para una hora en que el salón está cerrado. */
+const FUERA_DE_HORARIO = 'Esa hora queda fuera del horario del salón';
+
 /** El mismo tope que el DTO de la web: lo que no cabe allí tampoco se factura aquí. */
 const MAX_MENSAJE = 500;
 const MENSAJE_LARGO =
@@ -355,16 +358,21 @@ export class HandleInboundMessageUseCase {
   }): string {
     const otra = 'Dime otro día u hora y te propongo de nuevo.';
     if (r.motivo === 'fuera_de_horario') {
-      const fuera = 'Esa hora queda fuera del horario del salón';
-      if (!r.scheduledAt) return `${fuera}. ${otra}`;
-      const { abre, cierra } = horarioDelDia(
-        r.scheduledAt,
-        this.config.timeZone,
-      );
-      return `${fuera}: el ${this.diaLargo(r.scheduledAt)} abre de ${abre} a ${cierra} ${otra}`;
+      if (!r.scheduledAt) return `${FUERA_DE_HORARIO}. ${otra}`;
+      return this.fueraDeHorario(r.scheduledAt, otra);
     }
     if (r.motivo === 'fecha_pasada') return `Esa hora ya pasó. ${otra}`;
     return explicarPropuesta(r.motivo);
+  }
+
+  /**
+   * «Esa hora queda fuera del horario del salón: el sábado 17 de octubre abre
+   * de 9:00 a. m. a 7:00 p. m.» y lo que se le pide después. El horario sale
+   * de `getDayBounds` (festivos incluidos), nunca escrito a mano.
+   */
+  private fueraDeHorario(instante: Date, despues: string): string {
+    const { abre, cierra } = horarioDelDia(instante, this.config.timeZone);
+    return `${FUERA_DE_HORARIO}: el ${this.diaLargo(instante)} abre de ${abre} a ${cierra} ${despues}`;
   }
 
   /** «Cambiar»: la propuesta se gasta y se le pregunta qué quiere cambiar. */
@@ -840,6 +848,15 @@ export class HandleInboundMessageUseCase {
         await this.ofrecerHoras(id, from, actor.kind === 'admin', dateYmd, 0);
         return;
       }
+      // 2026-11-10, como «Confirmar» de una propuesta: cerrado a esa hora se
+      // dice con el horario de ESE día, tras el texto fijo de `explicar`.
+      if (error instanceof OutOfBusinessHoursError) {
+        await this.texto(
+          from,
+          this.fueraDeHorario(new Date(iso), 'Elige otra hora, por favor.'),
+        );
+        return;
+      }
       await this.texto(from, this.explicar(error));
     }
   }
@@ -913,7 +930,7 @@ export class HandleInboundMessageUseCase {
       return 'Esa hora acaba de ocuparse. Elige otra, por favor.';
     }
     if (error instanceof OutOfBusinessHoursError) {
-      return 'Esa hora queda fuera del horario del salón.';
+      return `${FUERA_DE_HORARIO}.`;
     }
     if (error instanceof ReservationInThePastError) {
       return 'Esa hora ya pasó. Elige otra, por favor.';

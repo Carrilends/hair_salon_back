@@ -63,6 +63,63 @@ export class RescheduleReservationUseCase {
     scheduledAt: string,
     actor: ReservationActor,
   ): Promise<RescheduleResult> {
+    const { reservation, byAdmin, previousScheduledAt, previousWorkerId } =
+      await this.preparar(id, scheduledAt, actor);
+
+    const saved = await this.repository.save(reservation);
+
+    // Se mide contra lo **guardado**, no contra lo que el reparto dijo que iba a
+    // hacer: lo que cuenta el día de la cita es quién quedó en la base. Y solo
+    // se avisa si de verdad cambió: el reparto ordena por carga y devolver la
+    // misma estilista es lo más probable con la agenda tranquila; repetir «sigue
+    // siendo la misma» en cada movimiento sería ruido, y el ruido se ignora.
+    const workerChanged = saved.workerId !== previousWorkerId;
+
+    try {
+      await this.notifier.reservationRescheduled(saved, {
+        byAdmin,
+        previousScheduledAt,
+        workerChanged,
+      });
+    } catch (error) {
+      // NF11: un canal caído no revierte una cita que ya está persistida.
+      this.logger.error(
+        `Reserva ${saved.id} reprogramada, pero falló la notificación`,
+        error as Error,
+      );
+    }
+
+    return { reservation: saved, workerChanged };
+  }
+
+  /**
+   * Las MISMAS reglas que `execute` —propiedad, estado y plazo, horario, pasado
+   * y estilista libre—, sin guardar ni avisar. Lanza los mismos errores.
+   *
+   * Existe para la propuesta de mover de WhatsApp (2026-11-10, como
+   * `CreateReservationUseCase.comprobar`): el botón `RSAT` no se enseña si la
+   * hora nueva fallaría. No reserva la franja: al pulsar, `execute` vuelve a
+   * decidirlo. Mueve en memoria el agregado que carga, nunca el persistido.
+   */
+  async comprobar(
+    id: string,
+    scheduledAt: string,
+    actor: ReservationActor,
+  ): Promise<void> {
+    await this.preparar(id, scheduledAt, actor);
+  }
+
+  /** Todo `execute` menos guardar y avisar: la cita ya movida, o un error. */
+  private async preparar(
+    id: string,
+    scheduledAt: string,
+    actor: ReservationActor,
+  ): Promise<{
+    reservation: Reservation;
+    byAdmin: boolean;
+    previousScheduledAt: Date;
+    previousWorkerId: string;
+  }> {
     const tz = process.env.SALON_TZ ?? 'America/Bogota';
     const minLeadMinutes = Number(
       process.env.RESCHEDULE_MIN_LEAD_MINUTES ?? '0',
@@ -125,29 +182,6 @@ export class RescheduleReservationUseCase {
       reservation.assignWorker(workerId);
     }
 
-    const saved = await this.repository.save(reservation);
-
-    // Se mide contra lo **guardado**, no contra lo que el reparto dijo que iba a
-    // hacer: lo que cuenta el día de la cita es quién quedó en la base. Y solo
-    // se avisa si de verdad cambió: el reparto ordena por carga y devolver la
-    // misma estilista es lo más probable con la agenda tranquila; repetir «sigue
-    // siendo la misma» en cada movimiento sería ruido, y el ruido se ignora.
-    const workerChanged = saved.workerId !== previousWorkerId;
-
-    try {
-      await this.notifier.reservationRescheduled(saved, {
-        byAdmin,
-        previousScheduledAt,
-        workerChanged,
-      });
-    } catch (error) {
-      // NF11: un canal caído no revierte una cita que ya está persistida.
-      this.logger.error(
-        `Reserva ${saved.id} reprogramada, pero falló la notificación`,
-        error as Error,
-      );
-    }
-
-    return { reservation: saved, workerChanged };
+    return { reservation, byAdmin, previousScheduledAt, previousWorkerId };
   }
 }

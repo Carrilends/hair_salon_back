@@ -15,6 +15,11 @@ import { Reservation } from 'src/reservations/domain/reservation';
 import { ReservationStatus } from 'src/reservations/domain/reservation-status';
 import { CreateReservationUseCase } from 'src/reservations/application/create-reservation.use-case';
 import { WorkerAssigner } from 'src/reservations/application/worker-assigner';
+import { RescheduleReservationUseCase } from 'src/reservations/application/reschedule-reservation.use-case';
+import {
+  DomainError,
+  DuplicateServicesError,
+} from 'src/reservations/domain/errors';
 
 /**
  * Plan 06, F4 (D4): en WhatsApp el modelo no escribe en la agenda. Propone, y
@@ -443,7 +448,7 @@ describe('si la lectura de la cita falla, no se pierde el turno (revisión final
   it('mover responde un motivo en vez de lanzar', async () => {
     const tool = new ProposeRescheduleTool(
       { ...DEF, name: 'reprogramarReserva' },
-      { citas: caida },
+      { citas: caida, agenda: { comprobar: async () => undefined } },
     );
     await expect(
       tool.execute(
@@ -457,7 +462,7 @@ describe('si la lectura de la cita falla, no se pierde el turno (revisión final
 describe('reprogramarReserva en WhatsApp: propone el botón de mover', () => {
   const tool = new ProposeRescheduleTool(
     { ...DEF, name: 'reprogramarReserva' },
-    { citas },
+    { citas, agenda: { comprobar: async () => undefined } },
   );
 
   it('pasa la hora nueva a la del salón y muestra también la cita actual', async () => {
@@ -564,4 +569,148 @@ describe('las herramientas que escriben se niegan en WhatsApp (segunda barrera)'
       });
     }
   });
+});
+
+/**
+ * Lo mismo que la propuesta de reservar, para mover (2026-11-10): antes de
+ * enseñar el botón `RSAT`, la hora nueva pasa por las MISMAS reglas que la
+ * reprogramación (`RescheduleReservationUseCase.comprobar`, aquí el real con
+ * dobles). Si no cabe, no hay botón ni se mueve nada.
+ */
+describe('reprogramarReserva en WhatsApp: valida la hora nueva antes de proponer', () => {
+  const SABADO = '2026-10-17'; // `ahora` es el miércoles 14 de octubre de 2026
+
+  function conAgendaReal(opts: { ocupada?: boolean } = {}) {
+    const guardadas: unknown[] = [];
+    const avisos: unknown[] = [];
+    const repositorio = {
+      findById: async () => cita(RID, NUMERO),
+      countOverlaps: async () => (opts.ocupada ? 1 : 0),
+      save: async (r: unknown) => {
+        guardadas.push(r);
+        return r;
+      },
+    };
+    const workers = {
+      getDefaultWorkerId: async () => 'default-w',
+      listAssignableWorkloads: async () => [{ id: 'w-1', usedMinutes: 0 }],
+    };
+    const agenda = new RescheduleReservationUseCase(
+      repositorio as never,
+      { now: () => ahora },
+      {
+        reservationRescheduled: async (...a: unknown[]) => void avisos.push(a),
+      } as never,
+      new WorkerAssigner(repositorio as never, workers as never),
+    );
+    const tool = new ProposeRescheduleTool(
+      { ...DEF, name: 'reprogramarReserva' },
+      { citas, agenda },
+    );
+    return { tool, guardadas, avisos };
+  }
+
+  const mover = (hhmm: string, dia = SABADO) => ({
+    reservaId: RID,
+    nuevaFecha: `${dia}T${hhmm}:00`,
+    ...LA_CITA,
+  });
+
+  it('sábado 8:00: fuera_de_horario con el horario de ese día, sin botón ni cambios', async () => {
+    const { tool, guardadas, avisos } = conAgendaReal();
+
+    const r = await tool.execute(mover('08:00'), clienta);
+
+    expect(r).toMatchObject({
+      ok: false,
+      motivo: 'fuera_de_horario',
+      horarioDelDia: { abre: '9:00 a. m.', cierra: '7:00 p. m.' },
+    });
+    expect((r as { instruccion: string }).instruccion).toMatch(/no se movió/i);
+    expect((r as { instruccion: string }).instruccion).toMatch(/otra hora/i);
+    expect(tool.presentar(r)).toBeNull();
+    expect(guardadas).toHaveLength(0);
+    expect(avisos).toHaveLength(0);
+  });
+
+  it('sábado 9:00: se propone con su botón, sin mover nada todavía', async () => {
+    const { tool, guardadas, avisos } = conAgendaReal();
+
+    const r = await tool.execute(mover('09:00'), clienta);
+
+    expect(r).toMatchObject({ ok: true, estado: 'requiere_boton' });
+    expect(tool.presentar(r)).toMatchObject({
+      cuandoLocal: `${SABADO}T09:00`,
+    });
+    expect(guardadas).toHaveLength(0);
+    expect(avisos).toHaveLength(0);
+  });
+
+  it('una hora que ya pasó: fecha_pasada, sin botón', async () => {
+    const { tool } = conAgendaReal();
+
+    const r = await tool.execute(mover('08:00', '2026-10-14'), clienta);
+
+    expect(r).toMatchObject({ ok: false, motivo: 'fecha_pasada' });
+    expect(tool.presentar(r)).toBeNull();
+  });
+
+  it('una franja ocupada: hora_ocupada, y le manda consultar la disponibilidad', async () => {
+    const { tool } = conAgendaReal({ ocupada: true });
+
+    const r = await tool.execute(mover('10:00'), clienta);
+
+    expect(r).toMatchObject({ ok: false, motivo: 'hora_ocupada' });
+    expect((r as { instruccion: string }).instruccion).toMatch(
+      /consultarDisponibilidad/,
+    );
+    expect(tool.presentar(r)).toBeNull();
+  });
+
+  it('si la comprobación falla por algo ajeno a la agenda, tampoco hay botón', async () => {
+    const error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const tool = new ProposeRescheduleTool(
+      { ...DEF, name: 'reprogramarReserva' },
+      {
+        citas,
+        agenda: {
+          comprobar: async () => {
+            throw new Error('base caída');
+          },
+        },
+      },
+    );
+
+    const r = await tool.execute(mover('10:00'), clienta);
+
+    expect(r).toMatchObject({ ok: false, motivo: 'error_desconocido' });
+    expect(tool.presentar(r)).toBeNull();
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
+  });
+});
+
+describe('instrucciones de agenda: cada motivo dice qué hacer', () => {
+  it.each(['no_disponible', 'servicios_duplicados'])(
+    '%s tiene su propia línea, no la genérica',
+    async (motivo) => {
+      const { tool } = proponerReserva(undefined, {
+        comprobar: async () => {
+          throw motivo === 'no_disponible'
+            ? new DomainError('regla')
+            : new DuplicateServicesError();
+        },
+      });
+
+      const r = (await tool.execute(argsValidos, clienta)) as {
+        motivo: string;
+        instruccion: string;
+      };
+
+      expect(r.motivo).toBe(motivo);
+      expect(r.instruccion).not.toMatch(/no pudiste prepararla/);
+    },
+  );
 });

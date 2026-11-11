@@ -296,6 +296,7 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
         ServiceCatalogQueryAdapter,
         GetReservationUseCase,
         CreateReservationUseCase,
+        RescheduleReservationUseCase,
         OWNER_CONTACT,
       ],
     },

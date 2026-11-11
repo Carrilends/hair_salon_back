@@ -632,3 +632,75 @@ describe('RescheduleReservationUseCase · aviso de cambio de estilista', () => {
     expect(guardados[0].workerId).toBe('w-2');
   });
 });
+
+/**
+ * `comprobar`: las mismas reglas que `execute` (propiedad, estado y plazo,
+ * horario, pasado, solape o reparto), sin guardar ni avisar. Lo usa la
+ * propuesta de mover de WhatsApp para no enseñar un botón `RSAT` que fallaría
+ * (2026-11-10, mismo defecto que la propuesta de reservar).
+ */
+describe('RescheduleReservationUseCase.comprobar (propuestas de WhatsApp)', () => {
+  const ACTOR = { kind: 'user' as const, userId: 'u-1' };
+  // 2026-04-25 es sábado: abre a las 9:00 (14:00Z).
+  const SABADO_8 = '2026-04-25T13:00:00.000Z';
+  const SABADO_9 = '2026-04-25T14:00:00.000Z';
+
+  function montarComprobar(
+    opts: { overlaps?: number; asignador?: unknown } = {},
+  ) {
+    const original = reserva();
+    const { port, guardados } = repo(original, { overlaps: opts.overlaps });
+    const avisos: unknown[] = [];
+    const uc = new RescheduleReservationUseCase(
+      port,
+      clock,
+      {
+        ...noopNotifier,
+        reservationRescheduled: async (...a: unknown[]) => void avisos.push(a),
+      },
+      (opts.asignador as any) ?? asignadorProhibido,
+    );
+    return { uc, guardados, avisos, original };
+  }
+
+  it('sábado 8:00: fuera de horario, sin guardar ni avisar', async () => {
+    const { uc, guardados, avisos } = montarComprobar();
+    await expect(uc.comprobar('r-1', SABADO_8, ACTOR)).rejects.toThrow(
+      OutOfBusinessHoursError,
+    );
+    expect(guardados).toHaveLength(0);
+    expect(avisos).toHaveLength(0);
+  });
+
+  it('sábado 9:00: cabe, sin guardar ni avisar', async () => {
+    const { uc, guardados, avisos } = montarComprobar();
+    await expect(uc.comprobar('r-1', SABADO_9, ACTOR)).resolves.toBeUndefined();
+    expect(guardados).toHaveLength(0);
+    expect(avisos).toHaveLength(0);
+  });
+
+  it('una hora que ya pasó: ReservationInThePastError', async () => {
+    const { uc } = montarComprobar();
+    await expect(
+      uc.comprobar('r-1', '2026-04-19T15:00:00.000Z', ACTOR), // domingo 10:00, ayer
+    ).rejects.toThrow(ReservationInThePastError);
+  });
+
+  it('su estilista ocupada: ChosenWorkerBusyError, sin guardar', async () => {
+    const { uc, guardados } = montarComprobar({ overlaps: 1 });
+    await expect(
+      uc.comprobar('r-1', NUEVA.toISOString(), ACTOR),
+    ).rejects.toThrow(ChosenWorkerBusyError);
+    expect(guardados).toHaveLength(0);
+  });
+
+  it('una cita ajena: ReservationOwnershipError, como execute', async () => {
+    const { uc } = montarComprobar();
+    await expect(
+      uc.comprobar('r-1', NUEVA.toISOString(), {
+        kind: 'user',
+        userId: 'otra',
+      }),
+    ).rejects.toThrow(ReservationOwnershipError);
+  });
+});

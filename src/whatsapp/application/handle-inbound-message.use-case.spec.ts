@@ -6,6 +6,8 @@ import {
   WorkerOverlapError,
   ChosenWorkerBusyError,
   InvalidStatusTransitionError,
+  OutOfBusinessHoursError,
+  ReservationInThePastError,
 } from 'src/reservations/domain/errors';
 import { HandleInboundMessageUseCase } from './handle-inbound-message.use-case';
 import { ReservationSummary } from '../domain/ports/reservation-actions.port';
@@ -406,6 +408,40 @@ describe('HandleInboundMessage · reprogramar', () => {
     expect(comoTexto(enviados[0]).body).toContain('estilista');
     expect(comoLista(enviados[1]).rows[0].id).toBe(
       `RSAT|${RID}|2026-09-12T09:00`,
+    );
+  });
+
+  // 2026-11-10: como «Confirmar» de una propuesta de reserva, el botón de mover
+  // dice en palabras simples por qué no se pudo, con el horario de ESE día.
+  it('si la hora queda fuera del horario, lo dice con el horario de ese día', async () => {
+    const { sut, enviados } = montar({
+      alMover: () => {
+        throw new OutOfBusinessHoursError();
+      },
+    });
+
+    // 2026-09-12 es sábado: abre a las 9:00.
+    await sut.handle(mensaje({ payload: `RSAT|${RID}|2026-09-12T08:00` }));
+
+    const t = comoTexto(enviados[0]).body;
+    expect(t).toMatch(/^Esa hora queda fuera del horario del salón/);
+    expect(t).toMatch(/sábado 12 de septiembre/);
+    expect(t).toMatch(/abre de 9:00 a\. m\. a 7:00 p\. m\./);
+    expect(t).not.toMatch(/m\.\./);
+    expect(t).not.toMatch(/Algo no salió bien/);
+  });
+
+  it('si la hora nueva ya pasó, lo dice con el texto fijo de siempre', async () => {
+    const { sut, enviados } = montar({
+      alMover: () => {
+        throw new ReservationInThePastError();
+      },
+    });
+
+    await sut.handle(mensaje({ payload: `RSAT|${RID}|2026-09-10T08:00` }));
+
+    expect(comoTexto(enviados[0]).body).toBe(
+      'Esa hora ya pasó. Elige otra, por favor.',
     );
   });
 
