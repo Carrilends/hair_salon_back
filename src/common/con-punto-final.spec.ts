@@ -16,8 +16,8 @@ describe('conPuntoFinal', () => {
     expect(conPuntoFinal('a las 3:30 p. m.')).toBe('a las 3:30 p. m.');
   });
 
-  it('tampoco con el espacio duro que pone Intl («a. m.»)', () => {
-    expect(conPuntoFinal('10:00 a. m.')).toBe('10:00 a. m.');
+  it('tampoco con el espacio duro que pone Intl («a.\u00a0m.»)', () => {
+    expect(conPuntoFinal('10:00 a.\u00a0m.')).toBe('10:00 a.\u00a0m.');
   });
 
   it('respeta otros cierres de frase', () => {
