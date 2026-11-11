@@ -52,7 +52,11 @@ describe('BOOK_OK / BOOK_NO', () => {
 });
 
 describe('HandleInboundMessage · botones de la propuesta', () => {
-  function montar(resultado: { ok: boolean; motivo?: string }) {
+  function montar(resultado: {
+    ok: boolean;
+    motivo?: string;
+    scheduledAt?: Date;
+  }) {
     const enviados: WhatsAppMessage[] = [];
     const llamadas: unknown[][] = [];
     const propuestas = {
@@ -60,7 +64,13 @@ describe('HandleInboundMessage · botones de la propuesta', () => {
         llamadas.push(['confirm', id, phone]);
         return resultado.ok
           ? { ok: true as const, scheduledAt: new Date('2026-10-20T15:00:00Z') }
-          : { ok: false as const, motivo: resultado.motivo! };
+          : {
+              ok: false as const,
+              motivo: resultado.motivo!,
+              ...(resultado.scheduledAt
+                ? { scheduledAt: resultado.scheduledAt }
+                : {}),
+            };
       },
       discard: async (id: string, phone: string) => {
         llamadas.push(['discard', id, phone]);
@@ -106,13 +116,70 @@ describe('HandleInboundMessage · botones de la propuesta', () => {
     ['usada', /ya se usó/],
     ['otro_numero', /No encuentro esa propuesta/],
     ['no_encontrada', /No encuentro esa propuesta/],
-    ['fuera_de_horario', /No pude registrar la reserva/],
   ])('si falla por %s, lo explica', async (motivo, esperado) => {
     const { sut, enviados } = montar({ ok: false, motivo });
 
     await sut.handle(pulsar('book_ok'));
 
     expect(texto(enviados[0])).toMatch(esperado);
+  });
+
+  // Prueba con móvil del 2026-11-10: «Confirmar» de una propuesta para un
+  // sábado a las 8:00 fallaba con «No pude registrar la reserva con esos
+  // datos». Ahora dice por qué, con el horario de ESE día.
+  it('«Confirmar» de una propuesta antigua a una hora cerrada dice el horario de ese día', async () => {
+    const { sut, enviados } = montar({
+      ok: false,
+      motivo: 'fuera_de_horario',
+      scheduledAt: new Date('2026-10-17T13:00:00Z'), // sábado 8:00 en Bogotá
+    });
+
+    await sut.handle(pulsar('book_ok'));
+
+    const t = texto(enviados[0]);
+    expect(t).toMatch(/^Esa hora queda fuera del horario del salón/);
+    expect(t).toMatch(/sábado 17 de octubre/);
+    expect(t).toMatch(/abre de 9:00 a\. m\. a 7:00 p\. m\./);
+    expect(t).toMatch(/otro día u hora/);
+    expect(t).not.toMatch(/No pude registrar/);
+    expect(t).not.toMatch(/m\.\./);
+  });
+
+  it('un festivo entre semana tiene el horario reducido', async () => {
+    const { sut, enviados } = montar({
+      ok: false,
+      motivo: 'fuera_de_horario',
+      // Lunes 12 de octubre de 2026, Día de la Raza, a las 8:00
+      scheduledAt: new Date('2026-10-12T13:00:00Z'),
+    });
+
+    await sut.handle(pulsar('book_ok'));
+
+    expect(texto(enviados[0])).toMatch(/abre de 9:00 a\. m\. a 7:00 p\. m\./);
+  });
+
+  it('«Confirmar» de una propuesta cuya hora ya pasó lo dice en palabras simples', async () => {
+    const { sut, enviados } = montar({
+      ok: false,
+      motivo: 'fecha_pasada',
+      scheduledAt: new Date('2026-10-14T13:00:00Z'),
+    });
+
+    await sut.handle(pulsar('book_ok'));
+
+    expect(texto(enviados[0])).toMatch(/^Esa hora ya pasó/);
+    expect(texto(enviados[0])).not.toMatch(/No pude registrar/);
+  });
+
+  it('sin la hora de la propuesta, fuera de horario se dice igual, sin inventar el horario', async () => {
+    const { sut, enviados } = montar({ ok: false, motivo: 'fuera_de_horario' });
+
+    await sut.handle(pulsar('book_ok'));
+
+    expect(texto(enviados[0])).toMatch(
+      /^Esa hora queda fuera del horario del salón/,
+    );
+    expect(texto(enviados[0])).not.toMatch(/abre de/);
   });
 
   it('la dueña pulsando el «Confirmar» de una clienta: se confirma con SU número y no pasa', async () => {

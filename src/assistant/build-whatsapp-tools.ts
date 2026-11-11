@@ -16,6 +16,7 @@ import { MyReservationsTool } from './application/tools/my-reservations.tool';
 import { ViewAgendaTool } from './application/tools/view-agenda.tool';
 import { ConfirmReservationTool } from './application/tools/confirm-reservation.tool';
 import {
+  AgendaParaProponer,
   ProposeBookingTool,
   ProposeCancelTool,
   ProposeRescheduleTool,
@@ -66,6 +67,7 @@ export function buildWhatsAppTools(
     'findNamesByIds' | 'search' | 'findNarrowingOptions'
   >,
   getReservation: GetReservationUseCase,
+  agenda: AgendaParaProponer,
   contacto: OwnerContactPort,
 ): WhatsAppToolSets {
   const de = (nombre: string): AssistantTool => {
@@ -85,7 +87,9 @@ export function buildWhatsAppTools(
 
   // Plan 06, F4 (D4): en WhatsApp las cuatro que escribían ahora PROPONEN, y
   // escribe el botón. Conservan el nombre y la definición de WhatsApp de F3b.
-  const deps = { pendientes, catalog };
+  // `agenda` (2026-11-10): antes de guardar una propuesta se comprueba con las
+  // reglas de la creación (`CreateReservationUseCase.comprobar`).
+  const deps = { pendientes, catalog, agenda };
   const crear = new ProposeBookingTool(
     'crearReserva',
     conDefinicion(de('crearReserva'), {

@@ -7,7 +7,11 @@ export interface PendingBookingActionsPort {
   confirm(
     id: string,
     phoneE164: string,
-  ): Promise<{ ok: true; scheduledAt: Date } | { ok: false; motivo: string }>;
+  ): Promise<
+    | { ok: true; scheduledAt: Date }
+    /** `scheduledAt`: la hora propuesta, cuando la agenda la rechazó al crear. */
+    | { ok: false; motivo: string; scheduledAt?: Date }
+  >;
 
   discard(
     id: string,

@@ -1,9 +1,13 @@
+import { Logger } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { AssistantContext, AssistantTool } from './assistant-tool';
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
 import { CreateReservationArgsDto } from './create-reservation-args.dto';
-import { identidadParaCrear } from './create-reservation.tool';
+import {
+  identidadParaCrear,
+  mapDomainErrorToReason,
+} from './create-reservation.tool';
 import {
   CitaAConfirmar,
   ConfirmBookingPresentation,
@@ -18,6 +22,7 @@ import { ServiceCatalogQueryPort } from '../../domain/ports/service-catalog-quer
 import { PendingBookingRepositoryPort } from '../../domain/ports/pending-booking-repository.port';
 import { PENDING_BOOKING_TTL_MINUTES } from '../../domain/pending-booking';
 import { getDatePartsInTz } from 'src/reservations/salon-time';
+import { horarioDelDia } from 'src/reservations/horario-en-palabras';
 import { CitaPedida, esLaCitaPedida, leerCitaPedida } from './cita-pedida';
 import { esUnaHoraNoDicha, HORA_NO_DICHA } from './hora-dicha';
 
@@ -32,6 +37,8 @@ import { esUnaHoraNoDicha, HORA_NO_DICHA } from './hora-dicha';
  */
 
 const SOLO_WHATSAPP = { ok: false, motivo: 'solo_whatsapp' } as const;
+
+const zonaDelSalon = () => process.env.SALON_TZ ?? 'America/Bogota';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -97,8 +104,40 @@ async function citaParaConfirmar(
   };
 }
 
+/**
+ * Las reglas de agenda de la creación, sin crear
+ * (`CreateReservationUseCase.comprobar`). Se tipa como interfaz por la misma
+ * razón que `CreateReservationExecutor`: no arrastrar el caso de uso de Nest a
+ * la capa de aplicación del asistente.
+ */
+export interface AgendaParaProponer {
+  comprobar(command: {
+    scheduledAt: string;
+    serviceIds: string[];
+    userId: null;
+    contact: { name: string; phone: string };
+  }): Promise<void>;
+}
+
+/** Qué hacer con cada motivo de agenda: lo lee el modelo, no la clienta. */
+function instruccionDeAgenda(motivo: string): string {
+  const base = 'No se guardó nada y no hay botones que pulsar.';
+  switch (motivo) {
+    case 'fuera_de_horario':
+      return `${base} Dile que a esa hora el salón está cerrado, con el horario de ese día (horarioDelDia), y ofrécele otra hora dentro de ese horario.`;
+    case 'fecha_pasada':
+      return `${base} Dile que esa hora ya pasó y pregúntale qué otra hora o día le sirve.`;
+    case 'hora_ocupada':
+      return `${base} Dile que esa hora ya está ocupada, consulta consultarDisponibilidad para ese día y ofrécele otra hora libre.`;
+    default:
+      return `${base} Dile que no pudiste prepararla y ofrécele otra hora.`;
+  }
+}
+
 /** `crearReserva` y `reservarPaquete` en WhatsApp. */
 export class ProposeBookingTool implements AssistantTool {
+  private readonly logger = new Logger(ProposeBookingTool.name);
+
   constructor(
     readonly name: string,
     readonly definition: LlmToolDefinition,
@@ -108,6 +147,7 @@ export class ProposeBookingTool implements AssistantTool {
         'save' | 'supersedeActiveFor'
       >;
       catalog: Pick<ServiceCatalogQueryPort, 'findNamesByIds'>;
+      agenda: AgendaParaProponer;
     },
   ) {}
 
@@ -148,6 +188,36 @@ export class ProposeBookingTool implements AssistantTool {
     const servicios = dto.serviciosIds.map((id) => nombres.get(id));
     if (servicios.some((n) => !n)) {
       return { ok: false, motivo: 'servicio_invalido' };
+    }
+
+    // Prueba con móvil del 2026-11-10: una propuesta para un sábado a las 8:00
+    // (abre a las 9:00) se guardó con sus botones y «Confirmar» falló sin decir
+    // por qué. Antes de guardar, las MISMAS reglas que la creación —horario,
+    // pasado, estilista libre—, con el caso de uso real: ninguna se copia aquí.
+    // Si no cabe, no se guarda ni se anula nada.
+    try {
+      await this.deps.agenda.comprobar({
+        scheduledAt: dto.fechaHoraIso,
+        serviceIds: dto.serviciosIds,
+        userId: null,
+        contact: contacto,
+      });
+    } catch (error) {
+      const motivo = mapDomainErrorToReason(error);
+      if (motivo === 'error_desconocido') {
+        this.logger.error(
+          'No se pudo comprobar la hora de una propuesta',
+          error as Error,
+        );
+      }
+      return {
+        ok: false,
+        motivo,
+        ...(motivo === 'fuera_de_horario'
+          ? { horarioDelDia: horarioDelDia(inicio, zonaDelSalon()) }
+          : {}),
+        instruccion: instruccionDeAgenda(motivo),
+      };
     }
 
     // Una sola propuesta viva por número: la nueva anula las anteriores, así
@@ -284,7 +354,7 @@ export class ProposeRescheduleTool implements AssistantTool {
 
     // El botón `RSAT` lleva la hora del salón (`YYYY-MM-DDTHH:mm`), como el
     // flujo de mover que ya existía: el manejador la vuelve a pasar a UTC.
-    const p = getDatePartsInTz(nueva, process.env.SALON_TZ ?? 'America/Bogota');
+    const p = getDatePartsInTz(nueva, zonaDelSalon());
     const dos = (n: number) => String(n).padStart(2, '0');
     const cuandoLocal = `${p.year}-${dos(p.month)}-${dos(p.day)}T${dos(p.hour)}:${dos(p.minute)}`;
     const { fecha, hora } = fechaYHoraEnPalabras(nueva.toISOString());

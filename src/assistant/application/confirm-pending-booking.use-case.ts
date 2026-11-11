@@ -7,7 +7,12 @@ import { ASSISTANT_CLOCK, PENDING_BOOKINGS } from './tokens';
 
 export type ConfirmPendingResult =
   | { ok: true; reservaId?: string; scheduledAt: Date }
-  | { ok: false; motivo: string };
+  /**
+   * `scheduledAt` solo cuando la propuesta era de este número y la creación la
+   * rechazó: el canal lo usa para decir el horario de ESE día. Si no se pudo
+   * consumir (ajena, inexistente, vencida, usada) no va: no se revela nada.
+   */
+  | { ok: false; motivo: string; scheduledAt?: Date };
 
 /**
  * Lo que hace el botón «Confirmar» de una propuesta de reserva (plan 06, F4,
@@ -62,7 +67,7 @@ export class ConfirmPendingBookingUseCase {
           error as Error,
         );
       }
-      return { ok: false, motivo };
+      return { ok: false, motivo, scheduledAt: p.scheduledAt };
     }
   }
 

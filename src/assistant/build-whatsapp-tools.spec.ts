@@ -26,6 +26,8 @@ function montar() {
     {} as never,
     {} as never,
     {} as never,
+    // 2026-11-10: las reglas de agenda antes de guardar una propuesta.
+    { comprobar: async () => undefined } as never,
     // F6: aviso a la dueña.
     { avisar: async () => 'enviado' } as never,
   );
@@ -130,6 +132,7 @@ describe('buildWhatsAppTools (D6)', () => {
         {} as never,
         {} as never,
         {} as never,
+        { comprobar: async () => undefined } as never,
         {} as never,
       ),
     ).toThrow(/listarServicios/);
@@ -221,6 +224,7 @@ describe('buildWhatsAppTools: la hora que ella no dijo (prueba con móvil 2026-1
         } as never,
         { findNamesByIds: async () => new Map([[S1, 'Taper fade']]) } as never,
         {} as never,
+        { comprobar: async () => undefined } as never,
         { avisar: async () => 'enviado' } as never,
       );
       const tool = juegos.clienta.find((t) => t.name === nombre)!;

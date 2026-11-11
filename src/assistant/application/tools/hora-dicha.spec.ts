@@ -47,6 +47,7 @@ function montar() {
       },
     },
     catalog: { findNamesByIds: async () => new Map([[S1, 'Taper fade']]) },
+    agenda: { comprobar: async () => undefined },
   });
   return { tool, guardadas, reemplazos };
 }

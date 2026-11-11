@@ -221,6 +221,7 @@ function montar() {
     {} as never,
     catalogo as never,
     {} as never,
+    { comprobar: async () => undefined } as never,
     {} as never,
   );
 

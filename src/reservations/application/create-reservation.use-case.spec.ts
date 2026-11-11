@@ -501,3 +501,92 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
     ).rejects.toThrow(OutOfBusinessHoursError);
   });
 });
+
+/**
+ * `comprobar`: las mismas reglas de agenda que `execute` (servicios, horario,
+ * pasado, estilista libre), sin guardar ni avisar. Lo usa la propuesta de
+ * WhatsApp para no guardar una cita que «Confirmar» rechazaría (sábado 8:00,
+ * 2026-11-10).
+ */
+describe('CreateReservationUseCase.comprobar (propuestas de WhatsApp)', () => {
+  beforeEach(() => {
+    process.env.SALON_TZ = 'America/Bogota';
+  });
+
+  const contacto = { name: 'Ana', phone: '573001112233' };
+
+  function montarComprobar(overlaps = 0) {
+    const repositorio = repo();
+    repositorio.overlaps = overlaps;
+    const guardadas: Reservation[] = [];
+    const save = repositorio.save;
+    repositorio.save = async (r: Reservation) => {
+      guardadas.push(r);
+      return save(r);
+    };
+    const avisos: Reservation[] = [];
+    const uc = new CreateReservationUseCase(
+      repositorio,
+      assigner(repositorio, workers as any),
+      catalog as any,
+      clock as any,
+      {
+        reservationCreated: async (r: Reservation) => void avisos.push(r),
+      } as any,
+    );
+    return { uc, guardadas, avisos };
+  }
+
+  it('sábado 8:00 (abre a las 9:00): fuera de horario, sin guardar ni avisar', async () => {
+    const { uc, guardadas, avisos } = montarComprobar();
+    await expect(
+      uc.comprobar({
+        scheduledAt: '2026-04-25T13:00:00.000Z', // sábado 8:00 Bogotá
+        serviceIds: ['s1'],
+        userId: null,
+        contact: contacto,
+      }),
+    ).rejects.toThrow(OutOfBusinessHoursError);
+    expect(guardadas).toHaveLength(0);
+    expect(avisos).toHaveLength(0);
+  });
+
+  it('sábado 9:00: cabe, y tampoco guarda ni avisa', async () => {
+    const { uc, guardadas, avisos } = montarComprobar();
+    await expect(
+      uc.comprobar({
+        scheduledAt: '2026-04-25T14:00:00.000Z', // sábado 9:00 Bogotá
+        serviceIds: ['s1'],
+        userId: null,
+        contact: contacto,
+      }),
+    ).resolves.toBeUndefined();
+    expect(guardadas).toHaveLength(0);
+    expect(avisos).toHaveLength(0);
+  });
+
+  it('una hora que ya pasó: ReservationInThePastError', async () => {
+    const { uc } = montarComprobar();
+    await expect(
+      uc.comprobar({
+        scheduledAt: '2026-03-31T15:00:00.000Z', // antes del reloj (1 de abril)
+        serviceIds: ['s1'],
+        userId: null,
+        contact: contacto,
+      }),
+    ).rejects.toThrow(ReservationInThePastError);
+  });
+
+  it('la estilista ocupada: WorkerOverlapError, sin guardar', async () => {
+    const { uc, guardadas } = montarComprobar(1);
+    await expect(
+      uc.comprobar({
+        scheduledAt: '2026-04-20T15:00:00.000Z',
+        serviceIds: ['s1'],
+        userId: null,
+        contact: contacto,
+      }),
+    ).rejects.toThrow(WorkerOverlapError);
+    expect(guardadas).toHaveLength(0);
+  });
+});

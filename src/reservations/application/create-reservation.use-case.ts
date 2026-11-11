@@ -50,6 +50,43 @@ export class CreateReservationUseCase {
   ) {}
 
   async execute(command: CreateReservationCommand): Promise<Reservation> {
+    const reservation = await this.preparar(command);
+
+    const saved = await this.repository.save(reservation);
+
+    // Se notifica DESPUÉS de persistir: si la persistencia falla no hay nada que
+    // anunciar; si falla la notificación, la reserva ya es un hecho (N8) y el
+    // error no debe propagarse al cliente. El canal durable es la base de datos.
+    try {
+      await this.notifier.reservationCreated(saved);
+    } catch (error) {
+      this.logger.error(
+        `Reserva ${saved.id} creada, pero falló la notificación`,
+        error as Error,
+      );
+    }
+
+    return saved;
+  }
+
+  /**
+   * Las MISMAS reglas que `execute` —servicios, horario del salón, no en el
+   * pasado y que haya estilista libre—, sin guardar ni avisar. Lanza los mismos
+   * errores de dominio.
+   *
+   * Existe para la propuesta de WhatsApp (prueba con móvil del 2026-11-10): una
+   * propuesta para un sábado a las 8:00 se guardaba con sus botones y
+   * «Confirmar» fallaba después. Comprobar no reserva la franja: entre proponer
+   * y confirmar puede ocuparse, y `execute` lo vuelve a decidir.
+   */
+  async comprobar(command: CreateReservationCommand): Promise<void> {
+    await this.preparar(command);
+  }
+
+  /** Todo `execute` menos guardar y avisar: el agregado listo, o un error. */
+  private async preparar(
+    command: CreateReservationCommand,
+  ): Promise<Reservation> {
     const tz = process.env.SALON_TZ ?? 'America/Bogota';
 
     // Se rechazan los duplicados ANTES de consultar el catálogo: `In(ids)`
@@ -114,20 +151,6 @@ export class CreateReservationUseCase {
     );
     if (overlaps > 0) throw new WorkerOverlapError();
 
-    const saved = await this.repository.save(reservation);
-
-    // Se notifica DESPUÉS de persistir: si la persistencia falla no hay nada que
-    // anunciar; si falla la notificación, la reserva ya es un hecho (N8) y el
-    // error no debe propagarse al cliente. El canal durable es la base de datos.
-    try {
-      await this.notifier.reservationCreated(saved);
-    } catch (error) {
-      this.logger.error(
-        `Reserva ${saved.id} creada, pero falló la notificación`,
-        error as Error,
-      );
-    }
-
-    return saved;
+    return reservation;
   }
 }

@@ -50,6 +50,7 @@ import { AssistantChatPort } from '../domain/ports/assistant-chat.port';
 import { avisoLegal, mensajesDeLaRespuesta } from './respuesta-del-asistente';
 import { pideConfirmacion } from 'src/assistant/application/tools/servicios-del-turno';
 import { PendingBookingActionsPort } from '../domain/ports/pending-booking-actions.port';
+import { horarioDelDia } from 'src/reservations/horario-en-palabras';
 
 export interface WhatsAppChannelConfig {
   /** Móvil de la peluquería. Un mensaje desde aquí actúa como administración. */
@@ -339,7 +340,31 @@ export class HandleInboundMessageUseCase {
       );
       return;
     }
-    await this.texto(from, explicarPropuesta(r.motivo));
+    await this.texto(from, this.explicarConfirmacion(r));
+  }
+
+  /**
+   * Por qué «Confirmar» no creó la reserva. Las reglas de agenda se dicen en
+   * palabras simples y, si la hora quedaba fuera, con el horario de ESE día
+   * (prueba con móvil del 2026-11-10: antes decía «No pude registrar la reserva
+   * con esos datos»). Los textos fijos de `explicar` se conservan.
+   */
+  private explicarConfirmacion(r: {
+    motivo: string;
+    scheduledAt?: Date;
+  }): string {
+    const otra = 'Dime otro día u hora y te propongo de nuevo.';
+    if (r.motivo === 'fuera_de_horario') {
+      const fuera = 'Esa hora queda fuera del horario del salón';
+      if (!r.scheduledAt) return `${fuera}. ${otra}`;
+      const { abre, cierra } = horarioDelDia(
+        r.scheduledAt,
+        this.config.timeZone,
+      );
+      return `${fuera}: el ${this.diaLargo(r.scheduledAt)} abre de ${abre} a ${cierra} ${otra}`;
+    }
+    if (r.motivo === 'fecha_pasada') return `Esa hora ya pasó. ${otra}`;
+    return explicarPropuesta(r.motivo);
   }
 
   /** «Cambiar»: la propuesta se gasta y se le pregunta qué quiere cambiar. */
@@ -944,6 +969,18 @@ export class HandleInboundMessageUseCase {
       timeStyle: 'short',
       timeZone: this.config.timeZone,
     }).format(fecha);
+  }
+
+  /** «sábado 17 de octubre», sin la coma que pone `Intl`. */
+  private diaLargo(fecha: Date): string {
+    return new Intl.DateTimeFormat('es-CO', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      timeZone: this.config.timeZone,
+    })
+      .format(fecha)
+      .replace(',', '');
   }
 
   private diaCorto(ymd: string): string {

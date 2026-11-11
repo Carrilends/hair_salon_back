@@ -1,4 +1,6 @@
+import { Logger } from '@nestjs/common';
 import {
+  AgendaParaProponer,
   ProposeBookingTool,
   ProposeCancelTool,
   ProposeRescheduleTool,
@@ -11,6 +13,8 @@ import { AssistantContext } from './assistant-tool';
 import { PendingBooking } from '../../domain/pending-booking';
 import { Reservation } from 'src/reservations/domain/reservation';
 import { ReservationStatus } from 'src/reservations/domain/reservation-status';
+import { CreateReservationUseCase } from 'src/reservations/application/create-reservation.use-case';
+import { WorkerAssigner } from 'src/reservations/application/worker-assigner';
 
 /**
  * Plan 06, F4 (D4): en WhatsApp el modelo no escribe en la agenda. Propone, y
@@ -50,6 +54,7 @@ function proponerReserva(
     [S1, 'Corte'],
     [S2, 'Tinte'],
   ]),
+  agenda: AgendaParaProponer = { comprobar: async () => undefined },
 ) {
   const guardadas: Omit<PendingBooking, 'id'>[] = [];
   const reemplazos: string[] = [];
@@ -64,6 +69,7 @@ function proponerReserva(
       },
     },
     catalog: { findNamesByIds: async () => nombres },
+    agenda,
   });
   return { tool, guardadas, reemplazos };
 }
@@ -174,6 +180,131 @@ describe('crearReserva / reservarPaquete en WhatsApp: proponen, no reservan', ()
 
     expect(r).toMatchObject({ ok: false, motivo: 'servicio_invalido' });
     expect(guardadas).toHaveLength(0);
+  });
+});
+
+/**
+ * Prueba con móvil del 2026-11-10: una propuesta para un sábado a las 8:00 (el
+ * salón abre a las 9:00) se guardó con sus botones y «Confirmar» falló sin
+ * decir por qué. Ahora la propuesta pasa antes por las MISMAS reglas que la
+ * creación (`CreateReservationUseCase.comprobar`, aquí el real con dobles): si
+ * no caben, no se guarda nada y el modelo recibe el motivo y qué hacer.
+ */
+describe('crearReserva en WhatsApp: valida la hora antes de guardar la propuesta', () => {
+  const SABADO = '2026-10-17'; // `ahora` es el miércoles 14 de octubre de 2026
+
+  function conAgendaReal(opts: { ocupada?: boolean } = {}) {
+    const repositorio = {
+      countOverlaps: async () => (opts.ocupada ? 1 : 0),
+      save: async () => {
+        throw new Error('comprobar no guarda');
+      },
+    };
+    const workers = {
+      getDefaultWorkerId: async () => 'default-w',
+      listAssignableWorkloads: async () => [],
+    };
+    const agenda = new CreateReservationUseCase(
+      repositorio as never,
+      new WorkerAssigner(repositorio as never, workers as never),
+      {
+        getSnapshots: async (ids: string[]) =>
+          ids.map((id) => ({
+            id,
+            name: 'Corte',
+            price: 1,
+            durationMinutes: 30,
+          })),
+      } as never,
+      { now: () => ahora },
+      {
+        reservationCreated: async () => {
+          throw new Error('comprobar no avisa');
+        },
+      } as never,
+    );
+    return proponerReserva(undefined, agenda);
+  }
+
+  it('sábado 8:00: fuera_de_horario, sin guardar ni anular nada, con el horario de ese día', async () => {
+    const { tool, guardadas, reemplazos } = conAgendaReal();
+
+    const r = await tool.execute(
+      { ...argsValidos, fechaHoraIso: `${SABADO}T08:00:00` },
+      clienta,
+    );
+
+    expect(r).toMatchObject({
+      ok: false,
+      motivo: 'fuera_de_horario',
+      horarioDelDia: { abre: '9:00 a. m.', cierra: '7:00 p. m.' },
+    });
+    expect((r as { instruccion: string }).instruccion).toMatch(
+      /no se guardó nada/i,
+    );
+    expect((r as { instruccion: string }).instruccion).toMatch(/otra hora/i);
+    expect(guardadas).toHaveLength(0);
+    expect(reemplazos).toHaveLength(0);
+    expect(tool.presentar(r)).toBeNull();
+  });
+
+  it('sábado 9:00: se acepta y se guarda la propuesta', async () => {
+    const { tool, guardadas } = conAgendaReal();
+
+    const r = await tool.execute(
+      { ...argsValidos, fechaHoraIso: `${SABADO}T09:00:00` },
+      clienta,
+    );
+
+    expect(r).toMatchObject({ ok: true, estado: 'pendiente_de_confirmar' });
+    expect(guardadas).toHaveLength(1);
+    expect(guardadas[0].scheduledAt).toEqual(new Date(`${SABADO}T14:00:00Z`));
+  });
+
+  it('una hora que ya pasó: fecha_pasada, sin guardar', async () => {
+    const { tool, guardadas } = conAgendaReal();
+
+    const r = await tool.execute(
+      { ...argsValidos, fechaHoraIso: '2026-10-14T08:00:00' },
+      clienta,
+    );
+
+    expect(r).toMatchObject({ ok: false, motivo: 'fecha_pasada' });
+    expect((r as { instruccion: string }).instruccion).toMatch(/otra hora/i);
+    expect(guardadas).toHaveLength(0);
+  });
+
+  it('una franja ocupada: hora_ocupada, sin guardar, y le manda consultar la disponibilidad', async () => {
+    const { tool, guardadas } = conAgendaReal({ ocupada: true });
+
+    const r = await tool.execute(argsValidos, clienta);
+
+    expect(r).toMatchObject({ ok: false, motivo: 'hora_ocupada' });
+    expect((r as { instruccion: string }).instruccion).toMatch(
+      /consultarDisponibilidad/,
+    );
+    expect(guardadas).toHaveLength(0);
+  });
+
+  it('si la comprobación falla por algo ajeno a la agenda, tampoco guarda', async () => {
+    const error = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const { tool, guardadas } = proponerReserva(undefined, {
+      comprobar: async () => {
+        throw new Error('base caída');
+      },
+    });
+
+    const r = await tool.execute(argsValidos, clienta);
+
+    expect(r).toMatchObject({ ok: false, motivo: 'error_desconocido' });
+    expect(guardadas).toHaveLength(0);
+    expect(error).toHaveBeenCalledWith(
+      'No se pudo comprobar la hora de una propuesta',
+      expect.any(Error),
+    );
+    error.mockRestore();
   });
 });
 

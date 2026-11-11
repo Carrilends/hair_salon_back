@@ -7,6 +7,7 @@ import {
   OWNER_CONTACT,
 } from './application/tokens';
 import { buildWhatsAppTools } from './build-whatsapp-tools';
+import { CreateReservationUseCase } from 'src/reservations/application/create-reservation.use-case';
 
 /**
  * Plan 06, F3a (revisión). El puerto de teléfono se inyecta con `@Optional()`:
@@ -49,6 +50,16 @@ describe('cableado de AssistantModule · herramientas de WhatsApp (F3b)', () => 
     );
 
     expect(juegos?.inject).toHaveLength(buildWhatsAppTools.length);
+  });
+
+  it('pasa a los juegos el caso de uso de crear, para comprobar la hora de una propuesta (2026-11-10)', () => {
+    const juegos = proveedores().find(
+      (p) => p.provide === ASSISTANT_WHATSAPP_TOOLS,
+    );
+    // Penúltimo: justo antes del aviso a la dueña, como `buildWhatsAppTools`.
+    expect(juegos?.inject?.[juegos.inject.length - 2]).toBe(
+      CreateReservationUseCase,
+    );
   });
 
   it('provee el aviso a la dueña y lo pasa el último a los juegos (F6)', () => {

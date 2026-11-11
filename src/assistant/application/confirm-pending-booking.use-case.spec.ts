@@ -4,7 +4,11 @@ import {
   PendingBooking,
   PendingBookingOutcome,
 } from '../domain/pending-booking';
-import { WorkerOverlapError } from 'src/reservations/domain/errors';
+import {
+  OutOfBusinessHoursError,
+  ReservationInThePastError,
+  WorkerOverlapError,
+} from 'src/reservations/domain/errors';
 
 /**
  * Plan 06, F4 (D4): lo que pasa al pulsar «Confirmar». La propuesta se consume
@@ -133,8 +137,29 @@ describe('ConfirmPendingBookingUseCase', () => {
     await expect(sut.confirm('p-1', NUMERO)).resolves.toEqual({
       ok: false,
       motivo: 'hora_ocupada',
+      // La hora de la propuesta viaja con el motivo: el canal la necesita para
+      // decirle a la clienta el horario de ESE día (2026-11-10).
+      scheduledAt: PROPUESTA.scheduledAt,
     });
   });
+
+  it.each([
+    ['fuera_de_horario', new OutOfBusinessHoursError()],
+    ['fecha_pasada', new ReservationInThePastError()],
+  ])(
+    'una propuesta antigua que ya no cabe (%s): el motivo y su hora',
+    async (motivo, error) => {
+      const { sut } = montar(PROPUESTA, async () => {
+        throw error;
+      });
+
+      await expect(sut.confirm('p-1', NUMERO)).resolves.toEqual({
+        ok: false,
+        motivo,
+        scheduledAt: PROPUESTA.scheduledAt,
+      });
+    },
+  );
 
   it('descartar la consume sin crear nada', async () => {
     const { sut, comandos, consumos } = montar();

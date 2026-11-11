@@ -295,6 +295,7 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
         PENDING_BOOKINGS,
         ServiceCatalogQueryAdapter,
         GetReservationUseCase,
+        CreateReservationUseCase,
         OWNER_CONTACT,
       ],
     },
