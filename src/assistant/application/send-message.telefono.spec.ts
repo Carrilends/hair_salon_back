@@ -536,6 +536,8 @@ describe('SendMessageUseCase · aviso legal una vez cada 30 días', () => {
     const r = await escribir(repo);
     expect(r.conversacionNueva).toBe(true);
     expect(r.tocaAvisoLegal).toBe(false);
+    // Ya se sabe por la consulta de 24 h: no hace falta la de 30 días.
+    expect(repo.pedidasPorNumero).toHaveLength(1);
   });
 
   it('tras más de un día de silencio pero menos de 30, no lo lleva', async () => {

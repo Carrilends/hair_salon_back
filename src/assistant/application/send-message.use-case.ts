@@ -256,16 +256,21 @@ export class SendMessageUseCase {
     ahora: Date,
     anotarUso: (uso: TokenUsage) => void,
   ): Promise<SendMessageResult> {
-    const conversation = await this.loadOrStart(input, ahora);
+    const { conversation, conversoEnElUltimoDia } = await this.loadOrStart(
+      input,
+      ahora,
+    );
     const porWhatsApp = input.canal === 'whatsapp';
     // Antes de añadir nada: una conversación recién abierta no tiene mensajes.
     const esNueva = conversation.messageCount === 0;
     // Antes de guardar la nueva, o se encontraría a sí misma: ¿conversó este
     // número con el asistente en los últimos 30 días? Una conversación que
     // rota por llena, o que vuelve tras un día de silencio, no repite el aviso.
+    // Si `loadOrStart` ya encontró una del último día (la llena), basta.
     const tocaAvisoLegal =
       porWhatsApp &&
       esNueva &&
+      !conversoEnElUltimoDia &&
       !(await this.porTelefono!.findActiveByPhone(
         input.phoneE164!,
         new Date(ahora.getTime() - AVISO_LEGAL_CADA_MS),
@@ -767,10 +772,14 @@ export class SendMessageUseCase {
     await this.siembraEnVuelo;
   }
 
+  /**
+   * La conversación del turno y, en WhatsApp, si el número tuvo una con
+   * actividad en el último día (aunque estuviera llena y se abra otra).
+   */
   private async loadOrStart(
     input: SendMessageInput,
     ahora: Date,
-  ): Promise<Conversation> {
+  ): Promise<{ conversation: Conversation; conversoEnElUltimoDia: boolean }> {
     if (input.canal === 'whatsapp') {
       // Por número, no por id (D2): la de las últimas 24 h, o una nueva. Es la
       // misma ventana que WhatsApp, así que «una conversación» significa lo
@@ -790,9 +799,12 @@ export class SendMessageUseCase {
         activa &&
         activa.messageCount < this.budget.maxMessagesPerConversation
       ) {
-        return activa;
+        return { conversation: activa, conversoEnElUltimoDia: true };
       }
-      return Conversation.start({ phoneE164: input.phoneE164 });
+      return {
+        conversation: Conversation.start({ phoneE164: input.phoneE164 }),
+        conversoEnElUltimoDia: activa !== null,
+      };
     }
 
     if (input.conversationId) {
@@ -814,10 +826,13 @@ export class SendMessageUseCase {
         // conversación seguiría sin dueño y sus mensajes no contarían contra
         // ningún tope (ver `Conversation.claimBy`).
         if (input.userId) existing.claimBy(input.userId);
-        return existing;
+        return { conversation: existing, conversoEnElUltimoDia: false };
       }
     }
-    return Conversation.start({ userId: input.userId });
+    return {
+      conversation: Conversation.start({ userId: input.userId }),
+      conversoEnElUltimoDia: false,
+    };
   }
 
   /**
