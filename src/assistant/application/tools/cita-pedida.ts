@@ -185,15 +185,13 @@ export async function comprobarCitaPedida(
 
   rechazadasEnElTurno?.add(claveDeLaCita(id));
   if (cita.id) rechazadasEnElTurno?.add(claveDeLaCita(cita.id));
-  const { fecha } = fechaYHoraEnPalabras(cita.scheduledAt.toISOString());
+  // La hora en 12 horas, como todas las que ve el modelo (2026-11-10). Si la
+  // copia tal cual en `horaDeLaCita`, `leerCitaPedida` la entiende.
+  const { fecha, hora } = fechaYHoraEnPalabras(cita.scheduledAt.toISOString());
   return {
     ok: false,
     motivo: 'no_coincide_con_lo_pedido',
-    // La hora va en `HH:mm` de 24 horas, no en 12 como el resto de horas que
-    // ve el modelo (2026-11-10): es el valor que el modelo vuelve a escribir
-    // en `horaDeLaCita` si la clienta dice que es esa, y la superficie MCP la
-    // fija así en `mcp-published-tools.spec.ts`, que esta corrección no toca.
-    laCitaConEseId: { fecha, hora: horaDelSalon(cita.scheduledAt) },
+    laCitaConEseId: { fecha, hora },
     queHacer:
       accion === 'cancelar'
         ? 'No se canceló nada. Pregúntale a la clienta cuál de sus citas quiere cancelar (por ejemplo, si es esta); no la canceles en este turno.'

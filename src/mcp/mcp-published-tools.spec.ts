@@ -205,7 +205,10 @@ describe('Superficie MCP — herramientas de gestion (T6)', () => {
     expect(resultadoDe(body)).toMatchObject({
       ok: false,
       motivo: 'no_coincide_con_lo_pedido',
-      laCitaConEseId: { fecha: 'lunes, 20 de abril de 2026', hora: '10:00' },
+      laCitaConEseId: {
+        fecha: 'lunes, 20 de abril de 2026',
+        hora: '10:00 a. m.',
+      },
     });
     expect(reservaGuardada.status).not.toBe('cancelada');
   });

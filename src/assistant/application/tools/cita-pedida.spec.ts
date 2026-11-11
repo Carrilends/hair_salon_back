@@ -610,7 +610,7 @@ describe('tras un rechazo, la cita no se toca en el mismo turno', () => {
       motivo: 'no_coincide_con_lo_pedido',
       laCitaConEseId: {
         fecha: 'domingo, 8 de noviembre de 2026',
-        hora: '09:00',
+        hora: '9:00 a. m.',
       },
     });
     expect((res as { queHacer: string }).queHacer).toMatch(/preg[uú]ntale/i);
