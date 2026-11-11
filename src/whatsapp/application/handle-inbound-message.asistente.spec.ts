@@ -47,7 +47,6 @@ function montar(opts: {
           ok: true,
           reply: 'Hola, ¿qué necesitas?',
           presentaciones: [],
-          tocaAvisoLegal: false,
         }
       );
     },
@@ -131,27 +130,11 @@ describe('HandleInboundMessage · asistente (plan 06, F5)', () => {
         ok: true,
         reply: 'Mañana tienes 3 citas.',
         presentaciones: [],
-        tocaAvisoLegal: true,
       },
     });
     await sut.handle(escribe('agenda de mañana', DUENA));
     expect(llamadas[0].esDuena).toBe(true);
     expect(textos(enviados)).toEqual(['Mañana tienes 3 citas.']);
-  });
-
-  it('cuando toca el aviso legal, la respuesta de la clienta empieza con él', async () => {
-    const { sut, enviados } = montar({
-      respuesta: {
-        ok: true,
-        reply: 'Hola.',
-        presentaciones: [],
-        tocaAvisoLegal: true,
-      },
-    });
-    await sut.handle(escribe('hola'));
-    expect(enviados).toHaveLength(2);
-    expect(textos(enviados)[0]).toContain(POLITICA);
-    expect(textos(enviados)[1]).toBe('Hola.');
   });
 
   it('las propuestas llegan con sus botones', async () => {
@@ -169,7 +152,6 @@ describe('HandleInboundMessage · asistente (plan 06, F5)', () => {
             hora: '10:00 a. m.',
           },
         ],
-        tocaAvisoLegal: false,
       },
     });
     await sut.handle(escribe('sí, a las 10'));
@@ -208,7 +190,6 @@ describe('HandleInboundMessage · asistente (plan 06, F5)', () => {
             hora: '10:00 a. m.',
           },
         ],
-        tocaAvisoLegal: false,
       },
     });
     await sut.handle(escribe('ese'));
@@ -293,7 +274,6 @@ describe('HandleInboundMessage · asistente (plan 06, F5)', () => {
         ok: true,
         reply: 'Mira.',
         presentaciones,
-        tocaAvisoLegal: false,
       }) as AssistantChatResult;
 
     it('con 131056 reintenta a 1 y 4 s y entrega una sola vez', async () => {

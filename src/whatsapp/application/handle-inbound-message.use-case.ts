@@ -39,7 +39,13 @@ import {
   CLOCK,
   PENDING_BOOKING_ACTIONS,
   ASSISTANT_CHAT,
+  LEGAL_NOTICE_LOG,
 } from './tokens';
+import { LegalNoticeLogPort } from '../domain/ports/legal-notice-log.port';
+import {
+  POLITICA_DE_DATOS_VERSION,
+  tocaElAvisoLegal,
+} from '../domain/aviso-legal';
 import { AssistantChatPort } from '../domain/ports/assistant-chat.port';
 import { avisoLegal, mensajesDeLaRespuesta } from './respuesta-del-asistente';
 import { pideConfirmacion } from 'src/assistant/application/tools/servicios-del-turno';
@@ -160,6 +166,9 @@ export class HandleInboundMessageUseCase {
     @Optional()
     @Inject(ASSISTANT_CHAT)
     private readonly asistente?: AssistantChatPort | null,
+    @Optional()
+    @Inject(LEGAL_NOTICE_LOG)
+    private readonly avisos?: LegalNoticeLogPort,
   ) {}
 
   async handle(mensaje: InboundMessage): Promise<void> {
@@ -373,14 +382,15 @@ export class HandleInboundMessageUseCase {
       return;
     }
 
-    const aviso =
-      r.tocaAvisoLegal && !esDuena ? avisoLegal(this.config.politicaUrl) : null;
+    // El aviso de tratamiento de datos va antes que la respuesta, y nunca a la
+    // dueña (D10).
+    if (!esDuena) await this.avisoLegalSiToca(from);
     // Cada envío por separado: que Meta rechace la foto no puede dejar a la
     // clienta sin los botones para confirmar.
     for (const m of mensajesDeLaRespuesta(
       r,
       from,
-      aviso,
+      null,
       this.config.imagenPorDefecto,
     )) {
       try {
@@ -404,6 +414,57 @@ export class HandleInboundMessageUseCase {
           }
         }
       }
+    }
+  }
+
+  /**
+   * El aviso de tratamiento de datos, si le toca a este número (decisión de
+   * Luis, 2026-11-10): nunca lo recibió, pasaron 15 días o cambió la versión
+   * de la política (`tocaElAvisoLegal`). Se anota **solo** si el transporte
+   * aceptó el envío; un `failed` que Meta notifique después por el webhook de
+   * estados no se puede ligar hoy a este registro.
+   *
+   * Si el registro no se puede leer, el aviso se envía: mejor de más que de
+   * menos. Si no se puede anotar, se registra el error y la respuesta sigue.
+   * Sin registro (no cableado), no se envía: el módulo siempre lo provee.
+   */
+  private async avisoLegalSiToca(from: string): Promise<void> {
+    if (!this.avisos) return;
+    const ahora = this.clock.now();
+    let toca = true;
+    try {
+      toca = tocaElAvisoLegal(await this.avisos.lastSent(from), ahora);
+    } catch (error) {
+      this.logger.error(
+        `No se pudo leer el registro del aviso legal de ${from}; se envía`,
+        error as Error,
+      );
+    }
+    if (!toca) return;
+    try {
+      await this.enviar({
+        kind: 'text',
+        to: from,
+        body: avisoLegal(this.config.politicaUrl),
+      });
+    } catch (error) {
+      this.logger.error(
+        `No se pudo enviar el aviso legal a ${from}`,
+        error as Error,
+      );
+      return;
+    }
+    try {
+      await this.avisos.recordSent({
+        phoneE164: from,
+        sentAt: ahora,
+        policyVersion: POLITICA_DE_DATOS_VERSION,
+      });
+    } catch (error) {
+      this.logger.error(
+        `No se pudo anotar el aviso legal enviado a ${from}`,
+        error as Error,
+      );
     }
   }
 

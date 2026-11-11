@@ -14,6 +14,7 @@ import {
   WHATSAPP_CHANNEL_CONFIG,
   PENDING_BOOKING_ACTIONS,
   ASSISTANT_CHAT,
+  LEGAL_NOTICE_LOG,
 } from './application/tokens';
 import { AssistantChatAdapter } from './infrastructure/assistant/assistant-chat.adapter';
 import { asistenteActivado, configDelCanal } from './whatsapp-config';
@@ -27,6 +28,8 @@ import { WhatsAppWebhookController } from './infrastructure/http/whatsapp-webhoo
 import { MetaSignatureGuard } from './infrastructure/http/meta-signature.guard';
 import { InboundMessageOrmEntity } from './infrastructure/persistence/inbound-message.orm-entity';
 import { TypeOrmInboundMessageLog } from './infrastructure/persistence/typeorm-inbound-message-log.repository';
+import { LegalNoticeOrmEntity } from './infrastructure/persistence/legal-notice.orm-entity';
+import { TypeOrmLegalNoticeLog } from './infrastructure/persistence/typeorm-legal-notice-log.repository';
 import { ReservationActionsAdapter } from './infrastructure/reservations/reservation-actions.adapter';
 import { InboundLogPurgeScheduler } from './infrastructure/scheduling/inbound-log-purge.scheduler';
 
@@ -48,7 +51,7 @@ const VENTANA_MS = 60_000;
  */
 @Module({
   imports: [
-    TypeOrmModule.forFeature([InboundMessageOrmEntity]),
+    TypeOrmModule.forFeature([InboundMessageOrmEntity, LegalNoticeOrmEntity]),
     ReservationsModule,
     NotificationsModule,
     WorkersModule,
@@ -70,6 +73,9 @@ const VENTANA_MS = 60_000;
       useClass: PendingBookingActionsAdapter,
     },
     { provide: INBOUND_MESSAGE_LOG, useClass: TypeOrmInboundMessageLog },
+    // El aviso de tratamiento de datos por número (2026-11-10): lo decide y lo
+    // anota el canal, que es quien lo envía.
+    { provide: LEGAL_NOTICE_LOG, useClass: TypeOrmLegalNoticeLog },
     {
       // Quién es la peluquería para este canal. Un mensaje que venga de ese
       // número actúa como administración; cualquier otro, como el teléfono que

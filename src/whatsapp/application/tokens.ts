@@ -16,3 +16,5 @@ export const RATE_LIMITER = Symbol('WHATSAPP_RATE_LIMITER');
 export const PENDING_BOOKING_ACTIONS = Symbol('PENDING_BOOKING_ACTIONS');
 /** Conversar con el asistente (plan 06, F5). `null` si está apagado. */
 export const ASSISTANT_CHAT = Symbol('WHATSAPP_ASSISTANT_CHAT');
+/** Registro del aviso de tratamiento de datos por número (2026-11-10). */
+export const LEGAL_NOTICE_LOG = Symbol('WHATSAPP_LEGAL_NOTICE_LOG');

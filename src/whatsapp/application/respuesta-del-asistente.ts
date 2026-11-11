@@ -91,8 +91,9 @@ function partirLineas(lineas: string[], max = MAX_TEXTO): string[] {
 }
 
 /**
- * Primer mensaje de cada conversación nueva de una clienta (plan 06, D10):
- * quién responde, que nada queda hecho sin su botón y dónde leer la política.
+ * Aviso de tratamiento de datos para una clienta (plan 06, D10): quién
+ * responde, que nada queda hecho sin su botón y dónde leer la política. Cuándo
+ * se envía lo decide `tocaElAvisoLegal` (nunca, 15 días o versión nueva).
  */
 export function avisoLegal(politicaUrl?: string): string {
   return (
