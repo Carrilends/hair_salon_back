@@ -11,8 +11,12 @@ export type AssistantChatResult =
       ok: true;
       reply: string;
       presentaciones: AssistantPresentation[];
-      /** El turno abrió conversación: toca el aviso legal (D10). */
-      conversacionNueva: boolean;
+      /**
+       * Toca el aviso legal (D10): el turno abrió conversación y el número no
+       * conversó con el asistente en los últimos 30 días. Lo decide el
+       * asistente; el canal solo lo envía (y nunca a la dueña).
+       */
+      tocaAvisoLegal: boolean;
     }
   | { ok: false; motivo: 'limite' | 'no_disponible' | 'error' };
 

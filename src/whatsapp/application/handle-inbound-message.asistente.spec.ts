@@ -47,7 +47,7 @@ function montar(opts: {
           ok: true,
           reply: 'Hola, ¿qué necesitas?',
           presentaciones: [],
-          conversacionNueva: false,
+          tocaAvisoLegal: false,
         }
       );
     },
@@ -131,7 +131,7 @@ describe('HandleInboundMessage · asistente (plan 06, F5)', () => {
         ok: true,
         reply: 'Mañana tienes 3 citas.',
         presentaciones: [],
-        conversacionNueva: true,
+        tocaAvisoLegal: true,
       },
     });
     await sut.handle(escribe('agenda de mañana', DUENA));
@@ -139,13 +139,13 @@ describe('HandleInboundMessage · asistente (plan 06, F5)', () => {
     expect(textos(enviados)).toEqual(['Mañana tienes 3 citas.']);
   });
 
-  it('una conversación nueva de clienta empieza con el aviso legal', async () => {
+  it('cuando toca el aviso legal, la respuesta de la clienta empieza con él', async () => {
     const { sut, enviados } = montar({
       respuesta: {
         ok: true,
         reply: 'Hola.',
         presentaciones: [],
-        conversacionNueva: true,
+        tocaAvisoLegal: true,
       },
     });
     await sut.handle(escribe('hola'));
@@ -169,7 +169,7 @@ describe('HandleInboundMessage · asistente (plan 06, F5)', () => {
             hora: '10:00 a. m.',
           },
         ],
-        conversacionNueva: false,
+        tocaAvisoLegal: false,
       },
     });
     await sut.handle(escribe('sí, a las 10'));
@@ -208,7 +208,7 @@ describe('HandleInboundMessage · asistente (plan 06, F5)', () => {
             hora: '10:00 a. m.',
           },
         ],
-        conversacionNueva: false,
+        tocaAvisoLegal: false,
       },
     });
     await sut.handle(escribe('ese'));
@@ -293,7 +293,7 @@ describe('HandleInboundMessage · asistente (plan 06, F5)', () => {
         ok: true,
         reply: 'Mira.',
         presentaciones,
-        conversacionNueva: false,
+        tocaAvisoLegal: false,
       }) as AssistantChatResult;
 
     it('con 131056 reintenta a 1 y 4 s y entrega una sola vez', async () => {

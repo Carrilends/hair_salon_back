@@ -23,7 +23,7 @@ describe('AssistantChatAdapter (plan 06, F5)', () => {
   it('llama al asistente con la identidad del canal y sin userId', async () => {
     const execute = jest
       .fn()
-      .mockResolvedValue({ reply: 'Hola', conversacionNueva: true });
+      .mockResolvedValue({ reply: 'Hola', tocaAvisoLegal: true });
     await montar(execute).conversar({
       phoneE164: NUMERO,
       esDuena: false,
@@ -48,7 +48,7 @@ describe('AssistantChatAdapter (plan 06, F5)', () => {
     expect(execute.mock.calls[0][0].isAdmin).toBe(true);
   });
 
-  it('devuelve el texto, las presentaciones (o lista vacía) y si es nueva', async () => {
+  it('devuelve el texto, las presentaciones (o lista vacía) y si toca el aviso', async () => {
     const r = await montar(
       jest.fn().mockResolvedValue({ reply: 'Hola' }),
     ).conversar({
@@ -60,8 +60,19 @@ describe('AssistantChatAdapter (plan 06, F5)', () => {
       ok: true,
       reply: 'Hola',
       presentaciones: [],
-      conversacionNueva: false,
+      tocaAvisoLegal: false,
     });
+  });
+
+  it('el aviso lo decide el asistente (30 días), no que la conversación sea nueva', async () => {
+    const r = await montar(
+      jest.fn().mockResolvedValue({
+        reply: 'Hola',
+        conversacionNueva: true,
+        tocaAvisoLegal: false,
+      }),
+    ).conversar({ phoneE164: NUMERO, esDuena: false, texto: 'hola' });
+    expect(r).toMatchObject({ ok: true, tocaAvisoLegal: false });
   });
 
   it.each([

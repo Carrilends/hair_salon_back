@@ -374,9 +374,7 @@ export class HandleInboundMessageUseCase {
     }
 
     const aviso =
-      r.conversacionNueva && !esDuena
-        ? avisoLegal(this.config.politicaUrl)
-        : null;
+      r.tocaAvisoLegal && !esDuena ? avisoLegal(this.config.politicaUrl) : null;
     // Cada envío por separado: que Meta rechace la foto no puede dejar a la
     // clienta sin los botones para confirmar.
     for (const m of mensajesDeLaRespuesta(

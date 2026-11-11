@@ -89,6 +89,12 @@ const PRIMERA_VUELTA_QUE_SE_JUZGA = 3;
  */
 const TIMEOUT_DIFERIDO_MS = 5_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * El aviso de tratamiento de datos de WhatsApp se repite solo tras 30 días sin
+ * conversar con el asistente (prueba con móvil del 2026-11-10).
+ */
+export const AVISO_LEGAL_CADA_MS = 30 * DAY_MS;
 const COURTESY_REPLY =
   'Disculpa, no logré completar la solicitud. ¿Quieres intentarlo de otra forma o reservar por el flujo web de siempre?';
 /**
@@ -140,10 +146,19 @@ export interface SendMessageResult {
   /**
    * Solo en WhatsApp (plan 06, F5, D10): el turno abrió una conversación —la
    * primera del número, la de después de 24 h de silencio o la que sustituye a
-   * una llena—. El canal la usa para enviar el aviso legal una vez por
-   * conversación. La web no lo recibe: allí el aviso lo muestra el widget.
+   * una llena—. Desde el 2026-11-10 el aviso legal no depende solo de esto:
+   * ver `tocaAvisoLegal`. La web no lo recibe: allí el aviso lo muestra el
+   * widget.
    */
   conversacionNueva?: boolean;
+  /**
+   * Solo en WhatsApp: toca enviar el aviso de tratamiento de datos. Es una
+   * conversación nueva **y** el número no tuvo ninguna con el asistente en los
+   * últimos 30 días (`AVISO_LEGAL_CADA_MS`). Prueba con móvil del 2026-11-10:
+   * con solo `conversacionNueva`, el aviso volvía a llegar cada vez que una
+   * conversación llena rotaba.
+   */
+  tocaAvisoLegal?: boolean;
 }
 
 /**
@@ -245,6 +260,16 @@ export class SendMessageUseCase {
     const porWhatsApp = input.canal === 'whatsapp';
     // Antes de añadir nada: una conversación recién abierta no tiene mensajes.
     const esNueva = conversation.messageCount === 0;
+    // Antes de guardar la nueva, o se encontraría a sí misma: ¿conversó este
+    // número con el asistente en los últimos 30 días? Una conversación que
+    // rota por llena, o que vuelve tras un día de silencio, no repite el aviso.
+    const tocaAvisoLegal =
+      porWhatsApp &&
+      esNueva &&
+      !(await this.porTelefono!.findActiveByPhone(
+        input.phoneE164!,
+        new Date(ahora.getTime() - AVISO_LEGAL_CADA_MS),
+      ));
     // La dueña escribiendo desde su WhatsApp (D7): gestiona la agenda, no
     // conversa por gusto, y un tope que la dejara sin poder confirmar una cita
     // a media tarde sería peor que el gasto que evita. Sigue bajo el techo
@@ -567,7 +592,7 @@ export class SendMessageUseCase {
       conversationId: saved.id,
       reply,
       ...(presentaciones.length > 0 ? { presentaciones } : {}),
-      ...(porWhatsApp ? { conversacionNueva: esNueva } : {}),
+      ...(porWhatsApp ? { conversacionNueva: esNueva, tocaAvisoLegal } : {}),
     };
   }
 

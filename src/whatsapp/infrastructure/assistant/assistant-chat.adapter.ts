@@ -55,7 +55,7 @@ export class AssistantChatAdapter implements AssistantChatPort {
         ok: true,
         reply: r.reply,
         presentaciones: r.presentaciones ?? [],
-        conversacionNueva: r.conversacionNueva === true,
+        tocaAvisoLegal: r.tocaAvisoLegal === true,
       };
     } catch (error) {
       // El techo de la instalación no es culpa de quien escribe: se le dice

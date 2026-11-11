@@ -75,6 +75,10 @@ class RepoDoble
     since: Date,
   ): Promise<Conversation | null> {
     this.pedidasPorNumero.push({ phone, since });
+    // Como la consulta real: solo la que tuvo actividad desde `since`. Sin
+    // `updatedAt` cuenta como reciente (las pruebas anteriores no la ponen).
+    const ultima = this.activaDelNumero?.updatedAt;
+    if (ultima && ultima < since) return null;
     return this.activaDelNumero;
   }
   async countMessagesOfPhoneSince(phone: string, since: Date): Promise<number> {
@@ -492,6 +496,80 @@ describe('SendMessageUseCase · conversación nueva (plan 06, F5, D10)', () => {
     const { useCase } = montar({});
     const r = await useCase.execute({ userId: 'u-1', message: 'hola' });
     expect(r).not.toHaveProperty('conversacionNueva');
+  });
+});
+
+/**
+ * Prueba con móvil del 2026-11-10: la conversación llegó a 20 mensajes, rotó y
+ * el aviso de tratamiento de datos volvió a llegar. El aviso se envía solo si
+ * el número no tuvo ninguna conversación con el asistente en los últimos 30
+ * días; para saberlo basta `findActiveByPhone`, sin migración.
+ */
+describe('SendMessageUseCase · aviso legal una vez cada 30 días', () => {
+  const DIA = 24 * 60 * 60 * 1000;
+  const haceDias = (d: number) => new Date(AHORA.getTime() - d * DIA);
+  const delNumero = (mensajes: number, ultimaActividad: Date) => {
+    const c = conversacionDelNumero(mensajes);
+    c.updatedAt = ultimaActividad;
+    return c;
+  };
+  const escribir = (repo: RepoDoble) =>
+    montar({ repo }).useCase.execute({
+      canal: 'whatsapp',
+      phoneE164: NUMERO,
+      userId: null,
+      message: 'hola',
+    });
+
+  it('la primera conversación del número lleva el aviso', async () => {
+    const r = await escribir(new RepoDoble());
+    expect(r.conversacionNueva).toBe(true);
+    expect(r.tocaAvisoLegal).toBe(true);
+  });
+
+  it('la conversación que sustituye a una llena hace unos minutos no lo lleva', async () => {
+    const repo = new RepoDoble();
+    repo.activaDelNumero = delNumero(
+      PRESUPUESTO.maxMessagesPerConversation,
+      new Date(AHORA.getTime() - 3 * 60_000),
+    );
+    const r = await escribir(repo);
+    expect(r.conversacionNueva).toBe(true);
+    expect(r.tocaAvisoLegal).toBe(false);
+  });
+
+  it('tras más de un día de silencio pero menos de 30, no lo lleva', async () => {
+    const repo = new RepoDoble();
+    repo.activaDelNumero = delNumero(4, haceDias(10));
+    const r = await escribir(repo);
+    expect(r.conversacionNueva).toBe(true);
+    expect(r.tocaAvisoLegal).toBe(false);
+    expect(repo.pedidasPorNumero.map((p) => p.since)).toContainEqual(
+      haceDias(30),
+    );
+  });
+
+  it('si la última conversación fue hace más de 30 días, lo lleva otra vez', async () => {
+    const repo = new RepoDoble();
+    repo.activaDelNumero = delNumero(4, haceDias(31));
+    const r = await escribir(repo);
+    expect(r.conversacionNueva).toBe(true);
+    expect(r.tocaAvisoLegal).toBe(true);
+  });
+
+  it('seguir una conversación activa no lo lleva', async () => {
+    const repo = new RepoDoble();
+    repo.activaDelNumero = delNumero(2, new Date(AHORA.getTime() - 60_000));
+    const r = await escribir(repo);
+    expect(r.tocaAvisoLegal).toBe(false);
+  });
+
+  it('la web no recibe el campo', async () => {
+    const r = await montar({}).useCase.execute({
+      userId: 'u-1',
+      message: 'hola',
+    });
+    expect(r).not.toHaveProperty('tocaAvisoLegal');
   });
 });
 
