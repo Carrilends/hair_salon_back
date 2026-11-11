@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { WhatsAppMessage } from 'src/notifications/domain/ports/whatsapp-sender.port';
 import { HandleInboundMessageUseCase } from './handle-inbound-message.use-case';
 import { InboundMessage } from '../domain/inbound-message';
@@ -46,6 +47,7 @@ function montar(
 ) {
   const registro = opts.registro ?? new RegistroDoble();
   const enviados: WhatsAppMessage[] = [];
+  const reloj = { ahora: AHORA };
   const asistente: AssistantChatPort = {
     nombreDelServicio: async () => null,
     conversar: async () => ({
@@ -74,12 +76,12 @@ function montar(
       politicaUrl: POLITICA,
       esperar: async () => undefined,
     },
-    { now: () => AHORA } as never,
+    { now: () => reloj.ahora } as never,
     undefined,
     asistente,
     registro,
   );
-  return { sut, registro, enviados };
+  return { sut, registro, enviados, reloj };
 }
 
 const escribe = (text: string, from = CLIENTA): InboundMessage => ({
@@ -197,7 +199,7 @@ describe('HandleInboundMessage · aviso de tratamiento de datos por número', ()
     expect(textos(enviados)[1]).toBe('Hola, ¿qué necesitas?');
   });
 
-  it('si no se puede registrar, la respuesta sale igual', async () => {
+  it('si no se puede registrar, la respuesta sale igual y el siguiente mensaje lo reenvía', async () => {
     const registro = new RegistroDoble();
     registro.recordSent = async () => {
       throw new Error('la base no responde');
@@ -205,7 +207,91 @@ describe('HandleInboundMessage · aviso de tratamiento de datos por número', ()
     const { sut, enviados } = montar({ registro });
 
     await sut.handle(escribe('hola'));
-
     expect(textos(enviados)).toHaveLength(2);
+    expect(esAviso(textos(enviados)[0])).toBe(true);
+
+    // La lectura funciona y no hay fila: le vuelve a tocar.
+    await sut.handle(escribe('¿y el sábado?'));
+    expect(textos(enviados)).toHaveLength(4);
+    expect(esAviso(textos(enviados)[2])).toBe(true);
+  });
+});
+
+/**
+ * Revisión de `a784919`: si el registro no se puede leer (tabla sin migrar,
+ * base caída), enviar «por si acaso» repetía el aviso en cada mensaje con dos
+ * errores en el log. Ahora decide con lo que este proceso envió, con la misma
+ * regla de 15 días y versión: como mucho un aviso por número y proceso.
+ */
+describe('HandleInboundMessage · aviso legal con el registro caído', () => {
+  const caido = () => {
+    const registro = new RegistroDoble();
+    registro.lastSent = async () => {
+      throw new Error('relation "whatsapp_legal_notices" does not exist');
+    };
+    return registro;
+  };
+  let errores: jest.SpyInstance;
+  beforeEach(() => {
+    errores = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+  });
+  afterEach(() => errores.mockRestore());
+
+  it('el primer mensaje lo lleva y el segundo, dentro de los 15 días, no', async () => {
+    const registro = caido();
+    const { sut, enviados, reloj } = montar({ registro });
+
+    await sut.handle(escribe('hola'));
+    reloj.ahora = new Date(AHORA.getTime() + 5 * 60_000);
+    await sut.handle(escribe('¿y el sábado?'));
+
+    expect(textos(enviados).filter(esAviso)).toHaveLength(1);
+    expect(textos(enviados)).toHaveLength(3);
+    // Con el registro caído no se intenta anotar: fallaría por lo mismo.
+    expect(registro.escrituras).toEqual([]);
+  });
+
+  it('un solo error en el log por proceso, no dos por mensaje', async () => {
+    const { sut } = montar({ registro: caido() });
+
+    await sut.handle(escribe('hola'));
+    await sut.handle(escribe('¿y el sábado?'));
+    await sut.handle(escribe('gracias'));
+
+    expect(errores).toHaveBeenCalledTimes(1);
+  });
+
+  it('a los 15 días en el mismo proceso, lo vuelve a enviar', async () => {
+    const { sut, enviados, reloj } = montar({ registro: caido() });
+
+    await sut.handle(escribe('hola'));
+    reloj.ahora = new Date(AHORA.getTime() + 15 * DIA);
+    await sut.handle(escribe('hola otra vez'));
+
+    expect(textos(enviados).filter(esAviso)).toHaveLength(2);
+  });
+
+  it('lo que se envió con el registro sano también cuenta si después se cae', async () => {
+    const registro = new RegistroDoble();
+    const { sut, enviados } = montar({ registro });
+
+    await sut.handle(escribe('hola'));
+    registro.lastSent = async () => {
+      throw new Error('la base no responde');
+    };
+    await sut.handle(escribe('¿y el sábado?'));
+
+    expect(textos(enviados).filter(esAviso)).toHaveLength(1);
+  });
+
+  it('cada número lleva su cuenta', async () => {
+    const { sut, enviados } = montar({ registro: caido() });
+
+    await sut.handle(escribe('hola'));
+    await sut.handle(escribe('hola', '573004445566'));
+
+    expect(textos(enviados).filter(esAviso)).toHaveLength(2);
   });
 });

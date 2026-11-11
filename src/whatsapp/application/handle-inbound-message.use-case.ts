@@ -146,6 +146,18 @@ const FILAS_CON_PAGINACION = MAX_FILAS - 1;
 @Injectable()
 export class HandleInboundMessageUseCase {
   private readonly logger = new Logger(HandleInboundMessageUseCase.name);
+  /**
+   * Avisos legales que ESTE proceso envió, por número. Es el respaldo cuando
+   * el registro no se puede leer (tabla sin migrar, base caída): con la misma
+   * regla de 15 días y versión, el aviso sale como mucho una vez por número y
+   * proceso, en vez de en cada mensaje (revisión de `a784919`).
+   */
+  private readonly avisosDeEsteProceso = new Map<
+    string,
+    { sentAt: Date; policyVersion: string }
+  >();
+  /** El fallo de lectura del registro se anota una vez por proceso. */
+  private lecturaDeAvisosFallida = false;
 
   constructor(
     @Inject(RESERVATION_ACTIONS)
@@ -424,23 +436,39 @@ export class HandleInboundMessageUseCase {
    * aceptó el envío; un `failed` que Meta notifique después por el webhook de
    * estados no se puede ligar hoy a este registro.
    *
-   * Si el registro no se puede leer, el aviso se envía: mejor de más que de
-   * menos. Si no se puede anotar, se registra el error y la respuesta sigue.
-   * Sin registro (no cableado), no se envía: el módulo siempre lo provee.
+   * Dos casos que no son simétricos, a propósito:
+   * - **Sin proveedor del registro** (no cableado) no se envía nunca. Es un
+   *   error de montaje, no de la base; el módulo siempre lo provee y
+   *   `whatsapp.module.spec.ts` lo comprueba.
+   * - **Con el registro, pero sin poder leerlo** (tabla sin migrar, base
+   *   caída), se decide con lo que este proceso envió
+   *   (`avisosDeEsteProceso`), con la misma regla: se envía una vez por
+   *   número y proceso, no en cada mensaje. El fallo de lectura se anota una
+   *   sola vez por proceso, y no se intenta anotar el envío, porque fallaría
+   *   por lo mismo.
+   *
+   * Si la lectura funciona pero anotar falla, se registra el error, la
+   * respuesta sigue y el siguiente mensaje vuelve a llevar el aviso.
    */
   private async avisoLegalSiToca(from: string): Promise<void> {
     if (!this.avisos) return;
     const ahora = this.clock.now();
-    let toca = true;
+    let registroLegible = true;
+    let ultimo: { sentAt: Date; policyVersion: string } | null;
     try {
-      toca = tocaElAvisoLegal(await this.avisos.lastSent(from), ahora);
+      ultimo = await this.avisos.lastSent(from);
     } catch (error) {
-      this.logger.error(
-        `No se pudo leer el registro del aviso legal de ${from}; se envía`,
-        error as Error,
-      );
+      registroLegible = false;
+      ultimo = this.avisosDeEsteProceso.get(from) ?? null;
+      if (!this.lecturaDeAvisosFallida) {
+        this.lecturaDeAvisosFallida = true;
+        this.logger.error(
+          'No se pudo leer el registro del aviso legal; hasta que vuelva, se decide con los avisos de este proceso',
+          error as Error,
+        );
+      }
     }
-    if (!toca) return;
+    if (!tocaElAvisoLegal(ultimo, ahora)) return;
     try {
       await this.enviar({
         kind: 'text',
@@ -454,12 +482,11 @@ export class HandleInboundMessageUseCase {
       );
       return;
     }
+    const enviado = { sentAt: ahora, policyVersion: POLITICA_DE_DATOS_VERSION };
+    this.avisosDeEsteProceso.set(from, enviado);
+    if (!registroLegible) return;
     try {
-      await this.avisos.recordSent({
-        phoneE164: from,
-        sentAt: ahora,
-        policyVersion: POLITICA_DE_DATOS_VERSION,
-      });
+      await this.avisos.recordSent({ phoneE164: from, ...enviado });
     } catch (error) {
       this.logger.error(
         `No se pudo anotar el aviso legal enviado a ${from}`,
