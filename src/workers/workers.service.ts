@@ -65,9 +65,20 @@ export interface WorkersWeekResponse {
     id: string;
     name: string;
     isDefault: boolean;
-    days: Array<{ date: string; usedMinutes: number; capacityMinutes: number }>;
+    days: Array<{
+      date: string;
+      usedMinutes: number;
+      capacityMinutes: number;
+      /** Minutos de ausencia de la estilista ese día (aparte de las citas). */
+      absentMinutes: number;
+    }>;
   }>;
 }
+
+import {
+  SQL_BLOQUES_DE_AUSENCIA_DEL_DIA,
+  SQL_MINUTOS_DE_AUSENCIA_POR_DIA,
+} from '../reservations/infrastructure/persistence/worker-absence.sql';
 
 @Injectable()
 export class WorkersService implements OnModuleInit {
@@ -219,14 +230,32 @@ export class WorkersService implements OnModuleInit {
       [tz, dateYmd],
     )) as ResRow[];
 
+    // Una ausencia ocupa a la estilista como una cita más: va como un bloque
+    // más de `reservations` y suma a `usedMinutes`, así el front deshabilita
+    // esas horas sin cambiar su lógica.
+    const ausencias = (await this.reservationRepository.manager.query(
+      SQL_BLOQUES_DE_AUSENCIA_DEL_DIA,
+      [dateYmd, tz],
+    )) as { worker_id: string; start_min: string; end_min: string }[];
+
+    const ocupaciones = [
+      ...resRows.map((r) => ({
+        wId: r.worker_id,
+        startMin: Number(r.start_min),
+        endMin: Number(r.start_min) + Number(r.duration),
+      })),
+      ...ausencias.map((a) => ({
+        wId: a.worker_id,
+        startMin: Number(a.start_min),
+        endMin: Number(a.end_min),
+      })),
+    ];
+
     const workerBlocks = new Map<string, ReservationBlock[]>();
     const workerUsed = new Map<string, number>();
 
-    for (const row of resRows) {
-      const wId = row.worker_id;
-      const startMin = Number(row.start_min);
-      const duration = Number(row.duration);
-      const endMin = startMin + duration;
+    for (const { wId, startMin, endMin } of ocupaciones) {
+      const duration = endMin - startMin;
 
       if (!workerBlocks.has(wId)) workerBlocks.set(wId, []);
       workerBlocks.get(wId)!.push({ startMin, endMin });
@@ -316,6 +345,16 @@ export class WorkersService implements OnModuleInit {
       usados.set(`${fila.worker_id}|${fila.ymd}`, Number(fila.used));
     }
 
+    const filasAusencia = (await this.reservationRepository.manager.query(
+      SQL_MINUTOS_DE_AUSENCIA_POR_DIA,
+      [days[0], days[6], tz],
+    )) as { worker_id: string; d: string; minutes: number | string }[];
+    const ausentes = new Map<string, number>();
+    for (const fila of filasAusencia) {
+      const k = `${fila.worker_id}|${fila.d}`;
+      ausentes.set(k, (ausentes.get(k) ?? 0) + Number(fila.minutes));
+    }
+
     return {
       start,
       days,
@@ -327,6 +366,7 @@ export class WorkersService implements OnModuleInit {
           date,
           usedMinutes: usados.get(`${w.id}|${date}`) ?? 0,
           capacityMinutes: capacidades[i],
+          absentMinutes: ausentes.get(`${w.id}|${date}`) ?? 0,
         })),
       })),
     };

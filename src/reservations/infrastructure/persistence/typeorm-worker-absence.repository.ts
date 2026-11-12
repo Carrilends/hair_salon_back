@@ -4,6 +4,10 @@ import { MoreThan, Repository } from 'typeorm';
 import { WorkerAbsenceOrmEntity } from './worker-absence.orm-entity';
 import { WorkerAbsence } from '../../domain/worker-absence';
 import { AbsenceOverlapError } from '../../domain/errors';
+import {
+  SQL_BLOQUES_DE_AUSENCIA_DEL_DIA,
+  SQL_MINUTOS_DE_AUSENCIA_POR_DIA,
+} from './worker-absence.sql';
 import { WorkerAbsenceRepositoryPort } from '../../domain/ports/worker-absence-repository.port';
 
 /** SQLSTATE de Postgres para violación de restricción de exclusión. */
@@ -84,16 +88,7 @@ export class TypeOrmWorkerAbsenceRepository
     // Hora local del salón de cada extremo, en minutos desde la medianoche del
     // día pedido, recortada a [0, 1440].
     const rows: { worker_id: string; start_min: string; end_min: string }[] =
-      await this.repo.query(
-        `SELECT worker_id,
-                GREATEST(0, ROUND(EXTRACT(EPOCH FROM ((starts_at AT TIME ZONE $2) - $1::date::timestamp)) / 60)) AS start_min,
-                LEAST(1440, ROUND(EXTRACT(EPOCH FROM ((ends_at AT TIME ZONE $2) - $1::date::timestamp)) / 60)) AS end_min
-           FROM worker_absences
-          WHERE (starts_at AT TIME ZONE $2) < $1::date::timestamp + interval '1 day'
-            AND (ends_at AT TIME ZONE $2) > $1::date::timestamp
-          ORDER BY starts_at`,
-        [dateYmd, tz],
-      );
+      await this.repo.query(SQL_BLOQUES_DE_AUSENCIA_DEL_DIA, [dateYmd, tz]);
     return rows.map((r) => ({
       workerId: r.worker_id,
       startMin: Number(r.start_min),
@@ -107,16 +102,11 @@ export class TypeOrmWorkerAbsenceRepository
     tz: string,
   ): Promise<{ workerId: string; dateYmd: string; minutes: number }[]> {
     const rows: { worker_id: string; d: string; minutes: string }[] =
-      await this.repo.query(
-        `SELECT worker_id,
-                to_char(starts_at AT TIME ZONE $3, 'YYYY-MM-DD') AS d,
-                SUM(ROUND(EXTRACT(EPOCH FROM (ends_at - starts_at)) / 60)) AS minutes
-           FROM worker_absences
-          WHERE (starts_at AT TIME ZONE $3)::date BETWEEN $1::date AND $2::date
-          GROUP BY worker_id, d
-          ORDER BY d, worker_id`,
-        [fromYmd, toYmd, tz],
-      );
+      await this.repo.query(SQL_MINUTOS_DE_AUSENCIA_POR_DIA, [
+        fromYmd,
+        toYmd,
+        tz,
+      ]);
     return rows.map((r) => ({
       workerId: r.worker_id,
       dateYmd: r.d,

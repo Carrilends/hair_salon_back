@@ -4,6 +4,7 @@ import {
   OccupancyMinuteRow,
   ReservationRepositoryPort,
 } from '../domain/ports/reservation-repository.port';
+import { WorkerAbsenceRepositoryPort } from '../domain/ports/worker-absence-repository.port';
 import { WorkerAvailabilityPort } from '../domain/ports/worker-availability.port';
 
 // Rango fijo en el pasado (2026-04-20, lunes) para que el ajuste "hoy" no
@@ -13,6 +14,10 @@ class FakeRepo implements Partial<ReservationRepositoryPort> {
   constructor(private readonly rows: OccupancyMinuteRow[]) {}
   findOccupancyRows = async () => this.rows;
 }
+
+const sinAusencias = {
+  minutesByWorkerAndDate: async () => [],
+} as unknown as WorkerAbsenceRepositoryPort;
 
 const workers: WorkerAvailabilityPort = {
   countParallelStylists: async () => 3,
@@ -32,7 +37,7 @@ describe('GetOccupancyUseCase', () => {
       { dateKey: '2026/04/20', startMin: 600, durationMin: 60 },
       { dateKey: '2026/04/20', startMin: 720, durationMin: 30 },
     ]);
-    const uc = new GetOccupancyUseCase(repo as any, workers);
+    const uc = new GetOccupancyUseCase(repo as any, workers, sinAusencias);
 
     const result = await uc.execute('2026-04-20', '2026-04-20');
 
@@ -44,9 +49,33 @@ describe('GetOccupancyUseCase', () => {
     });
   });
 
+  it('ocupación: el día suma los minutos ausentes y no supera la capacidad', async () => {
+    const repo = new FakeRepo([
+      { dateKey: '2026/04/20', startMin: 600, durationMin: 60 },
+    ]);
+    const ausencias = {
+      minutesByWorkerAndDate: async () => [
+        { workerId: 'w-1', dateYmd: '2026-04-20', minutes: 240 },
+        { workerId: 'w-2', dateYmd: '2026-04-20', minutes: 100 },
+        // Una ausencia de varios días acumulada en su día de inicio: el
+        // tope de la capacidad evita pasarse.
+        { workerId: 'w-3', dateYmd: '2026-04-21', minutes: 99999 },
+      ],
+    } as unknown as WorkerAbsenceRepositoryPort;
+    const uc = new GetOccupancyUseCase(repo as any, workers, ausencias);
+
+    const result = await uc.execute('2026-04-20', '2026-04-21');
+
+    expect(result.byDate['2026/04/20'].usedMinutes).toBe(60 + 240 + 100);
+    expect(result.byDate['2026/04/21']).toEqual({
+      usedMinutes: 2160,
+      capacityMinutes: 2160,
+    });
+  });
+
   it('rechaza cuando "from" es posterior a "to"', async () => {
     const repo = new FakeRepo([]);
-    const uc = new GetOccupancyUseCase(repo as any, workers);
+    const uc = new GetOccupancyUseCase(repo as any, workers, sinAusencias);
 
     await expect(uc.execute('2026-04-21', '2026-04-20')).rejects.toThrow(
       BadRequestException,

@@ -43,6 +43,20 @@ describe('WorkersService', () => {
     jest.useRealTimers();
   });
 
+  /**
+   * Doble de la base con dos tablas: lo que pida `worker_absences` recibe
+   * `ausencias`; cualquier otra consulta, `reservas`.
+   */
+  function consultas(reservas: unknown[], ausencias: unknown[] = []) {
+    const query = jest
+      .fn()
+      .mockImplementation(async (sql: string) =>
+        /worker_absences/.test(sql) ? ausencias : reservas,
+      );
+    (reservationRepository.manager as any).query = query;
+    return query;
+  }
+
   describe('getWorkerName', () => {
     it('devuelve el nombre del estilista', async () => {
       (workerRepository.findOne as jest.Mock).mockResolvedValue({
@@ -67,9 +81,7 @@ describe('WorkersService', () => {
       { id: 'w-def', name: 'Default', isDefault: true },
     ]);
 
-    (
-      reservationRepository.manager!.query as unknown as jest.Mock
-    ).mockResolvedValue([
+    consultas([
       { worker_id: 'w-1', start_min: '960', duration: '30' }, // pasada
       { worker_id: 'w-1', start_min: '1050', duration: '90' }, // en curso
       { worker_id: 'w-1', start_min: '1110', duration: '90' }, // futura
@@ -124,6 +136,7 @@ describe('WorkersService', () => {
       }[],
     ) {
       return jest.fn().mockImplementation(async (sql: string) => {
+        if (/worker_absences/.test(sql)) return [];
         const excluyeCanceladas = /status\s*<>\s*'cancelada'/.test(sql);
         return filas
           .filter((f) => !excluyeCanceladas || f.status !== 'cancelada')
@@ -294,6 +307,58 @@ describe('WorkersService', () => {
     });
   });
 
+  describe('getAvailabilityByDate y las ausencias', () => {
+    beforeEach(() => {
+      (workerRepository.find as jest.Mock).mockResolvedValue([
+        { id: 'w-1', name: 'Estilista A', isDefault: false },
+        { id: 'w-2', name: 'Estilista B', isDefault: false },
+      ]);
+    });
+
+    it('availability: ausencia 08:00–12:00 aparece como bloque 480–720 de esa estilista', async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-04-20T23:00:00.000Z'));
+      consultas(
+        [{ worker_id: 'w-1', start_min: '780', duration: '60' }],
+        [{ worker_id: 'w-1', start_min: '480', end_min: '720' }],
+      );
+
+      const r = await service.getAvailabilityByDate('2026-04-21');
+      const a = r.workers.find((w) => w.id === 'w-1')!;
+      const b = r.workers.find((w) => w.id === 'w-2')!;
+
+      expect(a.reservations).toEqual([
+        { startMin: 780, endMin: 840 },
+        { startMin: 480, endMin: 720 },
+      ]);
+      expect(a.usedMinutes).toBe(60 + 240);
+      expect(b.reservations).toEqual([]);
+      expect(b.usedMinutes).toBe(0);
+    });
+
+    it('hoy a las 10:30, la ausencia cuenta solo 90 minutos usados', async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-04-20T15:30:00.000Z')); // 10:30 Bogotá
+      consultas([], [{ worker_id: 'w-1', start_min: '480', end_min: '720' }]);
+
+      const r = await service.getAvailabilityByDate('2026-04-20');
+      const a = r.workers.find((w) => w.id === 'w-1')!;
+
+      expect(a.usedMinutes).toBe(90); // 10:30–12:00
+      expect(a.reservations).toEqual([{ startMin: 480, endMin: 720 }]);
+    });
+
+    it('una ausencia ya terminada hoy no cuenta minutos usados', async () => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-04-20T20:00:00.000Z')); // 15:00 Bogotá
+      consultas([], [{ worker_id: 'w-1', start_min: '480', end_min: '720' }]);
+
+      const r = await service.getAvailabilityByDate('2026-04-20');
+
+      expect(r.workers.find((w) => w.id === 'w-1')!.usedMinutes).toBe(0);
+    });
+  });
+
   describe('getWeekLoad', () => {
     /**
      * Lo que devolvería Postgres: una fila por estilista y día con citas no
@@ -315,7 +380,7 @@ describe('WorkersService', () => {
         { id: 'w-2', name: 'Bea', isDefault: false },
         { id: 'w-def', name: 'Sin preferencia', isDefault: true },
       ]);
-      query().mockResolvedValue(filas);
+      consultas(filas);
     });
 
     it('lleva el inicio al lunes y devuelve los siete días', async () => {
@@ -352,6 +417,23 @@ describe('WorkersService', () => {
       expect(minutos('w-def')).toEqual([0, 0, 0, 0, 0, 0, 60]);
     });
 
+    it('semana: absentMinutes del día', async () => {
+      consultas(filas, [
+        { worker_id: 'w-1', d: '2026-10-13', minutes: '240' },
+        { worker_id: 'w-def', d: '2026-10-18', minutes: 60 },
+      ]);
+
+      const semana = await service.getWeekLoad('2026-10-12');
+      const ausentes = (id: string) =>
+        semana.workers
+          .find((w) => w.id === id)!
+          .days.map((d) => d.absentMinutes);
+
+      expect(ausentes('w-1')).toEqual([0, 240, 0, 0, 0, 0, 0]);
+      expect(ausentes('w-2')).toEqual([0, 0, 0, 0, 0, 0, 0]);
+      expect(ausentes('w-def')).toEqual([0, 0, 0, 0, 0, 0, 60]);
+    });
+
     it('hoy cuenta el día entero, no solo lo que falta', async () => {
       jest.useFakeTimers();
       jest.setSystemTime(new Date('2026-10-14T23:00:00.000Z')); // miércoles, 18:00 Bogotá
@@ -363,13 +445,15 @@ describe('WorkersService', () => {
         date: '2026-10-14',
         usedMinutes: 150,
         capacityMinutes: 720,
+        absentMinutes: 0,
       });
     });
 
     it('pide la semana entera en UNA consulta, agrupada y sin las canceladas', async () => {
       await service.getWeekLoad('2026-10-14');
 
-      expect(query()).toHaveBeenCalledTimes(1);
+      // Una de reservas y una de ausencias: dos consultas para toda la semana.
+      expect(query()).toHaveBeenCalledTimes(2);
       expect(workerRepository.find).toHaveBeenCalledTimes(1);
       const [sql, params] = query().mock.calls[0] as [string, unknown[]];
       const plano = sql.replace(/\s+/g, ' ');

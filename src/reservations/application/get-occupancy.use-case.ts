@@ -1,7 +1,12 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { ReservationRepositoryPort } from '../domain/ports/reservation-repository.port';
+import { WorkerAbsenceRepositoryPort } from '../domain/ports/worker-absence-repository.port';
 import { WorkerAvailabilityPort } from '../domain/ports/worker-availability.port';
-import { RESERVATION_REPOSITORY, WORKER_AVAILABILITY } from './tokens';
+import {
+  RESERVATION_REPOSITORY,
+  WORKER_ABSENCES,
+  WORKER_AVAILABILITY,
+} from './tokens';
 import { getDayBounds, getSalonNow } from '../salon-time';
 
 function pad2(n: number): string {
@@ -28,6 +33,8 @@ export class GetOccupancyUseCase {
     private readonly repository: ReservationRepositoryPort,
     @Inject(WORKER_AVAILABILITY)
     private readonly workers: WorkerAvailabilityPort,
+    @Inject(WORKER_ABSENCES)
+    private readonly absences: WorkerAbsenceRepositoryPort,
   ) {}
 
   async execute(from: string, to: string) {
@@ -53,6 +60,13 @@ export class GetOccupancyUseCase {
       );
     }
 
+    // Las ausencias restan capacidad como una cita: suman a lo usado del día.
+    const ausencias = await this.absences.minutesByWorkerAndDate(from, to, tz);
+    for (const a of ausencias) {
+      const key = a.dateYmd.replace(/-/g, '/');
+      usedByDate.set(key, (usedByDate.get(key) ?? 0) + a.minutes);
+    }
+
     const byDate: Record<
       string,
       { usedMinutes: number; capacityMinutes: number }
@@ -60,9 +74,11 @@ export class GetOccupancyUseCase {
     for (const key of iterateKeys(from, to)) {
       const [y, m, d] = key.split('/').map(Number);
       const bounds = getDayBounds(`${y}-${pad2(m)}-${pad2(d)}`, tz, salonNow);
+      const capacityMinutes = parallelStylists * bounds.effectiveCapacityMin;
       byDate[key] = {
-        usedMinutes: usedByDate.get(key) ?? 0,
-        capacityMinutes: parallelStylists * bounds.effectiveCapacityMin,
+        // Tope: una ausencia larga no puede dejar el día por encima de lleno.
+        usedMinutes: Math.min(usedByDate.get(key) ?? 0, capacityMinutes),
+        capacityMinutes,
       };
     }
     return {
