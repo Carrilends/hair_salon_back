@@ -12,7 +12,12 @@ import {
   CancellationTooLateError,
   ChosenWorkerBusyError,
   WorkerAbsentError,
+  AbsenceNotFoundError,
+  AbsenceOverlapError,
+  DefaultWorkerAbsenceError,
   DomainError,
+  InvalidAbsenceError,
+  WorkerNotFoundError,
   ReservationNotFoundError,
   ReservationOwnershipError,
   WorkerOverlapError,
@@ -21,7 +26,8 @@ import {
 /**
  * Traduce los errores de dominio de Reservas a excepciones HTTP:
  *   - WorkerOverlapError / CancellationTooLateError -> 409 Conflict
- *   - ReservationNotFoundError                      -> 404 Not Found
+ *   - AbsenceOverlapError (ausencia cruzada)        -> 409 Conflict
+ *   - ReservationNotFoundError / AbsenceNotFoundError / WorkerNotFoundError -> 404 Not Found
  *   - ReservationOwnershipError                     -> 403 Forbidden
  *   - resto de errores de dominio (horario, transición de estado inválida,
  *     servicios/contacto faltantes, entrada inválida) -> 400 Bad Request
@@ -32,10 +38,15 @@ export class ReservationDomainExceptionFilter implements ExceptionFilter {
     let http: HttpException;
     if (
       error instanceof WorkerOverlapError ||
-      error instanceof CancellationTooLateError
+      error instanceof CancellationTooLateError ||
+      error instanceof AbsenceOverlapError
     ) {
       http = new ConflictException(error.message);
-    } else if (error instanceof ReservationNotFoundError) {
+    } else if (
+      error instanceof ReservationNotFoundError ||
+      error instanceof AbsenceNotFoundError ||
+      error instanceof WorkerNotFoundError
+    ) {
       http = new NotFoundException(error.message);
     } else if (error instanceof ReservationOwnershipError) {
       http = new ForbiddenException(error.message);
@@ -68,6 +79,10 @@ export class ReservationDomainExceptionFilter implements ExceptionFilter {
  * se los comería a los dos.
  */
 function motivoDelConflicto(error: DomainError): string | null {
+  if (error instanceof InvalidAbsenceError) return 'ausencia_invalida';
+  if (error instanceof DefaultWorkerAbsenceError)
+    return 'estilista_por_defecto';
+  if (error instanceof AbsenceOverlapError) return 'ausencia_cruzada';
   if (error instanceof WorkerAbsentError) return 'estilista_ausente';
   if (error instanceof ChosenWorkerBusyError) return 'estilista_ocupada';
   if (error instanceof WorkerOverlapError) return 'hora_ocupada';

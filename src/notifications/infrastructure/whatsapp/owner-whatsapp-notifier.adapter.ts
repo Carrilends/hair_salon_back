@@ -79,6 +79,8 @@ export class OwnerWhatsAppNotifier implements NotifierPort {
   }
 
   private quePaso(event: NotifiableEvent): string {
+    const porAusencia = this.quePasoPorAusencia(event);
+    if (porAusencia) return porAusencia;
     switch (event.type) {
       case 'reservation.created':
         return 'Reserva nueva';
@@ -95,6 +97,24 @@ export class OwnerWhatsAppNotifier implements NotifierPort {
       default:
         return assertNever(event, 'OwnerWhatsAppNotifier');
     }
+  }
+
+  /**
+   * Textos fijos cuando la causa es la ausencia de una estilista. En la
+   * cancelación se le sugiere a la dueña llamar a la clienta; el teléfono va
+   * tal como llegó en la reserva.
+   */
+  private quePasoPorAusencia(event: NotifiableEvent): string | null {
+    if (event.type === 'reservation.rescheduled' && event.absence) {
+      return `Cita pasada a ${event.workerName} por la ausencia de ${event.absence.absentWorkerName}`;
+    }
+    if (event.type === 'reservation.cancelled' && event.absence) {
+      const base = `Cita cancelada por la ausencia de ${event.absence.absentWorkerName}. Te sugerimos hablar con ${event.customerName}`;
+      return event.customerPhone
+        ? `${base} (${event.customerPhone}) para darle otra hora`
+        : `${base} para darle otra hora; no dejó teléfono, revisa la bandeja`;
+    }
+    return null;
   }
 
   /**

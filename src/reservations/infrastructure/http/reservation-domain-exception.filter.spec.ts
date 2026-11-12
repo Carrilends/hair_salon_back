@@ -7,6 +7,11 @@ import {
   ReservationOwnershipError,
   WorkerOverlapError,
   WorkerAbsentError,
+  InvalidAbsenceError,
+  DefaultWorkerAbsenceError,
+  AbsenceOverlapError,
+  AbsenceNotFoundError,
+  WorkerNotFoundError,
 } from '../../domain/errors';
 
 /** Respuesta de Express mínima: solo anota lo que el filtro le pide. */
@@ -82,5 +87,17 @@ describe('ReservationDomainExceptionFilter y ausencias', () => {
       statusCode: 409,
       reason: 'estilista_ausente',
     });
+  });
+
+  it.each([
+    [new InvalidAbsenceError('x'), 400, 'ausencia_invalida'],
+    [new DefaultWorkerAbsenceError(), 400, 'estilista_por_defecto'],
+    [new AbsenceOverlapError(), 409, 'ausencia_cruzada'],
+    [new AbsenceNotFoundError('a-1'), 404, undefined],
+    [new WorkerNotFoundError('w-1'), 404, undefined],
+  ])('%s -> %s con motivo %s', (error, status, reason) => {
+    const salida = traducir(error);
+    expect(salida.status).toBe(status);
+    expect(salida.body.reason).toBe(reason);
   });
 });

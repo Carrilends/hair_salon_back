@@ -13,6 +13,10 @@ const crear = (o: {
 }) => WorkerAbsence.create({ workerId: W, tz: TZ, now: NOW, ...o });
 
 describe('WorkerAbsence.create', () => {
+  it('una fecha que no existe (2026-02-30) es InvalidAbsenceError, no un fallo interno', () => {
+    expect(() => crear({ dateYmd: '2026-02-30' })).toThrow(InvalidAbsenceError);
+  });
+
   it('día completo de un martes = 08:00–20:00 hora del salón', () => {
     const a = crear({ dateYmd: '2026-11-17' });
     expect(a.startsAt.toISOString()).toBe('2026-11-17T13:00:00.000Z');

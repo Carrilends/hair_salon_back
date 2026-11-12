@@ -170,4 +170,49 @@ describe('OwnerWhatsAppNotifier', () => {
 
     expect(comoPlantilla(sent[0]).bodyParams[1]).toContain('3:00');
   });
+
+  describe('ausencia de una estilista', () => {
+    const quePaso = async (e: NotifiableEvent) => {
+      const { notifier, sent } = notificador();
+      await notifier.notify(e);
+      return comoPlantilla(sent[0]).bodyParams[0];
+    };
+
+    it('cita reasignada: texto fijo con la nueva y la ausente', async () => {
+      const e = evento({
+        type: 'reservation.rescheduled',
+        byAdmin: true,
+        workerChanged: true,
+        workerName: 'Estilista B',
+        previousScheduledAt: new Date('2026-08-29T20:00:00Z'),
+        absence: { absentWorkerName: 'Estilista A' },
+      });
+      expect(await quePaso(e)).toBe(
+        'Cita pasada a Estilista B por la ausencia de Estilista A',
+      );
+    });
+
+    it('cita cancelada con teléfono: el teléfono tal como llega', async () => {
+      const e = evento({
+        type: 'reservation.cancelled',
+        byAdmin: true,
+        absence: { absentWorkerName: 'Estilista A' },
+      });
+      expect(await quePaso(e)).toBe(
+        'Cita cancelada por la ausencia de Estilista A. Te sugerimos hablar con Marta (3001234567) para darle otra hora',
+      );
+    });
+
+    it('cita cancelada sin teléfono: manda a la bandeja', async () => {
+      const e = evento({
+        type: 'reservation.cancelled',
+        byAdmin: true,
+        customerPhone: null,
+        absence: { absentWorkerName: 'Estilista A' },
+      });
+      expect(await quePaso(e)).toBe(
+        'Cita cancelada por la ausencia de Estilista A. Te sugerimos hablar con Marta para darle otra hora; no dejó teléfono, revisa la bandeja',
+      );
+    });
+  });
 });

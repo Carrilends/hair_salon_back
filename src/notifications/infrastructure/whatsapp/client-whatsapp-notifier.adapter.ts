@@ -21,6 +21,12 @@ export interface ClientWhatsAppConfig {
   templateRescheduled: string;
   templateConfirmed: string;
   /**
+   * «Tu cita sigue en pie, pero ahora te atenderá X»: la que se manda cuando
+   * una ausencia pasa la cita a otra estilista. Vacía, se usa la de
+   * reprogramada (la hora no cambió, pero el aviso sigue siendo cierto).
+   */
+  templateWorkerChanged: string;
+  /**
    * Foto de respaldo de la cabecera del aviso de creación (plan 06, F1) y, a la
    * vez, **el interruptor de la cabecera**: vacía, el aviso sale sin imagen
    * (plantilla v1 de texto); con valor, sale siempre con imagen (plantilla v2
@@ -118,6 +124,16 @@ export class ClientWhatsAppNotifier implements NotifierPort {
         // Sigue sin avisarse del movimiento propio que conserva estilista: eso
         // ya se lo confirmó el canal por el que lo hizo, y cada plantilla cuesta.
         if (!event.byAdmin && !event.workerChanged) return null;
+        // Una ausencia conserva la hora: contarle «antes → después» con la
+        // misma hora dos veces confunde. Solo cambia la estilista.
+        if (event.absence && this.config.templateWorkerChanged) {
+          return {
+            kind: 'template',
+            to,
+            templateName: this.config.templateWorkerChanged,
+            bodyParams: [cuando, event.workerName],
+          };
+        }
         return {
           kind: 'template',
           to,

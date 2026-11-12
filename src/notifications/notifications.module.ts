@@ -124,6 +124,9 @@ function respaldoDelAviso(): string | undefined {
           process.env.WHATSAPP_TEMPLATE_RESERVA_REPROGRAMADA ?? '',
         templateConfirmed:
           process.env.WHATSAPP_TEMPLATE_RESERVA_CONFIRMADA ?? '',
+        // Vacía = la ausencia se avisa con la plantilla de reprogramada.
+        templateWorkerChanged:
+          process.env.WHATSAPP_TEMPLATE_ESTILISTA_CAMBIADA ?? '',
         // Vacía = aviso de creación sin imagen (plantilla v1). Ver la config.
         fallbackImageUrl: respaldoDelAviso(),
       }),

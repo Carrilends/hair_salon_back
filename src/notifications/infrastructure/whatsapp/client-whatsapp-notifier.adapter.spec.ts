@@ -1,4 +1,8 @@
-import { ReservationCreatedEvent } from '../../domain/events/notifiable-event';
+import {
+  ReservationCancelledEvent,
+  ReservationCreatedEvent,
+  ReservationRescheduledEvent,
+} from '../../domain/events/notifiable-event';
 import { WhatsAppMessage } from '../../domain/ports/whatsapp-sender.port';
 import {
   ClientWhatsAppConfig,
@@ -11,6 +15,7 @@ const config: ClientWhatsAppConfig = {
   templateCancelled: 'reserva_cancelada_cliente',
   templateRescheduled: 'reserva_reprogramada_cliente',
   templateConfirmed: 'reserva_confirmada_cliente',
+  templateWorkerChanged: 'estilista_cambiada_cliente',
 };
 
 /** Estrecha la unión para poder leer los campos de plantilla en las aserciones. */
@@ -43,14 +48,14 @@ function makeEvent(
   };
 }
 
-function makeNotifier() {
+function makeNotifier(cfg: ClientWhatsAppConfig = config) {
   const sent: WhatsAppMessage[] = [];
   const sender = {
     send: async (m: WhatsAppMessage) => {
       sent.push(m);
     },
   };
-  const notifier = new ClientWhatsAppNotifier(sender as never, config);
+  const notifier = new ClientWhatsAppNotifier(sender as never, cfg);
   return { notifier, sent };
 }
 
@@ -348,5 +353,53 @@ describe('ClientWhatsAppNotifier · imagen del aviso de creación', () => {
     for (const m of sent) {
       expect(comoPlantilla(m)).not.toHaveProperty('headerImageUrl');
     }
+  });
+
+  describe('ausencia de una estilista', () => {
+    const base = makeEvent();
+    const reprogramada = (): ReservationRescheduledEvent => ({
+      ...base,
+      type: 'reservation.rescheduled',
+      byAdmin: true,
+      previousScheduledAt: base.scheduledAt,
+      workerChanged: true,
+      workerName: 'Estilista B',
+      absence: { absentWorkerName: 'Estilista A' },
+    });
+
+    it('rescheduled con absence usa la plantilla de estilista cambiada [cuando, nueva]', async () => {
+      const { notifier, sent } = makeNotifier();
+      await notifier.notify(reprogramada());
+      const m = comoPlantilla(sent[0]);
+      expect(m.templateName).toBe('estilista_cambiada_cliente');
+      expect(m.bodyParams).toHaveLength(2);
+      expect(m.bodyParams[0]).toContain('2026');
+      expect(m.bodyParams[1]).toBe('Estilista B');
+    });
+
+    it('sin la variable de plantilla cae en la de reprogramada', async () => {
+      const { notifier, sent } = makeNotifier({
+        ...config,
+        templateWorkerChanged: '',
+      });
+      await notifier.notify(reprogramada());
+      const m = comoPlantilla(sent[0]);
+      expect(m.templateName).toBe('reserva_reprogramada_cliente');
+      expect(m.bodyParams).toHaveLength(3);
+    });
+
+    it('cancelled con absence usa la plantilla de cancelada de siempre', async () => {
+      const { notifier, sent } = makeNotifier();
+      const e: ReservationCancelledEvent = {
+        ...base,
+        type: 'reservation.cancelled',
+        byAdmin: true,
+        absence: { absentWorkerName: 'Estilista A' },
+      };
+      await notifier.notify(e);
+      const m = comoPlantilla(sent[0]);
+      expect(m.templateName).toBe('reserva_cancelada_cliente');
+      expect(m.bodyParams).toHaveLength(2);
+    });
   });
 });

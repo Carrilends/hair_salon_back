@@ -10,6 +10,7 @@ import { WorkerAbsenceOrmEntity } from './infrastructure/persistence/worker-abse
 import { TypeOrmWorkerAbsenceRepository } from './infrastructure/persistence/typeorm-worker-absence.repository';
 import { ReservationServiceOrmEntity } from './infrastructure/persistence/reservation-service.orm-entity';
 import { ReservationsController } from './infrastructure/http/reservations.controller';
+import { WorkerAbsencesController } from './infrastructure/http/worker-absences.controller';
 import { TypeOrmReservationRepository } from './infrastructure/persistence/typeorm-reservation.repository';
 import { WorkersAvailabilityAdapter } from './infrastructure/workers/workers-availability.adapter';
 import { SystemClock } from './infrastructure/time/system-clock.adapter';
@@ -58,7 +59,7 @@ import {
     AuthModule,
     NotificationsModule,
   ],
-  controllers: [ReservationsController],
+  controllers: [ReservationsController, WorkerAbsencesController],
   providers: [
     // Reparto de estilista compartido por la creación y la reprogramación: si
     // cada una llevara el suyo, acabarían divergiendo.
