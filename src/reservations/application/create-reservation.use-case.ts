@@ -3,11 +3,13 @@ import { Reservation } from '../domain/reservation';
 import { ReservationScheduling } from '../domain/reservation-scheduling';
 import {
   WorkerOverlapError,
+  WorkerAbsentError,
   InvalidReservationError,
   DuplicateServicesError,
 } from '../domain/errors';
 import { ReservationRepositoryPort } from '../domain/ports/reservation-repository.port';
 import { WorkerAssigner } from './worker-assigner';
+import { WorkerAbsenceRepositoryPort } from '../domain/ports/worker-absence-repository.port';
 import { ServiceCatalogPort } from '../domain/ports/service-catalog.port';
 import { ClockPort } from '../domain/ports/clock.port';
 import { ReservationNotifierPort } from '../domain/ports/reservation-notifier.port';
@@ -16,6 +18,7 @@ import {
   SERVICE_CATALOG,
   CLOCK,
   RESERVATION_NOTIFIER,
+  WORKER_ABSENCES,
 } from './tokens';
 
 /**
@@ -47,6 +50,8 @@ export class CreateReservationUseCase {
     private readonly clock: ClockPort,
     @Inject(RESERVATION_NOTIFIER)
     private readonly notifier: ReservationNotifierPort,
+    @Inject(WORKER_ABSENCES)
+    private readonly absences: WorkerAbsenceRepositoryPort,
   ) {}
 
   async execute(command: CreateReservationCommand): Promise<Reservation> {
@@ -140,6 +145,19 @@ export class CreateReservationUseCase {
       (await this.assigner.elegir(borrador.scheduledAt, borrador.endedAt, tz));
     const reservation =
       workerId === borrador.workerId ? borrador : armar(workerId);
+
+    // Ausencia de la estilista (vacaciones, incapacidad…): va antes que el
+    // solape (orden canónico A6) y tras horario y pasado. Si el reparto la
+    // eligió ya vino libre de ausencias; aquí cae la que eligió la clienta.
+    if (
+      await this.absences.overlapsAny(
+        workerId,
+        reservation.scheduledAt,
+        reservation.endedAt,
+      )
+    ) {
+      throw new WorkerAbsentError();
+    }
 
     // Única puerta del sistema para la regla de solape, la recorran las reservas
     // con estilista elegido o asignado. (La restricción de exclusión de la tabla

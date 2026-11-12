@@ -21,6 +21,9 @@ import {
   DuplicateServicesError,
 } from 'src/reservations/domain/errors';
 
+/** Sin ausencias: el comportamiento previo a la regla. */
+const SIN_AUSENCIAS = { overlapsAny: async () => false };
+
 /**
  * Plan 06, F4 (D4): en WhatsApp el modelo no escribe en la agenda. Propone, y
  * escribe un botón.
@@ -211,7 +214,11 @@ describe('crearReserva en WhatsApp: valida la hora antes de guardar la propuesta
     };
     const agenda = new CreateReservationUseCase(
       repositorio as never,
-      new WorkerAssigner(repositorio as never, workers as never),
+      new WorkerAssigner(
+        repositorio as never,
+        workers as never,
+        SIN_AUSENCIAS as never,
+      ),
       {
         getSnapshots: async (ids: string[]) =>
           ids.map((id) => ({
@@ -227,6 +234,7 @@ describe('crearReserva en WhatsApp: valida la hora antes de guardar la propuesta
           throw new Error('comprobar no avisa');
         },
       } as never,
+      SIN_AUSENCIAS as never,
     );
     return proponerReserva(undefined, agenda);
   }
@@ -601,7 +609,12 @@ describe('reprogramarReserva en WhatsApp: valida la hora nueva antes de proponer
       {
         reservationRescheduled: async (...a: unknown[]) => void avisos.push(a),
       } as never,
-      new WorkerAssigner(repositorio as never, workers as never),
+      new WorkerAssigner(
+        repositorio as never,
+        workers as never,
+        SIN_AUSENCIAS as never,
+      ),
+      SIN_AUSENCIAS as never,
     );
     const tool = new ProposeRescheduleTool(
       { ...DEF, name: 'reprogramarReserva' },

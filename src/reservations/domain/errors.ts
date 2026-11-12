@@ -36,6 +36,21 @@ export class ChosenWorkerBusyError extends WorkerOverlapError {
   }
 }
 
+/**
+ * La estilista tiene una ausencia (vacaciones, incapacidad…) que cubre la
+ * ventana pedida. Hereda de `WorkerOverlapError` por la misma razón que
+ * `ChosenWorkerBusyError`: todo lo que ya traduce el genérico sigue
+ * funcionando. Allí donde se distinga, el `instanceof` específico va ANTES que
+ * `ChosenWorkerBusyError` y que el genérico.
+ */
+export class WorkerAbsentError extends WorkerOverlapError {
+  constructor() {
+    super();
+    this.message = 'La estilista no está disponible a esa hora';
+    this.name = 'WorkerAbsentError';
+  }
+}
+
 export class ReservationNotFoundError extends DomainError {
   constructor(id: string) {
     super(`Reservation ${id} not found`);

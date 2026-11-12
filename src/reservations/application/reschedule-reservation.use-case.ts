@@ -3,15 +3,22 @@ import { Reservation } from '../domain/reservation';
 import { ReservationScheduling } from '../domain/reservation-scheduling';
 import {
   ChosenWorkerBusyError,
+  WorkerAbsentError,
   ReservationNotFoundError,
 } from '../domain/errors';
 import { ReservationRepositoryPort } from '../domain/ports/reservation-repository.port';
+import { WorkerAbsenceRepositoryPort } from '../domain/ports/worker-absence-repository.port';
 import { ClockPort } from '../domain/ports/clock.port';
 import { ReservationActor, isAdminActor } from '../domain/reservation-actor';
 import { assertCanActOn } from '../domain/reservation-authorization';
 import { ReservationNotifierPort } from '../domain/ports/reservation-notifier.port';
 import { WorkerAssigner } from './worker-assigner';
-import { RESERVATION_REPOSITORY, CLOCK, RESERVATION_NOTIFIER } from './tokens';
+import {
+  RESERVATION_REPOSITORY,
+  CLOCK,
+  RESERVATION_NOTIFIER,
+  WORKER_ABSENCES,
+} from './tokens';
 
 /**
  * Mueve una cita en el tiempo. Es la **única** regla de reprogramación del
@@ -56,6 +63,8 @@ export class RescheduleReservationUseCase {
     @Inject(RESERVATION_NOTIFIER)
     private readonly notifier: ReservationNotifierPort,
     private readonly assigner: WorkerAssigner,
+    @Inject(WORKER_ABSENCES)
+    private readonly absences: WorkerAbsenceRepositoryPort,
   ) {}
 
   async execute(
@@ -158,6 +167,17 @@ export class RescheduleReservationUseCase {
     // anterior —y, en la rama del reparto, sacaría a su estilista actual de la
     // lista de candidatas—.
     if (reservation.workerPinned) {
+      // Ausencia antes que solape (A6): su estilista no puede esa hora aunque
+      // la agenda esté vacía.
+      if (
+        await this.absences.overlapsAny(
+          reservation.workerId,
+          reservation.scheduledAt,
+          reservation.endedAt,
+        )
+      ) {
+        throw new WorkerAbsentError();
+      }
       const overlaps = await this.repository.countOverlaps(
         reservation.workerId,
         reservation.scheduledAt,

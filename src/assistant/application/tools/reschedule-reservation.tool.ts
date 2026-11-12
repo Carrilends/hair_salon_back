@@ -10,6 +10,7 @@ import {
   ReservationOwnershipError,
   WorkerOverlapError,
   ChosenWorkerBusyError,
+  WorkerAbsentError,
 } from 'src/reservations/domain/errors';
 import { ReservationActor } from 'src/reservations/domain/reservation-actor';
 import { actorDelContexto } from './identidad';
@@ -224,6 +225,7 @@ export function mapRescheduleErrorToReason(error: unknown): string {
   // se comería al específico y el modelo no podría distinguir «tu estilista no
   // puede a esa hora» (cabe cambiar de hora o reservar sin preferencia) de «el
   // salón está lleno» (solo cabe cambiar de hora).
+  if (error instanceof WorkerAbsentError) return 'estilista_ausente';
   if (error instanceof ChosenWorkerBusyError) return 'estilista_ocupada';
   if (error instanceof WorkerOverlapError) return 'hora_ocupada';
   if (error instanceof OutOfBusinessHoursError) return 'fuera_de_horario';

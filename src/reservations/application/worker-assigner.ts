@@ -1,9 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { WorkerOverlapError } from '../domain/errors';
 import { ReservationRepositoryPort } from '../domain/ports/reservation-repository.port';
+import { WorkerAbsenceRepositoryPort } from '../domain/ports/worker-absence-repository.port';
 import { WorkerAvailabilityPort } from '../domain/ports/worker-availability.port';
 import { getDatePartsInTz } from '../salon-time';
-import { RESERVATION_REPOSITORY, WORKER_AVAILABILITY } from './tokens';
+import {
+  RESERVATION_REPOSITORY,
+  WORKER_ABSENCES,
+  WORKER_AVAILABILITY,
+} from './tokens';
 
 function pad2(n: number): string {
   return String(n).padStart(2, '0');
@@ -40,6 +45,8 @@ export class WorkerAssigner {
     private readonly repository: ReservationRepositoryPort,
     @Inject(WORKER_AVAILABILITY)
     private readonly workers: WorkerAvailabilityPort,
+    @Inject(WORKER_ABSENCES)
+    private readonly absences: WorkerAbsenceRepositoryPort,
   ) {}
 
   /**
@@ -59,7 +66,13 @@ export class WorkerAssigner {
     scheduledAt: Date,
     endedAt: Date,
     tz: string,
-    opts?: { excludeReservationId?: string },
+    opts?: {
+      excludeReservationId?: string;
+      /** Estilistas que no pueden entrar en el reparto (p. ej. la de la cita que se simula). */
+      excludeWorkerIds?: string[];
+      /** Reservas simuladas que todavía no están en la base. */
+      ocupadas?: { workerId: string; start: Date; end: Date }[];
+    },
   ): Promise<string> {
     const p = getDatePartsInTz(scheduledAt, tz);
     const dateYmd = `${p.year}-${pad2(p.month)}-${pad2(p.day)}`;
@@ -74,6 +87,20 @@ export class WorkerAssigner {
     // En serie y no en paralelo a propósito: en cuanto una sirve, las demás
     // consultas sobran, y son pocas (el salón tiene un puñado de estilistas).
     for (const candidata of candidatas) {
+      if (opts?.excludeWorkerIds?.includes(candidata.id)) continue;
+      if (
+        opts?.ocupadas?.some(
+          (o) =>
+            o.workerId === candidata.id &&
+            o.start < endedAt &&
+            scheduledAt < o.end,
+        )
+      )
+        continue;
+      // Una ausencia que se cruza saca a la candidata del reparto, igual que
+      // una cita: la clienta no eligió a nadie, así que se pasa a la siguiente.
+      if (await this.absences.overlapsAny(candidata.id, scheduledAt, endedAt))
+        continue;
       const solapes = await this.repository.countOverlaps(
         candidata.id,
         scheduledAt,

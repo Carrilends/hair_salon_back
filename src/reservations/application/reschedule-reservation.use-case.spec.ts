@@ -9,7 +9,11 @@ import {
   ReservationOwnershipError,
   WorkerOverlapError,
   ChosenWorkerBusyError,
+  WorkerAbsentError,
 } from '../domain/errors';
+
+/** Sin ausencias: el comportamiento previo a la regla. */
+const SIN_AUSENCIAS = { overlapsAny: async () => false };
 
 const lines = [
   { serviceId: 's1', name: 'Corte', price: 20000, durationMinutes: 60 },
@@ -115,6 +119,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
       clock,
       noopNotifier,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     const result = await uc.execute('r-1', NUEVA.toISOString(), {
@@ -136,6 +141,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
       clock,
       noopNotifier,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     await expect(
@@ -150,6 +156,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
       clock,
       noopNotifier,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     await expect(
@@ -166,6 +173,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
       tarde,
       noopNotifier,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     await expect(
@@ -181,6 +189,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
       clock,
       noopNotifier,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     await expect(
@@ -199,6 +208,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
       clock,
       noopNotifier,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     await expect(
@@ -219,6 +229,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
       clock,
       noopNotifier,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     await uc.execute('r-1', NUEVA.toISOString(), {
@@ -236,6 +247,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
       clock,
       noopNotifier,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     await expect(
@@ -253,6 +265,7 @@ describe('RescheduleReservationUseCase · orden canónico de validación', () =>
       clock,
       noopNotifier,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     await expect(
@@ -271,6 +284,7 @@ describe('RescheduleReservationUseCase · margen de antelación', () => {
       clock,
       noopNotifier,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     await expect(
@@ -286,6 +300,7 @@ describe('RescheduleReservationUseCase · margen de antelación', () => {
       clock,
       noopNotifier,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     await uc.execute('r-1', NUEVA.toISOString(), { kind: 'admin' });
@@ -308,6 +323,7 @@ describe('RescheduleReservationUseCase · aviso', () => {
       clock,
       espia,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     await uc.execute('r-1', NUEVA.toISOString(), {
@@ -338,6 +354,7 @@ describe('RescheduleReservationUseCase · aviso', () => {
       clock,
       roto,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     const result = await uc.execute('r-1', NUEVA.toISOString(), {
@@ -371,6 +388,7 @@ describe('RescheduleReservationUseCase · reparto de estilista', () => {
       clock,
       noopNotifier,
       reparto.port,
+      SIN_AUSENCIAS as never,
     );
 
     await expect(
@@ -390,6 +408,7 @@ describe('RescheduleReservationUseCase · reparto de estilista', () => {
       clock,
       noopNotifier,
       reparto.port,
+      SIN_AUSENCIAS as never,
     );
 
     const result = await uc.execute('r-1', NUEVA.toISOString(), {
@@ -413,6 +432,7 @@ describe('RescheduleReservationUseCase · reparto de estilista', () => {
       clock,
       noopNotifier,
       reparto.port,
+      SIN_AUSENCIAS as never,
     );
 
     await uc.execute('r-1', NUEVA.toISOString(), {
@@ -431,6 +451,7 @@ describe('RescheduleReservationUseCase · reparto de estilista', () => {
       clock,
       noopNotifier,
       reparto.port,
+      SIN_AUSENCIAS as never,
     );
 
     await expect(
@@ -449,6 +470,7 @@ describe('RescheduleReservationUseCase · reparto de estilista', () => {
       clock,
       noopNotifier,
       reparto.port,
+      SIN_AUSENCIAS as never,
     );
 
     await expect(
@@ -478,6 +500,7 @@ describe('RescheduleReservationUseCase · el 409 dice por qué', () => {
       clock,
       noopNotifier,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     await expect(
@@ -493,6 +516,7 @@ describe('RescheduleReservationUseCase · el 409 dice por qué', () => {
       clock,
       noopNotifier,
       reparto.port,
+      SIN_AUSENCIAS as never,
     );
 
     const error = await uc
@@ -553,6 +577,7 @@ describe('RescheduleReservationUseCase · aviso de cambio de estilista', () => {
       clock,
       espia.port,
       reparto.port,
+      SIN_AUSENCIAS as never,
     );
 
     const result = await uc.execute('r-1', NUEVA.toISOString(), {
@@ -576,6 +601,7 @@ describe('RescheduleReservationUseCase · aviso de cambio de estilista', () => {
       clock,
       espia.port,
       reparto.port,
+      SIN_AUSENCIAS as never,
     );
 
     const result = await uc.execute('r-1', NUEVA.toISOString(), {
@@ -595,6 +621,7 @@ describe('RescheduleReservationUseCase · aviso de cambio de estilista', () => {
       clock,
       espia.port,
       asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
 
     const result = await uc.execute('r-1', NUEVA.toISOString(), {
@@ -621,6 +648,7 @@ describe('RescheduleReservationUseCase · aviso de cambio de estilista', () => {
       clock,
       roto,
       reparto.port,
+      SIN_AUSENCIAS as never,
     );
 
     const result = await uc.execute('r-1', NUEVA.toISOString(), {
@@ -659,6 +687,7 @@ describe('RescheduleReservationUseCase.comprobar (propuestas de WhatsApp)', () =
         reservationRescheduled: async (...a: unknown[]) => void avisos.push(a),
       },
       (opts.asignador as any) ?? asignadorProhibido,
+      SIN_AUSENCIAS as never,
     );
     return { uc, guardados, avisos, original };
   }
@@ -702,5 +731,28 @@ describe('RescheduleReservationUseCase.comprobar (propuestas de WhatsApp)', () =
         userId: 'otra',
       }),
     ).rejects.toThrow(ReservationOwnershipError);
+  });
+});
+
+describe('RescheduleReservationUseCase y ausencias', () => {
+  it('mover una cita fijada a una hora en que su estilista está ausente -> WorkerAbsentError', async () => {
+    const { port, guardados } = repo(reserva());
+    const ausente = {
+      overlapsAny: async (workerId: string, start: Date, end: Date) =>
+        workerId === 'w-1' &&
+        start < new Date('2026-04-21T17:00:00.000Z') &&
+        new Date('2026-04-21T16:00:00.000Z') < end,
+    };
+    const uc = new RescheduleReservationUseCase(
+      port,
+      clock,
+      noopNotifier,
+      asignadorProhibido,
+      ausente as never,
+    );
+    await expect(
+      uc.execute('r-1', NUEVA.toISOString(), { kind: 'user', userId: 'u-1' }),
+    ).rejects.toThrow(WorkerAbsentError);
+    expect(guardados).toHaveLength(0);
   });
 });

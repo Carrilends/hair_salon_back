@@ -7,6 +7,9 @@ import { encodeButtonPayload } from 'src/whatsapp/domain/button-payload';
 import { WhatsAppMessage } from 'src/notifications/domain/ports/whatsapp-sender.port';
 import { PendingBooking } from 'src/assistant/domain/pending-booking';
 
+/** Sin ausencias: el comportamiento previo a la regla. */
+const SIN_AUSENCIAS = { overlapsAny: async () => false };
+
 /**
  * Caso de aceptación tras `afd06bb`: «Confirmar» fuera de horario respondía
  * «Esa hora queda fuera del horario del salón.» SIN el horario del día, porque
@@ -83,6 +86,7 @@ describe('«Confirmar» fuera de horario, por el adaptador real: la clienta lee 
           getDefaultWorkerId: async () => 'default-w',
           listAssignableWorkloads: async () => [],
         } as never,
+        SIN_AUSENCIAS as never,
       ),
       {
         getSnapshots: async (ids: string[]) =>
@@ -95,6 +99,7 @@ describe('«Confirmar» fuera de horario, por el adaptador real: la clienta lee 
       } as never,
       ahora,
       { reservationCreated: async () => undefined } as never,
+      SIN_AUSENCIAS as never,
     );
     const confirmar = new ConfirmPendingBookingUseCase(
       {

@@ -17,6 +17,7 @@ import {
   ReservationOwnershipError,
   WorkerOverlapError,
   ChosenWorkerBusyError,
+  WorkerAbsentError,
   InvalidStatusTransitionError,
 } from 'src/reservations/domain/errors';
 import { salonLocalToUtcIso } from 'src/reservations/salon-time';
@@ -115,6 +116,8 @@ function explicarPropuesta(motivo: string): string {
   switch (motivo) {
     case 'hora_ocupada':
       return 'Esa hora se acaba de ocupar. Dime otro día u hora y te propongo de nuevo.';
+    case 'estilista_ausente':
+      return 'La estilista no está disponible a esa hora. Dime otro día u hora y te propongo de nuevo.';
     case 'vencida':
       return 'Esa propuesta caducó (duran 15 minutos). Escríbeme y la armamos de nuevo.';
     case 'usada':
@@ -832,6 +835,14 @@ export class HandleInboundMessageUseCase {
       // El específico va ANTES que el genérico, del que hereda: si no, las dos
       // causas contarían la misma historia y una de las dos sería mentira. Las
       // dos siguen volviendo a ofrecer el día.
+      if (error instanceof WorkerAbsentError) {
+        await this.texto(
+          from,
+          'La estilista no está disponible a esa hora. Mira las que sí.',
+        );
+        await this.ofrecerHoras(id, from, actor.kind === 'admin', dateYmd, 0);
+        return;
+      }
       if (error instanceof ChosenWorkerBusyError) {
         await this.texto(
           from,
@@ -923,6 +934,9 @@ export class HandleInboundMessageUseCase {
     }
     // Específico antes que genérico: `ChosenWorkerBusyError` hereda de
     // `WorkerOverlapError` y el orden es lo único que los distingue.
+    if (error instanceof WorkerAbsentError) {
+      return 'La estilista no está disponible a esa hora. Elige otra, por favor.';
+    }
     if (error instanceof ChosenWorkerBusyError) {
       return 'Tu estilista no tiene libre esa hora. Elige otra, por favor.';
     }

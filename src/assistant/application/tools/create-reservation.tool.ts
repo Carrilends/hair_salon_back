@@ -19,6 +19,7 @@ import {
   OutOfBusinessHoursError,
   ReservationInThePastError,
   WorkerOverlapError,
+  WorkerAbsentError,
 } from 'src/reservations/domain/errors';
 
 /**
@@ -301,6 +302,8 @@ export function identidadParaCrear(
 
 /** Traduce los errores de dominio de Reservas a motivos cortos y legibles. */
 export function mapDomainErrorToReason(error: unknown): string {
+  // ANTES que `WorkerOverlapError`, del que hereda.
+  if (error instanceof WorkerAbsentError) return 'estilista_ausente';
   if (error instanceof WorkerOverlapError) return 'hora_ocupada';
   if (error instanceof OutOfBusinessHoursError) return 'fuera_de_horario';
   if (error instanceof ReservationInThePastError) return 'fecha_pasada';

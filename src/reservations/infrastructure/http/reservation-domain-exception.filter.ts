@@ -11,6 +11,7 @@ import {
 import {
   CancellationTooLateError,
   ChosenWorkerBusyError,
+  WorkerAbsentError,
   DomainError,
   ReservationNotFoundError,
   ReservationOwnershipError,
@@ -67,6 +68,7 @@ export class ReservationDomainExceptionFilter implements ExceptionFilter {
  * se los comería a los dos.
  */
 function motivoDelConflicto(error: DomainError): string | null {
+  if (error instanceof WorkerAbsentError) return 'estilista_ausente';
   if (error instanceof ChosenWorkerBusyError) return 'estilista_ocupada';
   if (error instanceof WorkerOverlapError) return 'hora_ocupada';
   return null;

@@ -2,6 +2,7 @@ import { CreateReservationUseCase } from './create-reservation.use-case';
 import {
   OutOfBusinessHoursError,
   WorkerOverlapError,
+  WorkerAbsentError,
   MissingContactError,
   InvalidReservationError,
   ReservationInThePastError,
@@ -9,6 +10,9 @@ import {
 } from '../domain/errors';
 import { Reservation } from '../domain/reservation';
 import { WorkerAssigner } from './worker-assigner';
+
+/** Sin ausencias: el comportamiento previo a la regla. */
+const SIN_AUSENCIAS = { overlapsAny: async () => false };
 
 const catalog = {
   getSnapshots: async (ids: string[]) =>
@@ -36,7 +40,7 @@ const workers = {
  * que lo que se comprueba —y lo que se espera— no cambia.
  */
 function assigner(repository: any, workersPort: any): WorkerAssigner {
-  return new WorkerAssigner(repository, workersPort);
+  return new WorkerAssigner(repository, workersPort, SIN_AUSENCIAS as never);
 }
 
 // "ahora" fijado antes de las fechas de prueba (2026-04-20): las reservas no
@@ -80,6 +84,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       catalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     const result = await uc.execute({
       scheduledAt: '2026-04-20T15:00:00.000Z',
@@ -103,6 +108,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       catalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     const result = await uc.execute({
       scheduledAt: '2026-04-20T15:00:00.000Z',
@@ -120,6 +126,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       catalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     await expect(
       uc.execute({
@@ -139,6 +146,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       emptyCatalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     await expect(
       uc.execute({
@@ -157,6 +165,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       catalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     await expect(
       uc.execute({
@@ -175,6 +184,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       catalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     await expect(
       uc.execute({
@@ -195,6 +205,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       catalog as any,
       lateClock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     await expect(
       uc.execute({
@@ -215,6 +226,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       catalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     await expect(
       uc.execute({
@@ -239,6 +251,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       catalog as any,
       clock as any,
       notifier as any,
+      SIN_AUSENCIAS as never,
     );
     const result = await uc.execute({
       scheduledAt: '2026-04-20T15:00:00.000Z',
@@ -265,6 +278,7 @@ describe('CreateReservationUseCase (maduro)', () => {
       catalog as any,
       clock as any,
       notifier as any,
+      SIN_AUSENCIAS as never,
     );
     const result = await uc.execute({
       scheduledAt: '2026-04-20T15:00:00.000Z',
@@ -333,6 +347,7 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
       catalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     const result = await uc.execute({
       scheduledAt: '2026-04-20T15:00:00.000Z',
@@ -357,6 +372,7 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
       catalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     const result = await uc.execute({
       scheduledAt: '2026-04-20T15:00:00.000Z',
@@ -380,6 +396,7 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
       catalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     await expect(
       uc.execute({
@@ -404,6 +421,7 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
       catalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     // Quien pide una estilista concreta (portal) no debe acabar con otra: si esa
     // no puede, es un 409, no una sustitución silenciosa.
@@ -431,6 +449,7 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
       catalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     const result = await uc.execute({
       scheduledAt: '2026-04-20T15:00:00.000Z',
@@ -449,6 +468,7 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
       catalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     const result = await uc.execute({
       scheduledAt: '2026-04-20T15:00:00.000Z',
@@ -470,6 +490,7 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
       catalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     const result = await uc.execute({
       scheduledAt: '2026-04-20T15:00:00.000Z',
@@ -491,6 +512,7 @@ describe('CreateReservationUseCase — asignación de estilista', () => {
       catalog as any,
       clock as any,
       noopNotifier as any,
+      SIN_AUSENCIAS as never,
     );
     await expect(
       uc.execute({
@@ -533,6 +555,7 @@ describe('CreateReservationUseCase.comprobar (propuestas de WhatsApp)', () => {
       {
         reservationCreated: async (r: Reservation) => void avisos.push(r),
       } as any,
+      SIN_AUSENCIAS as never,
     );
     return { uc, guardadas, avisos };
   }
@@ -588,5 +611,109 @@ describe('CreateReservationUseCase.comprobar (propuestas de WhatsApp)', () => {
       }),
     ).rejects.toThrow(WorkerOverlapError);
     expect(guardadas).toHaveLength(0);
+  });
+});
+
+/** Ausencias simuladas: solapa si la ventana cruza alguna de la estilista. */
+function conAusencias(
+  lista: { workerId: string; start: string; end: string }[],
+) {
+  return {
+    overlapsAny: async (workerId: string, start: Date, end: Date) =>
+      lista.some(
+        (a) =>
+          a.workerId === workerId &&
+          new Date(a.start) < end &&
+          start < new Date(a.end),
+      ),
+  } as never;
+}
+
+// 11:00 a 12:00 en Bogotá del lunes 2026-04-20.
+const AUSENCIA_W1 = [
+  {
+    workerId: 'w-1',
+    start: '2026-04-20T16:00:00.000Z',
+    end: '2026-04-20T17:00:00.000Z',
+  },
+];
+
+describe('CreateReservationUseCase y ausencias', () => {
+  beforeEach(() => {
+    process.env.SALON_TZ = 'America/Bogota';
+  });
+
+  function caso(
+    ausencias: never,
+    asignables = [{ id: 'w-1', usedMinutes: 0 }],
+  ) {
+    const repositorio = repo();
+    const workersPort = {
+      getDefaultWorkerId: async () => 'default-w',
+      listAssignableWorkloads: async () => asignables,
+    };
+    return new CreateReservationUseCase(
+      repositorio as any,
+      new WorkerAssigner(repositorio as any, workersPort as any, ausencias),
+      catalog as any,
+      clock as any,
+      noopNotifier as any,
+      ausencias,
+    );
+  }
+
+  it('crear con estilista elegida ausente -> WorkerAbsentError', async () => {
+    const uc = caso(conAusencias(AUSENCIA_W1));
+    await expect(
+      uc.execute({
+        scheduledAt: '2026-04-20T16:30:00.000Z',
+        serviceIds: ['s1'],
+        workerId: 'w-1',
+        userId: 'u-1',
+      }),
+    ).rejects.toThrow(WorkerAbsentError);
+  });
+
+  it('a las 11:45 (30 min) con ausencia hasta 12:00 -> WorkerAbsentError; a las 12:00 -> ok', async () => {
+    const uc = caso(conAusencias(AUSENCIA_W1));
+    await expect(
+      uc.execute({
+        scheduledAt: '2026-04-20T16:45:00.000Z',
+        serviceIds: ['s1'],
+        workerId: 'w-1',
+        userId: 'u-1',
+      }),
+    ).rejects.toThrow(WorkerAbsentError);
+    const ok = await uc.execute({
+      scheduledAt: '2026-04-20T17:00:00.000Z',
+      serviceIds: ['s1'],
+      workerId: 'w-1',
+      userId: 'u-1',
+    });
+    expect(ok.workerId).toBe('w-1');
+  });
+
+  it('sin preferencia con la única libre ausente -> WorkerOverlapError', async () => {
+    const uc = caso(conAusencias(AUSENCIA_W1));
+    await expect(
+      uc.execute({
+        scheduledAt: '2026-04-20T16:30:00.000Z',
+        serviceIds: ['s1'],
+        userId: 'u-1',
+      }),
+    ).rejects.toThrow(WorkerOverlapError);
+  });
+
+  it('sin preferencia reparte a la que no está ausente', async () => {
+    const uc = caso(conAusencias(AUSENCIA_W1), [
+      { id: 'w-1', usedMinutes: 0 },
+      { id: 'w-2', usedMinutes: 90 },
+    ]);
+    const r = await uc.execute({
+      scheduledAt: '2026-04-20T16:30:00.000Z',
+      serviceIds: ['s1'],
+      userId: 'u-1',
+    });
+    expect(r.workerId).toBe('w-2');
   });
 });

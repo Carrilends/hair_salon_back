@@ -151,6 +151,8 @@ function instruccionDeAgenda(motivo: string, base: string): string {
       return `${base} Dile que esa hora ya está ocupada, consulta consultarDisponibilidad para ese día y ofrécele otra hora libre.`;
     case 'estilista_ocupada':
       return `${base} Dile que su estilista no tiene libre esa hora, consulta consultarDisponibilidad para ese día y ofrécele otra hora.`;
+    case 'estilista_ausente':
+      return `${base} Dile que la estilista no está disponible a esa hora, consulta consultarDisponibilidad para ese día y ofrécele otra hora.`;
     case 'fuera_de_plazo':
       return `${base} Dile que esa cita ya no se puede cambiar desde aquí porque su hora ya pasó o está muy cerca.`;
     case 'estado_no_movible':

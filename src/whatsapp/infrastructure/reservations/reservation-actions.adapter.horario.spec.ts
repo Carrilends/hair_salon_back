@@ -6,6 +6,9 @@ import { ReservationStatus } from 'src/reservations/domain/reservation-status';
 import { HandleInboundMessageUseCase } from 'src/whatsapp/application/handle-inbound-message.use-case';
 import { WhatsAppMessage } from 'src/notifications/domain/ports/whatsapp-sender.port';
 
+/** Sin ausencias: el comportamiento previo a la regla. */
+const SIN_AUSENCIAS = { overlapsAny: async () => false };
+
 /**
  * Comprobación pedida tras el caso de aceptación de `afd06bb` («Confirmar»
  * perdía el horario del día en su adaptador): ¿le pasa lo mismo al botón de
@@ -49,7 +52,9 @@ describe('RSAT fuera de horario, por el adaptador real: la clienta lee el horari
           getDefaultWorkerId: async () => 'default-w',
           listAssignableWorkloads: async () => [],
         } as never,
+        SIN_AUSENCIAS as never,
       ),
+      SIN_AUSENCIAS as never,
     );
     const adaptador = new ReservationActionsAdapter(
       {} as never,

@@ -1,6 +1,12 @@
-import { CreateReservationTool } from './create-reservation.tool';
+import {
+  CreateReservationTool,
+  mapDomainErrorToReason,
+} from './create-reservation.tool';
 import { AssistantContext } from './assistant-tool';
-import { WorkerOverlapError } from 'src/reservations/domain/errors';
+import {
+  WorkerAbsentError,
+  WorkerOverlapError,
+} from 'src/reservations/domain/errors';
 
 const UUID = '11111111-1111-4111-8111-111111111111';
 
@@ -413,5 +419,16 @@ describe('CreateReservationTool con verificación previa (plan 04, T5)', () => {
     expect(received).toMatchObject({
       scheduledAt: '2026-08-20T14:00:00.000Z',
     });
+  });
+});
+
+describe('mapDomainErrorToReason y ausencias', () => {
+  it('WorkerAbsentError -> estilista_ausente, antes que el solape genérico', () => {
+    expect(mapDomainErrorToReason(new WorkerAbsentError())).toBe(
+      'estilista_ausente',
+    );
+    expect(mapDomainErrorToReason(new WorkerOverlapError())).toBe(
+      'hora_ocupada',
+    );
   });
 });

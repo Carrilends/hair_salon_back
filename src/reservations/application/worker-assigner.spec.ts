@@ -1,6 +1,9 @@
 import { WorkerAssigner } from './worker-assigner';
 import { WorkerOverlapError } from '../domain/errors';
 
+/** Sin ausencias: el comportamiento previo a la regla. */
+const SIN_AUSENCIAS = { overlapsAny: async () => false };
+
 const INICIO = new Date('2026-04-20T15:00:00.000Z');
 const FIN = new Date('2026-04-20T16:00:00.000Z');
 const TZ = 'America/Bogota';
@@ -40,6 +43,7 @@ describe('WorkerAssigner', () => {
         { id: 'w-ocupada', usedMinutes: 0 },
         { id: 'w-libre', usedMinutes: 120 },
       ]),
+      SIN_AUSENCIAS as never,
     );
 
     expect(await assigner.elegir(INICIO, FIN, TZ)).toBe('w-libre');
@@ -54,6 +58,7 @@ describe('WorkerAssigner', () => {
         { id: 'w-descansada', usedMinutes: 30 },
         { id: 'w-media', usedMinutes: 120 },
       ]),
+      SIN_AUSENCIAS as never,
     );
 
     expect(await assigner.elegir(INICIO, FIN, TZ)).toBe('w-descansada');
@@ -67,6 +72,7 @@ describe('WorkerAssigner', () => {
         { id: 'w-b', usedMinutes: 60 },
         { id: 'w-a', usedMinutes: 60 },
       ]),
+      SIN_AUSENCIAS as never,
     );
 
     expect(await assigner.elegir(INICIO, FIN, TZ)).toBe('w-a');
@@ -80,6 +86,7 @@ describe('WorkerAssigner', () => {
         { id: 'w-a', usedMinutes: 0 },
         { id: 'w-b', usedMinutes: 0 },
       ]),
+      SIN_AUSENCIAS as never,
     );
 
     await expect(assigner.elegir(INICIO, FIN, TZ)).rejects.toThrow(
@@ -89,7 +96,11 @@ describe('WorkerAssigner', () => {
 
   it('cae en el estilista por defecto si no hay asignables dadas de alta', async () => {
     const { port } = repo([]);
-    const assigner = new WorkerAssigner(port, workers([]));
+    const assigner = new WorkerAssigner(
+      port,
+      workers([]),
+      SIN_AUSENCIAS as never,
+    );
 
     expect(await assigner.elegir(INICIO, FIN, TZ)).toBe('default-w');
   });
@@ -105,6 +116,7 @@ describe('WorkerAssigner', () => {
     const assigner = new WorkerAssigner(
       port,
       workers([{ id: 'w-a', usedMinutes: 0 }]),
+      SIN_AUSENCIAS as never,
     );
 
     await assigner.elegir(INICIO, FIN, TZ, { excludeReservationId: 'r-1' });
@@ -117,10 +129,69 @@ describe('WorkerAssigner', () => {
     const assigner = new WorkerAssigner(
       port,
       workers([{ id: 'w-a', usedMinutes: 0 }]),
+      SIN_AUSENCIAS as never,
     );
 
     await assigner.elegir(INICIO, FIN, TZ);
 
     expect(llamadas[0]).toEqual(['w-a', INICIO, FIN, undefined]);
+  });
+});
+
+describe('WorkerAssigner y ausencias', () => {
+  const ausenteW = (ids: string[]) =>
+    ({ overlapsAny: async (id: string) => ids.includes(id) }) as never;
+
+  it('elegir salta a la ausente y elige la siguiente por carga', async () => {
+    const { port } = repo([]);
+    const assigner = new WorkerAssigner(
+      port,
+      workers([
+        { id: 'w-a', usedMinutes: 0 },
+        { id: 'w-b', usedMinutes: 300 },
+        { id: 'w-c', usedMinutes: 60 },
+      ]),
+      ausenteW(['w-a']),
+    );
+    expect(await assigner.elegir(INICIO, FIN, TZ)).toBe('w-c');
+  });
+
+  it('elegir con excludeWorkerIds y ocupadas', async () => {
+    const { port } = repo([]);
+    const assigner = new WorkerAssigner(
+      port,
+      workers([
+        { id: 'w-a', usedMinutes: 0 },
+        { id: 'w-b', usedMinutes: 10 },
+        { id: 'w-c', usedMinutes: 20 },
+        { id: 'w-d', usedMinutes: 30 },
+      ]),
+      SIN_AUSENCIAS as never,
+    );
+    const elegida = await assigner.elegir(INICIO, FIN, TZ, {
+      excludeWorkerIds: ['w-a'],
+      ocupadas: [{ workerId: 'w-b', start: INICIO, end: FIN }],
+    });
+    expect(elegida).toBe('w-c');
+    // Una simulada que no se cruza no la saca.
+    expect(
+      await assigner.elegir(INICIO, FIN, TZ, {
+        ocupadas: [
+          { workerId: 'w-a', start: FIN, end: new Date(+FIN + 3600e3) },
+        ],
+      }),
+    ).toBe('w-a');
+  });
+
+  it('lanza WorkerOverlapError si todas están ausentes', async () => {
+    const { port } = repo([]);
+    const assigner = new WorkerAssigner(
+      port,
+      workers([{ id: 'w-a', usedMinutes: 0 }]),
+      ausenteW(['w-a']),
+    );
+    await expect(assigner.elegir(INICIO, FIN, TZ)).rejects.toThrow(
+      WorkerOverlapError,
+    );
   });
 });

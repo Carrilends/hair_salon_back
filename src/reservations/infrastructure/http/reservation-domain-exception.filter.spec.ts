@@ -6,6 +6,7 @@ import {
   ReservationNotFoundError,
   ReservationOwnershipError,
   WorkerOverlapError,
+  WorkerAbsentError,
 } from '../../domain/errors';
 
 /** Respuesta de Express mínima: solo anota lo que el filtro le pide. */
@@ -70,5 +71,16 @@ describe('ReservationDomainExceptionFilter', () => {
     const reason = traducir(new ChosenWorkerBusyError()).body.reason;
     expect(reason).toBeDefined();
     expect(reason).not.toBe('hora_ocupada');
+  });
+});
+
+describe('ReservationDomainExceptionFilter y ausencias', () => {
+  it('WorkerAbsentError -> 409 estilista_ausente', () => {
+    const salida = traducir(new WorkerAbsentError());
+    expect(salida.status).toBe(409);
+    expect(salida.body).toMatchObject({
+      statusCode: 409,
+      reason: 'estilista_ausente',
+    });
   });
 });
