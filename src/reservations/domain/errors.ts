@@ -180,3 +180,11 @@ export class AbsenceNotFoundError extends DomainError {
     this.name = 'AbsenceNotFoundError';
   }
 }
+
+/** La estilista indicada no existe. */
+export class WorkerNotFoundError extends DomainError {
+  constructor(id: string) {
+    super(`No existe la estilista ${id}`);
+    this.name = 'WorkerNotFoundError';
+  }
+}

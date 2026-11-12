@@ -341,3 +341,51 @@ describe('Reservation.assignWorker', () => {
     expect(r.workerPinned).toBe(false);
   });
 });
+
+describe('Reservation.reassignForAbsence', () => {
+  function con(workerPinned: boolean): Reservation {
+    return Reservation.schedule({
+      scheduledAt: new Date('2026-04-20T15:00:00.000Z'),
+      workerId: 'w-1',
+      workerPinned,
+      userId: 'u-1',
+      lines,
+    });
+  }
+
+  it('en una fijada: cambia la estilista y deja workerPinned=false', () => {
+    const r = con(true);
+
+    r.reassignForAbsence('w-2');
+
+    expect(r.workerId).toBe('w-2');
+    expect(r.workerPinned).toBe(false);
+  });
+
+  it('assignWorker en una fijada sigue lanzando WorkerReassignmentNotAllowedError', () => {
+    const r = con(true);
+
+    expect(() => r.assignWorker('w-2')).toThrow(
+      WorkerReassignmentNotAllowedError,
+    );
+  });
+
+  it('en una cancelada lanza', () => {
+    const r = con(false);
+    r.cancel({ byAdmin: true, now: new Date('2026-04-19T15:00:00.000Z') });
+
+    expect(() => r.reassignForAbsence('w-2')).toThrow(
+      ReservationNotReschedulableError,
+    );
+    expect(r.workerId).toBe('w-1');
+  });
+
+  it('funciona en una confirmada', () => {
+    const r = con(false);
+    r.confirm();
+
+    r.reassignForAbsence('w-2');
+
+    expect(r.workerId).toBe('w-2');
+  });
+});

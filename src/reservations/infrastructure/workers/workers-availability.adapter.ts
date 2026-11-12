@@ -32,4 +32,13 @@ export class WorkersAvailabilityAdapter implements WorkerAvailabilityPort {
       .filter((w) => w.assignable)
       .map((w) => ({ id: w.id, usedMinutes: w.usedMinutes }));
   }
+
+  async findWorker(
+    id: string,
+  ): Promise<{ id: string; name: string; isDefault: boolean } | null> {
+    // `findAll` es la puerta pública del servicio: son pocas estilistas, y así
+    // un id mal formado es simplemente una estilista que no existe.
+    const w = (await this.workersService.findAll()).find((x) => x.id === id);
+    return w ? { id: w.id, name: w.name, isDefault: w.isDefault } : null;
+  }
 }

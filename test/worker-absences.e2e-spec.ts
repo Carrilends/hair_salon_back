@@ -3,6 +3,8 @@ import { DataSource } from 'typeorm';
 import { WorkerAbsenceOrmEntity } from 'src/reservations/infrastructure/persistence/worker-absence.orm-entity';
 import { TypeOrmWorkerAbsenceRepository } from 'src/reservations/infrastructure/persistence/typeorm-worker-absence.repository';
 import { WorkerAbsence } from 'src/reservations/domain/worker-absence';
+import { TypeOrmReservationRepository } from 'src/reservations/infrastructure/persistence/typeorm-reservation.repository';
+import { ReservationOrmEntity } from 'src/reservations/infrastructure/persistence/reservation.orm-entity';
 import { AbsenceOverlapError } from 'src/reservations/domain/errors';
 
 /**
@@ -136,6 +138,78 @@ describe('TypeOrmWorkerAbsenceRepository (integración, HairSalonE2E)', () => {
       [workerTemp],
     );
     expect(n).toBe(0);
+  });
+
+  it('findAffectedByAbsence: vivas, que se cruzan y no empezaron, en orden', async () => {
+    const repo = new TypeOrmReservationRepository(
+      ds.getRepository(ReservationOrmEntity),
+    );
+    const ids: string[] = [];
+    const insertar = async (
+      desde: string,
+      hasta: string,
+      estado: string,
+      worker = workerA,
+    ) => {
+      const [f] = await ds.query(
+        `INSERT INTO reservations
+           (scheduled_at, ended_at, worker_id, total_duration_minutes, status)
+         VALUES ($1, $2, $3, 60, $4) RETURNING id`,
+        [new Date(desde), new Date(hasta), worker, estado],
+      );
+      ids.push(f.id);
+      return f.id as string;
+    };
+    try {
+      // Hora del salón = UTC-5. Franja de la ausencia: 11:00-12:00 (16:00-17:00Z).
+      const franja = (dia: string) => [
+        new Date(`${dia}T16:00:00Z`),
+        new Date(`${dia}T17:00:00Z`),
+      ];
+      const [inicio, fin] = franja('2030-03-12');
+      const now = new Date('2030-03-12T15:00:00Z');
+      const tarde = await insertar(
+        '2030-03-12T16:30:00Z',
+        '2030-03-12T17:30:00Z',
+        'pendiente',
+      );
+      const temprano = await insertar(
+        '2030-03-12T15:30:00Z',
+        '2030-03-12T16:30:00Z',
+        'confirmada',
+      );
+      // Fuera: empieza justo al terminar la franja, o es de otra estilista.
+      await insertar(
+        '2030-03-12T17:30:00Z',
+        '2030-03-12T18:30:00Z',
+        'pendiente',
+      );
+      await insertar(
+        '2030-03-12T16:00:00Z',
+        '2030-03-12T17:00:00Z',
+        'pendiente',
+        workerB,
+      );
+      const r = await repo.findAffectedByAbsence(workerA, inicio, fin, now);
+      expect(r.map((x) => x.id)).toEqual([temprano, tarde]);
+
+      // Cada exclusión en su día: dos citas vivas no pueden compartir hueco.
+      const casos: [string, string, Date][] = [
+        ['2030-03-13', 'cancelada', now],
+        ['2030-03-14', 'cumplida', now],
+        // En curso: empezó antes de `now`.
+        ['2030-03-15', 'pendiente', new Date('2030-03-15T16:10:00Z')],
+      ];
+      for (const [dia, estado, ahora] of casos) {
+        const [d, h] = franja(dia);
+        await insertar(d.toISOString(), h.toISOString(), estado);
+        expect(await repo.findAffectedByAbsence(workerA, d, h, ahora)).toEqual(
+          [],
+        );
+      }
+    } finally {
+      await ds.query(`DELETE FROM reservations WHERE id = ANY($1)`, [ids]);
+    }
   });
 
   it('la migración no altera excl_reservations_worker_overlap', async () => {

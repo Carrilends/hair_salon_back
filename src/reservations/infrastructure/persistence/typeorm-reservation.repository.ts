@@ -1,6 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, LessThan, MoreThan, Not, Repository } from 'typeorm';
+import {
+  And,
+  In,
+  LessThan,
+  MoreThan,
+  MoreThanOrEqual,
+  Not,
+  Repository,
+} from 'typeorm';
 import { ReservationOrmEntity } from './reservation.orm-entity';
 import { ReservationMapper } from './reservation.mapper';
 import { Reservation } from '../../domain/reservation';
@@ -101,6 +109,25 @@ export class TypeOrmReservationRepository implements ReservationRepositoryPort {
     }
 
     return qb.getCount();
+  }
+
+  async findAffectedByAbsence(
+    workerId: string,
+    start: Date,
+    end: Date,
+    now: Date,
+  ): Promise<Reservation[]> {
+    const rows = await this.repo.find({
+      where: {
+        workerId,
+        status: In(['pendiente', 'confirmada']),
+        scheduledAt: And(MoreThanOrEqual(now), LessThan(end)),
+        endedAt: MoreThan(start),
+      },
+      relations: ['services'],
+      order: { scheduledAt: 'ASC', id: 'ASC' },
+    });
+    return rows.map((r) => ReservationMapper.toDomain(r));
   }
 
   async findActiveWithWorker(now: Date): Promise<ReservationView[]> {

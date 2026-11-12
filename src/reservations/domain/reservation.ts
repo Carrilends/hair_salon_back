@@ -48,7 +48,7 @@ export class Reservation {
    * la reprogramación no puede saber si reasignar resuelve un 409 innecesario o
    * traiciona a quien pidió a su estilista de confianza.
    */
-  readonly workerPinned: boolean;
+  private _workerPinned: boolean;
   readonly lines: ReservationLine[];
   // La ventana es privada desde que existe la reprogramación: sigue siendo de
   // solo lectura desde fuera (los getters), pero el agregado necesita poder
@@ -68,13 +68,19 @@ export class Reservation {
     this._scheduledAt = props.scheduledAt;
     this._endedAt = props.endedAt;
     this._workerId = props.workerId;
-    this.workerPinned = props.workerPinned ?? false;
+    this._workerPinned = props.workerPinned ?? false;
     this.lines = props.lines;
     this._status = props.status;
   }
 
   get status(): ReservationStatus {
     return this._status;
+  }
+
+  // De solo lectura desde fuera; únicamente `reassignForAbsence` la baja, porque
+  // una ausencia es la única razón que justifica pasar por encima de la elección.
+  get workerPinned(): boolean {
+    return this._workerPinned;
   }
 
   get workerId(): string {
@@ -171,6 +177,22 @@ export class Reservation {
   assignWorker(workerId: string): void {
     if (this.workerPinned) throw new WorkerReassignmentNotAllowedError();
     this._workerId = workerId;
+  }
+
+  /**
+   * Cambia la estilista porque la que tenía está ausente, **aunque la clienta
+   * la hubiera elegido**: la cita se salva en la misma hora con otra estilista,
+   * y a partir de ahí deja de ser una elección suya (`workerPinned = false`).
+   * Solo admite citas vivas (`pendiente` o `confirmada`): una terminada no se
+   * toca. Es una operación aparte de `assignWorker`, que sigue negándose a
+   * pisar una elección de la clienta.
+   */
+  reassignForAbsence(workerId: string): void {
+    if (!canReschedule(this._status)) {
+      throw new ReservationNotReschedulableError(this._status);
+    }
+    this._workerId = workerId;
+    this._workerPinned = false;
   }
 
   confirm(): void {

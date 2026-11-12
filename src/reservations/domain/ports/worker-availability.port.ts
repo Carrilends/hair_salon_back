@@ -16,4 +16,8 @@ export interface WorkerAvailabilityPort {
    * repartir el trabajo y el orden de la consulta cargaría siempre a la misma.
    */
   listAssignableWorkloads(dateYmd: string): Promise<AssignableWorkerLoad[]>;
+  /** Datos básicos de una estilista, o `null` si no existe. */
+  findWorker(
+    id: string,
+  ): Promise<{ id: string; name: string; isDefault: boolean } | null>;
 }

@@ -25,6 +25,7 @@ const workers: WorkerAvailabilityPort = {
   // La ocupación agregada no elige estilista; el puerto lo exige, el caso de uso
   // no lo usa.
   listAssignableWorkloads: async () => [],
+  findWorker: async () => null,
 };
 
 describe('GetOccupancyUseCase', () => {

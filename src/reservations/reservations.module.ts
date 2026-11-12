@@ -19,6 +19,7 @@ import { ReservationNotifierAdapter } from './infrastructure/notifications/reser
 import { ReservationPurgeScheduler } from './infrastructure/scheduling/reservation-purge.scheduler';
 import { CreateReservationUseCase } from './application/create-reservation.use-case';
 import { WorkerAssigner } from './application/worker-assigner';
+import { AbsencePlanner } from './application/absences/absence-planner';
 import { GetOccupancyUseCase } from './application/get-occupancy.use-case';
 import { ListActiveReservationsUseCase } from './application/list-active-reservations.use-case';
 import { GetMyReservationsUseCase } from './application/get-my-reservations.use-case';
@@ -58,6 +59,7 @@ import {
     // Reparto de estilista compartido por la creación y la reprogramación: si
     // cada una llevara el suyo, acabarían divergiendo.
     WorkerAssigner,
+    AbsencePlanner,
     CreateReservationUseCase,
     GetOccupancyUseCase,
     ListActiveReservationsUseCase,

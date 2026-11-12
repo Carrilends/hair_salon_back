@@ -56,6 +56,18 @@ export interface ReservationRepositoryPort {
     endedAt: Date,
     excludeReservationId?: string,
   ): Promise<number>;
+  /**
+   * Citas vivas (ni canceladas ni cumplidas) de la estilista cuya ventana se
+   * cruza con `[start, end)` y que aún no empezaron (`scheduledAt >= now`: una
+   * cita en curso no se mueve). Orden `scheduledAt, id`, que hace determinista
+   * el plan de una ausencia.
+   */
+  findAffectedByAbsence(
+    workerId: string,
+    start: Date,
+    end: Date,
+    now: Date,
+  ): Promise<Reservation[]>;
   findActiveWithWorker(now: Date): Promise<ReservationView[]>;
   findByUser(userId: string): Promise<ReservationView[]>;
   /**
