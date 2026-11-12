@@ -82,6 +82,24 @@ export class WorkerAbsence {
     return new WorkerAbsence(null, workerId, new Date(inicio), endsAt);
   }
 
+  /**
+   * Ausencia aún sin guardar, con la ventana ya calculada (la que la propuesta
+   * de WhatsApp guardó). No revalida el horario: eso lo hizo `create` al
+   * proponerla; quien la use comprueba que no haya pasado.
+   */
+  static fromWindow(input: {
+    workerId: string;
+    startsAt: Date;
+    endsAt: Date;
+  }): WorkerAbsence {
+    return new WorkerAbsence(
+      null,
+      input.workerId,
+      input.startsAt,
+      input.endsAt,
+    );
+  }
+
   static fromPersistence(p: {
     id: string;
     workerId: string;

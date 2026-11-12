@@ -78,7 +78,8 @@ export class AbsencePlanner {
         reservationId: r.id!,
         scheduledAt: r.scheduledAt,
         endedAt: r.endedAt,
-        customerName: r.contact?.name ?? '',
+        // Mismo texto que el adaptador de avisos para quien no dejó contacto.
+        customerName: r.contact?.name ?? 'Cliente registrado',
         customerPhone: r.contact?.phone ?? null,
         services: r.lines.map((l) => l.name),
       };

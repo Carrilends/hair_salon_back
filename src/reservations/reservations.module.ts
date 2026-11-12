@@ -20,6 +20,10 @@ import { ReservationPurgeScheduler } from './infrastructure/scheduling/reservati
 import { CreateReservationUseCase } from './application/create-reservation.use-case';
 import { WorkerAssigner } from './application/worker-assigner';
 import { AbsencePlanner } from './application/absences/absence-planner';
+import { PreviewAbsenceUseCase } from './application/absences/preview-absence.use-case';
+import { MarkAbsenceUseCase } from './application/absences/mark-absence.use-case';
+import { RemoveAbsenceUseCase } from './application/absences/remove-absence.use-case';
+import { ListAbsencesUseCase } from './application/absences/list-absences.use-case';
 import { GetOccupancyUseCase } from './application/get-occupancy.use-case';
 import { ListActiveReservationsUseCase } from './application/list-active-reservations.use-case';
 import { GetMyReservationsUseCase } from './application/get-my-reservations.use-case';
@@ -60,6 +64,10 @@ import {
     // cada una llevara el suyo, acabarían divergiendo.
     WorkerAssigner,
     AbsencePlanner,
+    PreviewAbsenceUseCase,
+    MarkAbsenceUseCase,
+    RemoveAbsenceUseCase,
+    ListAbsencesUseCase,
     CreateReservationUseCase,
     GetOccupancyUseCase,
     ListActiveReservationsUseCase,

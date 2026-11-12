@@ -1,6 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Reservation } from '../../domain/reservation';
-import { ReservationNotifierPort } from '../../domain/ports/reservation-notifier.port';
+import {
+  AbsenceMeta,
+  ReservationNotifierPort,
+} from '../../domain/ports/reservation-notifier.port';
 import { NotificationDispatcher } from 'src/notifications/application/notification-dispatcher';
 import { WorkersService } from 'src/workers/workers.service';
 import { ServiceImagesPort } from '../../domain/ports/service-images.port';
@@ -39,11 +42,12 @@ export class ReservationNotifierAdapter implements ReservationNotifierPort {
 
   async reservationCancelled(
     reservation: Reservation,
-    meta: { byAdmin: boolean },
+    meta: { byAdmin: boolean; absence?: AbsenceMeta },
   ): Promise<void> {
     await this.dispatcher.notify({
       type: 'reservation.cancelled',
       byAdmin: meta.byAdmin,
+      ...(meta.absence ? { absence: meta.absence } : {}),
       ...(await this.baseEvent(reservation)),
     });
   }
@@ -54,6 +58,7 @@ export class ReservationNotifierAdapter implements ReservationNotifierPort {
       byAdmin: boolean;
       previousScheduledAt: Date;
       workerChanged: boolean;
+      absence?: AbsenceMeta;
     },
   ): Promise<void> {
     await this.dispatcher.notify({
@@ -63,6 +68,7 @@ export class ReservationNotifierAdapter implements ReservationNotifierPort {
       // Viaja tal cual: quién decide qué hacer con él es cada canal. El nombre
       // de la estilista nueva ya va en `workerName` (lo resuelve `baseEvent`).
       workerChanged: meta.workerChanged,
+      ...(meta.absence ? { absence: meta.absence } : {}),
       // La reserva ya viene movida: `scheduledAt` es la hora nueva, y la
       // anterior llega aparte para poder mostrar «antes → después».
       ...(await this.baseEvent(reservation)),

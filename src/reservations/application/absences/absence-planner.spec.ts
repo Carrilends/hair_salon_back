@@ -102,6 +102,26 @@ describe('AbsencePlanner', () => {
     expect(opts.excludeReservationId).toBe('a');
   });
 
+  it('una cita sin contacto se llama «Cliente registrado», como en los avisos', async () => {
+    const sinContacto = Reservation.fromPersistence({
+      id: 'sc',
+      scheduledAt: utc('10:00'),
+      endedAt: utc('11:00'),
+      workerId: 'ausente',
+      workerPinned: false,
+      status: 'pendiente' as never,
+      contact: null,
+      lines: [
+        { serviceId: 's1', name: 'Corte', price: 1, durationMinutes: 60 },
+      ],
+    } as never);
+    const { planner } = montar([sinContacto]);
+
+    const plan = await planner.planear(ausencia(), NOW);
+
+    expect(plan.impacts[0].customerName).toBe('Cliente registrado');
+  });
+
   it('pide al repositorio solo lo que empieza desde ahora y dentro de la franja', async () => {
     const { planner, repo } = montar([]);
     const a = ausencia('11:00', '12:00');

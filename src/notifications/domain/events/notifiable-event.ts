@@ -43,6 +43,8 @@ export interface ReservationCancelledEvent extends ReservationEventBase {
    */
   type: 'reservation.cancelled';
   byAdmin: boolean;
+  /** Si la causa es la ausencia de una estilista, su nombre (los avisos lo cuentan). */
+  absence?: { absentWorkerName: string };
 }
 
 export interface ReservationRescheduledEvent extends ReservationEventBase {
@@ -60,6 +62,8 @@ export interface ReservationRescheduledEvent extends ReservationEventBase {
    * único que las plantillas usan (minimización de datos).
    */
   workerChanged: boolean;
+  /** Si la causa es la ausencia de una estilista, su nombre (los avisos lo cuentan). */
+  absence?: { absentWorkerName: string };
 }
 
 /**
