@@ -1,5 +1,9 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { InvalidAbsenceError } from '../../domain/errors';
+import { InvalidAbsenceError, WorkerOverlapError } from '../../domain/errors';
+import { canReschedule } from '../../domain/reservation-status';
+import { WorkerAvailabilityPort } from '../../domain/ports/worker-availability.port';
+import { Reservation } from '../../domain/reservation';
+import { WorkerAssigner } from '../worker-assigner';
 import { ClockPort } from '../../domain/ports/clock.port';
 import { ReservationNotifierPort } from '../../domain/ports/reservation-notifier.port';
 import { ReservationRepositoryPort } from '../../domain/ports/reservation-repository.port';
@@ -10,6 +14,7 @@ import {
   RESERVATION_NOTIFIER,
   RESERVATION_REPOSITORY,
   WORKER_ABSENCES,
+  WORKER_AVAILABILITY,
 } from '../tokens';
 import { AbsenceImpact, AbsencePlan, AbsencePlanner } from './absence-planner';
 import { AbsenceCommand } from './preview-absence.use-case';
@@ -27,8 +32,10 @@ export type MarkAbsenceResult = AbsencePlan & {
  * Se guarda **primero**: desde ese instante ninguna puerta reserva con la
  * estilista ausente, así que el plan que se ejecuta (calculado de nuevo, con la
  * agenda de ahora) no puede quedarse viejo por reservas nuevas. Cada cita se
- * resuelve por separado: si una falla (p. ej. una carrera que la restricción de
- * exclusión rechaza) se anota en `sinResolver` y se sigue con las demás.
+ * decide **en vivo**, en serie: el plan solo dice qué citas mirar, porque entre
+ * un aviso y otro una clienta pudo mover la suya. Si una reasignación falla al
+ * guardar (p. ej. una carrera que la restricción de exclusión rechaza) se
+ * cancela esa cita y se avisa; solo si tampoco eso se puede va a `sinResolver`.
  */
 @Injectable()
 export class MarkAbsenceUseCase {
@@ -43,9 +50,12 @@ export class MarkAbsenceUseCase {
     @Inject(RESERVATION_NOTIFIER)
     private readonly notifier: ReservationNotifierPort,
     @Inject(CLOCK) private readonly clock: ClockPort,
+    private readonly assigner: WorkerAssigner,
+    @Inject(WORKER_AVAILABILITY)
+    private readonly workers: WorkerAvailabilityPort,
   ) {}
 
-  execute(cmd: AbsenceCommand): Promise<MarkAbsenceResult> {
+  async execute(cmd: AbsenceCommand): Promise<MarkAbsenceResult> {
     const absence = WorkerAbsence.create({
       ...cmd,
       now: this.clock.now(),
@@ -75,53 +85,126 @@ export class MarkAbsenceUseCase {
     // exclusión) y no se emite ningún aviso.
     const saved = await this.absences.save(absence);
 
-    const now = this.clock.now();
-    const plan = await this.planner.planear(saved, now);
+    let plan: AbsencePlan;
+    try {
+      plan = await this.planner.planear(saved, this.clock.now());
+    } catch (err) {
+      // Aún no se tocó ninguna cita: no dejar una ausencia a medio aplicar.
+      await this.absences
+        .delete(saved.id!)
+        .catch((e) =>
+          this.logger.error(
+            `No se pudo deshacer la ausencia ${saved.id}`,
+            e as Error,
+          ),
+        );
+      throw err;
+    }
+
     const absenceMeta = { absentWorkerName: plan.workerName };
+    const impacts: AbsenceImpact[] = [];
     const sinResolver: string[] = [];
 
-    for (const impact of plan.impacts) {
+    for (const candidata of plan.impacts) {
       try {
-        await this.resolver(impact, absenceMeta, now);
+        const hecho = await this.resolver(candidata, saved, absenceMeta);
+        if (hecho) impacts.push(hecho);
       } catch (err) {
         this.logger.error(
-          `Ausencia ${saved.id}: no se pudo resolver la reserva ${impact.reservationId}`,
+          `Ausencia ${saved.id}: no se pudo resolver la reserva ${candidata.reservationId}`,
           err as Error,
         );
-        sinResolver.push(impact.reservationId);
+        sinResolver.push(candidata.reservationId);
       }
     }
 
-    return { ...plan, absenceId: saved.id!, sinResolver };
+    return { ...plan, impacts, absenceId: saved.id!, sinResolver };
   }
 
+  /** Devuelve lo que realmente pasó, o `null` si la cita ya no está afectada. */
   private async resolver(
-    impact: AbsenceImpact,
-    absence: { absentWorkerName: string },
-    now: Date,
-  ): Promise<void> {
-    const reservation = await this.reservations.findById(impact.reservationId);
-    if (!reservation) throw new Error('la reserva ya no existe');
-
-    if (impact.outcome === 'reasignada') {
-      reservation.reassignForAbsence(impact.newWorkerId!);
-      const saved = await this.reservations.save(reservation);
-      await this.avisar(impact.reservationId, () =>
-        this.notifier.reservationRescheduled(saved, {
-          byAdmin: true,
-          // La hora no cambia; solo la estilista.
-          previousScheduledAt: saved.scheduledAt,
-          workerChanged: true,
-          absence,
-        }),
-      );
-    } else {
-      reservation.cancel({ byAdmin: true, now });
-      const saved = await this.reservations.save(reservation);
-      await this.avisar(impact.reservationId, () =>
-        this.notifier.reservationCancelled(saved, { byAdmin: true, absence }),
-      );
+    candidata: AbsenceImpact,
+    absence: WorkerAbsence,
+    meta: { absentWorkerName: string },
+  ): Promise<AbsenceImpact | null> {
+    const now = this.clock.now();
+    const reservation = await this.reservations.findById(
+      candidata.reservationId,
+    );
+    if (
+      !reservation ||
+      !canReschedule(reservation.status) ||
+      reservation.workerId !== absence.workerId ||
+      !absence.overlaps(reservation.scheduledAt, reservation.endedAt) ||
+      reservation.scheduledAt.getTime() < now.getTime()
+    ) {
+      return null;
     }
+
+    const tz = process.env.SALON_TZ ?? 'America/Bogota';
+    let nuevaId: string | null = null;
+    try {
+      nuevaId = await this.assigner.elegir(
+        reservation.scheduledAt,
+        reservation.endedAt,
+        tz,
+        {
+          excludeReservationId: reservation.id,
+          excludeWorkerIds: [absence.workerId],
+        },
+      );
+    } catch (err) {
+      if (!(err instanceof WorkerOverlapError)) throw err;
+    }
+
+    if (nuevaId) {
+      const previousScheduledAt = reservation.scheduledAt;
+      let movida: Reservation | null = null;
+      try {
+        reservation.reassignForAbsence(nuevaId);
+        movida = await this.reservations.save(reservation);
+      } catch (err) {
+        // Una carrera pudo ocupar a esa estilista: la cita no se queda en
+        // silencio, se cancela y se avisa.
+        this.logger.warn(
+          `Reserva ${candidata.reservationId}: falló la reasignación, se cancela: ${(err as Error).message}`,
+        );
+      }
+      if (movida) {
+        const guardada = movida;
+        await this.avisar(candidata.reservationId, () =>
+          this.notifier.reservationRescheduled(guardada, {
+            byAdmin: true,
+            // La hora no cambia; solo la estilista.
+            previousScheduledAt,
+            workerChanged: true,
+            absence: meta,
+          }),
+        );
+        return {
+          ...candidata,
+          outcome: 'reasignada',
+          newWorkerId: nuevaId,
+          newWorkerName: (await this.workers.findWorker(nuevaId))?.name ?? '',
+        };
+      }
+    }
+
+    const fresca =
+      (await this.reservations.findById(candidata.reservationId)) ??
+      reservation;
+    fresca.cancel({ byAdmin: true, now });
+    const saved = await this.reservations.save(fresca);
+    await this.avisar(candidata.reservationId, () =>
+      this.notifier.reservationCancelled(saved, {
+        byAdmin: true,
+        absence: meta,
+      }),
+    );
+    const resto = { ...candidata, outcome: 'cancelada' as const };
+    delete resto.newWorkerId;
+    delete resto.newWorkerName;
+    return resto;
   }
 
   /** La cita ya cambió: un canal caído no puede deshacerlo (NF11). */

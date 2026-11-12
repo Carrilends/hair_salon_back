@@ -7,12 +7,17 @@ export const TZ = 'America/Bogota';
 export const NOW = new Date('2030-03-11T15:00:00Z');
 export const utc = (hhmm: string) => new Date(`2030-03-12T${hhmm}:00-05:00`);
 
-export function cita(id: string, desde: string, minutos = 60): Reservation {
+export function cita(
+  id: string,
+  desde: string,
+  minutos = 60,
+  workerId = 'ausente',
+): Reservation {
   return Reservation.fromPersistence({
     id,
     scheduledAt: utc(desde),
     endedAt: new Date(utc(desde).getTime() + minutos * 60_000),
-    workerId: 'ausente',
+    workerId,
     workerPinned: false,
     status: 'pendiente' as never,
     contact: { name: 'Clienta Prueba', phone: '+573001112233' },

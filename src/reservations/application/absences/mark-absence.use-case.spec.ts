@@ -1,8 +1,22 @@
 import { MarkAbsenceUseCase } from './mark-absence.use-case';
-import { AbsenceOverlapError, InvalidAbsenceError } from '../../domain/errors';
+import {
+  AbsenceOverlapError,
+  InvalidAbsenceError,
+  WorkerOverlapError,
+} from '../../domain/errors';
+import { Reservation } from '../../domain/reservation';
 import { NOW, cita, plan, repoAusencias } from './absences-helpers-spec';
 
-function montar(opts: { falla?: string; avisoCae?: boolean } = {}) {
+function montar(
+  opts: {
+    /** Falla todo guardado de esta cita. */
+    falla?: string;
+    /** Falla solo el guardado que la pasa a otra estilista. */
+    fallaReasignar?: string;
+    avisoCae?: boolean;
+    planFalla?: boolean;
+  } = {},
+) {
   const absences = repoAusencias();
   const citas = new Map([
     ['a', cita('a', '10:00')],
@@ -12,6 +26,13 @@ function montar(opts: { falla?: string; avisoCae?: boolean } = {}) {
     findById: jest.fn(async (id: string) => citas.get(id) ?? null),
     save: jest.fn(async (r: any) => {
       if (r.id === opts.falla) throw new Error('exclusion');
+      if (
+        r.id === opts.fallaReasignar &&
+        r.workerId === 'libre' &&
+        r.status !== 'cancelada'
+      ) {
+        throw new Error('exclusion');
+      }
       return r;
     }),
   };
@@ -35,6 +56,20 @@ function montar(opts: { falla?: string; avisoCae?: boolean } = {}) {
       plan([impacto('a', 'reasignada'), impacto('b', 'cancelada')]),
     ),
   };
+  // En vivo: 'a' tiene una libre; 'b' no.
+  const assigner = {
+    elegir: jest.fn(async (_s: Date, _e: Date, _tz: string, o: any) => {
+      if (o.excludeReservationId === 'b') throw new WorkerOverlapError();
+      return 'libre';
+    }),
+  };
+  const workers = {
+    findWorker: jest.fn(async (id: string) => ({
+      id,
+      name: 'Estilista B',
+      isDefault: false,
+    })),
+  };
   const notifier = {
     reservationCancelled: jest.fn(async () => {
       if (opts.avisoCae) throw new Error('canal caído');
@@ -49,8 +84,10 @@ function montar(opts: { falla?: string; avisoCae?: boolean } = {}) {
     planner as never,
     notifier as never,
     { now: () => NOW } as never,
+    assigner as never,
+    workers as never,
   );
-  return { uc, absences, reservas, planner, notifier, citas };
+  return { uc, absences, reservas, planner, notifier, citas, assigner };
 }
 
 const CMD = { workerId: 'ausente', dateYmd: '2030-03-12' };
@@ -119,10 +156,106 @@ describe('MarkAbsenceUseCase', () => {
 
     const r = await uc.execute(CMD);
 
+    // Ni mover ni cancelar 'a' se pudo guardar.
     expect(r.sinResolver).toEqual(['a']);
+    expect(r.impacts.map((i) => i.reservationId)).toEqual(['b']);
     expect(citas.get('b')!.status).toBe('cancelada');
     expect(notifier.reservationCancelled).toHaveBeenCalledTimes(1);
     expect(notifier.reservationRescheduled).not.toHaveBeenCalled();
+  });
+
+  it('si falla guardar la reasignación, la cita se cancela y se avisa con absence', async () => {
+    const { uc, notifier, citas } = montar({ fallaReasignar: 'a' });
+
+    const r = await uc.execute(CMD);
+
+    expect(r.sinResolver).toEqual([]);
+    expect(citas.get('a')!.status).toBe('cancelada');
+    expect(notifier.reservationRescheduled).not.toHaveBeenCalled();
+    expect(notifier.reservationCancelled).toHaveBeenCalledWith(citas.get('a'), {
+      byAdmin: true,
+      absence: { absentWorkerName: 'Estilista A' },
+    });
+    expect(r.impacts.find((i) => i.reservationId === 'a')).toMatchObject({
+      outcome: 'cancelada',
+    });
+    expect(
+      r.impacts.find((i) => i.reservationId === 'a')!.newWorkerId,
+    ).toBeUndefined();
+  });
+
+  it.each([
+    [
+      'otro día',
+      () => {
+        const c = cita('a', '10:00');
+        return Reservation.fromPersistence({
+          id: 'a',
+          scheduledAt: new Date('2030-03-13T10:00:00-05:00'),
+          endedAt: new Date('2030-03-13T11:00:00-05:00'),
+          workerId: 'ausente',
+          workerPinned: false,
+          status: c.status,
+          contact: c.contact,
+          lines: c.lines,
+        } as never);
+      },
+    ],
+    ['otra estilista', () => cita('a', '10:00', 60, 'libre')],
+  ])(
+    'una cita que la clienta movió (%s) mientras tanto no se toca ni se avisa',
+    async (_n, movida) => {
+      const { uc, notifier, citas, reservas } = montar();
+      citas.set('a', movida());
+
+      const r = await uc.execute(CMD);
+
+      expect(r.impacts.map((i) => i.reservationId)).toEqual(['b']);
+      expect(r.sinResolver).toEqual([]);
+      expect(citas.get('a')!.status).toBe('pendiente');
+      expect(notifier.reservationRescheduled).not.toHaveBeenCalled();
+      expect(notifier.reservationCancelled).toHaveBeenCalledTimes(1);
+      expect(reservas.save).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('el resultado describe lo que pasó: nueva estilista de la reasignada', async () => {
+    const { uc } = montar();
+
+    const r = await uc.execute(CMD);
+
+    expect(r.impacts[0]).toMatchObject({
+      reservationId: 'a',
+      outcome: 'reasignada',
+      newWorkerId: 'libre',
+      newWorkerName: 'Estilista B',
+    });
+    expect(r.impacts[1]).toMatchObject({
+      reservationId: 'b',
+      outcome: 'cancelada',
+    });
+  });
+
+  it('execute con datos inválidos es una promesa rechazada', async () => {
+    const { uc } = montar();
+
+    await expect(
+      uc.execute({ workerId: 'ausente', dateYmd: 'no-es-fecha' }),
+    ).rejects.toThrow(InvalidAbsenceError);
+  });
+
+  it('si re-planear falla tras guardar, se borra la ausencia y se relanza', async () => {
+    const { uc, absences, planner } = montar();
+    planner.planear
+      .mockImplementationOnce(async () => plan([]))
+      .mockImplementationOnce(async () => {
+        throw new Error('base caída');
+      });
+
+    await expect(uc.execute(CMD)).rejects.toThrow('base caída');
+
+    expect(absences.delete).toHaveBeenCalledWith('abs-1');
+    expect(absences.filas).toEqual([]);
   });
 
   it('un aviso caído no revierte nada ni va a sinResolver (NF11)', async () => {
@@ -134,13 +267,14 @@ describe('MarkAbsenceUseCase', () => {
     expect(citas.get('b')!.status).toBe('cancelada');
   });
 
-  it('una cita que ya no existe al aplicar va a sinResolver', async () => {
+  it('una cita que ya no existe al aplicar se omite', async () => {
     const { uc, citas } = montar();
     citas.delete('a');
 
     const r = await uc.execute(CMD);
 
-    expect(r.sinResolver).toEqual(['a']);
+    expect(r.sinResolver).toEqual([]);
+    expect(r.impacts.map((i) => i.reservationId)).toEqual(['b']);
   });
 
   describe('executeExact', () => {
