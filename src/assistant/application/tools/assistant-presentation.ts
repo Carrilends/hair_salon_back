@@ -22,6 +22,7 @@ export type AssistantPresentation =
   | ConfirmBookingPresentation
   | ConfirmCancelPresentation
   | ConfirmReschedulePresentation
+  | ConfirmAbsencePresentation
   | AgendaPresentation
   | TextoPresentation;
 
@@ -113,6 +114,25 @@ export interface ConfirmReschedulePresentation {
   hora: string;
   /** La cita tal como está ahora. */
   cita: CitaAConfirmar;
+}
+
+/**
+ * Ausencias por WhatsApp (2026-11-11): la vista previa de una ausencia que la
+ * dueña confirma con un botón (`ABS_OK|…`). Solo la produce `marcarAusencia`,
+ * del juego de la dueña; nunca llega a la web.
+ */
+export interface ConfirmAbsencePresentation {
+  tipo: 'confirmar-ausencia';
+  /** Id de la propuesta guardada: va dentro del botón `ABS_OK|…`. */
+  propuestaId: string;
+  estilista: string;
+  fecha: string;
+  /** «todo el día» o «de 8:00 a. m. a 12:00 p. m.». */
+  franja: string;
+  /** «3 citas pasan a otra estilista y 1 se cancela» o «No tiene citas en esas horas». */
+  resumen: string;
+  /** Una línea por cita: `10:00 a. m. · clienta · pasa a [nueva]` o `· se cancela`. */
+  lineas: string[];
 }
 
 /**

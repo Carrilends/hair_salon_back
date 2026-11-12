@@ -234,3 +234,23 @@ describe('datos del salón: puntuación', () => {
     expect(p).not.toMatch(/m\.\./);
   });
 });
+
+describe('ausencias por WhatsApp (2026-11-11)', () => {
+  it('la dueña: marcarAusencia, preguntar si algo no está claro y nunca «hecho» antes del botón', () => {
+    const p = SYSTEM_PROMPT_WHATSAPP_DUENA;
+    const regla = p.split('\n').find((l) => /no viene/.test(l))!;
+    expect(regla).toMatch(/marcarAusencia/);
+    expect(regla).toMatch(/qué estilista, qué día o hasta qué hora/);
+    expect(regla).toMatch(/pregúntale antes de llamarla/);
+    const boton = p.split('\n').find((l) => /marcarAusencia NO/.test(l))!;
+    expect(boton).toMatch(/botón/);
+    expect(boton).toMatch(/Nunca digas que ya quedó/);
+    expect(p).toMatch(/verAusencias/);
+  });
+
+  it('la clienta y la web no oyen hablar de ausencias', () => {
+    for (const p of [SYSTEM_PROMPT, SYSTEM_PROMPT_WHATSAPP_CLIENTA]) {
+      expect(p).not.toMatch(/marcarAusencia|verAusencias/);
+    }
+  });
+});

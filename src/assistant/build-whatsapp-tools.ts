@@ -30,6 +30,16 @@ import { EnfriamientoPorNumero } from './application/enfriamiento-por-numero';
 import { OwnerContactPort } from './domain/ports/owner-contact.port';
 import { PendingBookingRepositoryPort } from './domain/ports/pending-booking-repository.port';
 import { ServiceCatalogQueryPort } from './domain/ports/service-catalog-query.port';
+import { PendingAbsenceRepositoryPort } from './domain/ports/pending-absence-repository.port';
+import {
+  EstilistasDelSalon,
+  MarkAbsenceTool,
+  VistaPreviaDeAusencia,
+} from './application/tools/marcar-ausencia.tool';
+import {
+  AusenciasProximas,
+  ViewAbsencesTool,
+} from './application/tools/ver-ausencias.tool';
 
 export type { WhatsAppToolSets };
 
@@ -48,8 +58,9 @@ const NOMBRE = {
  * Parte del arreglo de la web (`ASSISTANT_TOOLS`) y **no lo modifica**: las
  * herramientas que en WhatsApp necesitan otra descripción u otro argumento se
  * envuelven (`conDefinicion`), sin tocar el objeto original, que es el mismo
- * que publica MCP. Las de la dueña (`verAgenda`, `confirmarReserva`) solo
- * existen aquí, de modo que MCP no las publica.
+ * que publica MCP. Las de la dueña (`verAgenda`, `confirmarReserva`,
+ * `marcarAusencia`, `verAusencias`) solo existen aquí, de modo que MCP no las
+ * publica.
  *
  * Falla al componer si falta una herramienta base: mejor un arranque roto que
  * un canal al que le falta algo y solo se nota con el primer mensaje.
@@ -71,6 +82,11 @@ export function buildWhatsAppTools(
   agenda: AgendaParaProponer,
   agendaMover: AgendaParaMover,
   contacto: OwnerContactPort,
+  // 2026-11-11: ausencias de las estilistas, solo para la dueña.
+  pendientesAusencia: PendingAbsenceRepositoryPort,
+  vistaPreviaAusencia: VistaPreviaDeAusencia,
+  ausenciasProximas: AusenciasProximas,
+  estilistas: EstilistasDelSalon,
 ): WhatsAppToolSets {
   const de = (nombre: string): AssistantTool => {
     const tool = base.find((t) => t.name === nombre);
@@ -185,6 +201,14 @@ export function buildWhatsAppTools(
       new ConfirmReservationTool(confirm),
       cancelar,
       reprogramar,
+      // 2026-11-11: «[estilista] no viene». Prepara la ausencia; la aplica el
+      // botón `ABS_OK`, nunca el modelo, porque puede cancelar citas.
+      new MarkAbsenceTool({
+        estilistas,
+        vistaPrevia: vistaPreviaAusencia,
+        pendientes: pendientesAusencia,
+      }),
+      new ViewAbsencesTool(ausenciasProximas),
     ],
   };
 }

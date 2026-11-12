@@ -224,6 +224,10 @@ function montar() {
     { comprobar: async () => undefined } as never,
     { comprobar: async () => undefined } as never,
     {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
   );
 
   let guion: Paso[] = [];

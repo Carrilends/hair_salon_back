@@ -15,10 +15,12 @@ import {
   PENDING_BOOKING_ACTIONS,
   ASSISTANT_CHAT,
   LEGAL_NOTICE_LOG,
+  PENDING_ABSENCE_ACTIONS,
 } from './application/tokens';
 import { AssistantChatAdapter } from './infrastructure/assistant/assistant-chat.adapter';
 import { asistenteActivado, configDelCanal } from './whatsapp-config';
 import { PendingBookingActionsAdapter } from './infrastructure/assistant/pending-booking-actions.adapter';
+import { PendingAbsenceActionsAdapter } from './infrastructure/assistant/pending-absence-actions.adapter';
 import {
   HandleInboundMessageUseCase,
   WhatsAppChannelConfig,
@@ -71,6 +73,11 @@ const VENTANA_MS = 60_000;
     {
       provide: PENDING_BOOKING_ACTIONS,
       useClass: PendingBookingActionsAdapter,
+    },
+    {
+      // 2026-11-11: «Confirmar» / «Descartar» de una ausencia de la dueña.
+      provide: PENDING_ABSENCE_ACTIONS,
+      useClass: PendingAbsenceActionsAdapter,
     },
     { provide: INBOUND_MESSAGE_LOG, useClass: TypeOrmInboundMessageLog },
     // El aviso de tratamiento de datos por número (2026-11-10): lo decide y lo

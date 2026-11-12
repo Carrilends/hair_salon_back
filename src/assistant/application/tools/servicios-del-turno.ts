@@ -37,7 +37,8 @@ export function pideConfirmacion(p: AssistantPresentation[]): boolean {
     (x) =>
       x.tipo === 'confirmar-reserva' ||
       x.tipo === 'confirmar-cancelacion' ||
-      x.tipo === 'confirmar-cambio',
+      x.tipo === 'confirmar-cambio' ||
+      x.tipo === 'confirmar-ausencia',
   );
 }
 

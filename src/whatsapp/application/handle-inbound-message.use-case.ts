@@ -41,6 +41,7 @@ import {
   PENDING_BOOKING_ACTIONS,
   ASSISTANT_CHAT,
   LEGAL_NOTICE_LOG,
+  PENDING_ABSENCE_ACTIONS,
 } from './tokens';
 import { LegalNoticeLogPort } from '../domain/ports/legal-notice-log.port';
 import {
@@ -48,9 +49,14 @@ import {
   tocaElAvisoLegal,
 } from '../domain/aviso-legal';
 import { AssistantChatPort } from '../domain/ports/assistant-chat.port';
-import { avisoLegal, mensajesDeLaRespuesta } from './respuesta-del-asistente';
+import {
+  avisoLegal,
+  mensajesDeLaRespuesta,
+  partirTexto,
+} from './respuesta-del-asistente';
 import { pideConfirmacion } from 'src/assistant/application/tools/servicios-del-turno';
 import { PendingBookingActionsPort } from '../domain/ports/pending-booking-actions.port';
+import { PendingAbsenceActionsPort } from '../domain/ports/pending-absence-actions.port';
 import { horarioDelDia } from 'src/reservations/horario-en-palabras';
 
 export interface WhatsAppChannelConfig {
@@ -130,6 +136,30 @@ function explicarPropuesta(motivo: string): string {
   }
 }
 
+/**
+ * Por qué «Confirmar» o «Descartar» no aplicó una ausencia, dicho para la
+ * dueña (2026-11-11). Una propuesta ajena y una inexistente se dicen igual.
+ */
+function explicarAusencia(motivo: string): string {
+  switch (motivo) {
+    case 'vencida':
+      return 'Esa propuesta de ausencia caducó (duran 15 minutos). Escríbeme de nuevo quién no viene y te la preparo otra vez.';
+    case 'usada':
+      return 'Esa propuesta de ausencia ya se usó o la reemplazó una más nueva. Si falta algo, escríbeme.';
+    case 'otro_numero':
+    case 'no_encontrada':
+      return 'No encuentro esa propuesta de ausencia. Escríbeme de nuevo quién no viene y te la preparo.';
+    case 'ausencia_cruzada':
+      return 'Esa estilista ya tiene una ausencia que se cruza con esa franja; no se aplicó nada.';
+    case 'ausencia_invalida':
+      return 'Esa franja ya pasó o no es válida; no se aplicó nada.';
+    case 'estilista_no_encontrada':
+      return 'No encuentro a esa estilista; no se aplicó nada.';
+    default:
+      return 'No pude aplicar la ausencia. Inténtalo de nuevo en un momento o márcala desde el portal.';
+  }
+}
+
 /** Tope de filas de una lista de WhatsApp. */
 const MAX_FILAS = 10;
 /** Se reserva una fila para «ver más» cuando hay que paginar. */
@@ -188,6 +218,11 @@ export class HandleInboundMessageUseCase {
     @Optional()
     @Inject(LEGAL_NOTICE_LOG)
     private readonly avisos?: LegalNoticeLogPort,
+    // Ausencias de las estilistas (2026-11-11). Opcional: sin él, sus botones
+    // se tratan como desconocidos.
+    @Optional()
+    @Inject(PENDING_ABSENCE_ACTIONS)
+    private readonly ausencias?: PendingAbsenceActionsPort,
   ) {}
 
   async handle(mensaje: InboundMessage): Promise<void> {
@@ -296,6 +331,12 @@ export class HandleInboundMessageUseCase {
       case 'book_no':
         return this.descartarPropuesta(payload.bookingId, from);
 
+      case 'abs_ok':
+        return this.aplicarAusencia(payload.proposalId, from, esDuena);
+
+      case 'abs_no':
+        return this.descartarAusencia(payload.proposalId, from, esDuena);
+
       case 'service':
         return this.meInteresa(payload.serviceId, from, esDuena);
     }
@@ -390,6 +431,65 @@ export class HandleInboundMessageUseCase {
       r.ok === true
         ? 'Vale, no la reservo. Dime qué quieres cambiar.'
         : explicarPropuesta(r.motivo),
+    );
+  }
+
+  // ------------------------------------------- ausencias (2026-11-11)
+
+  /**
+   * «Confirmar» una propuesta de ausencia: la ÚNICA vía por la que una ausencia
+   * dicha al asistente se aplica. Solo la dueña: desde otro número ni se
+   * intenta (la propuesta, además, solo la consume el número que la pidió).
+   * Responde una línea por cita, o que no tenía citas.
+   */
+  private async aplicarAusencia(
+    id: string,
+    from: string,
+    esDuena: boolean,
+  ): Promise<void> {
+    if (!this.ausencias) {
+      await this.texto(from, BOTON_DESCONOCIDO);
+      return;
+    }
+    if (!esDuena) {
+      await this.texto(from, explicarAusencia('no_encontrada'));
+      return;
+    }
+    const r = await this.ausencias.confirm(id, from);
+    if (r.ok === false) {
+      await this.texto(from, explicarAusencia(r.motivo));
+      return;
+    }
+    const encabezado = conPuntoFinal(
+      `Listo: ${r.estilista} queda ausente el ${r.fecha}, ${r.franja}`,
+    );
+    const respuesta = r.lineas.length
+      ? [encabezado, ...r.lineas].join('\n')
+      : `${encabezado} No tenía citas en esas horas.`;
+    // Un día con muchas citas puede pasar del tope de un mensaje de WhatsApp.
+    for (const parte of partirTexto(respuesta)) await this.texto(from, parte);
+  }
+
+  /** «Descartar»: la propuesta se gasta y no se aplica nada. */
+  private async descartarAusencia(
+    id: string,
+    from: string,
+    esDuena: boolean,
+  ): Promise<void> {
+    if (!this.ausencias) {
+      await this.texto(from, BOTON_DESCONOCIDO);
+      return;
+    }
+    if (!esDuena) {
+      await this.texto(from, explicarAusencia('no_encontrada'));
+      return;
+    }
+    const r = await this.ausencias.discard(id, from);
+    await this.texto(
+      from,
+      r.ok === true
+        ? 'Vale, no la marco. Si quieres, dime de nuevo quién no viene y cuándo.'
+        : explicarAusencia(r.motivo),
     );
   }
 

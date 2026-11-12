@@ -31,6 +31,12 @@ function montar() {
     { comprobar: async () => undefined } as never,
     // F6: aviso a la dueña.
     { avisar: async () => 'enviado' } as never,
+    // 2026-11-11: ausencias de las estilistas (propuestas, vista previa,
+    // lista y nombres).
+    {} as never,
+    {} as never,
+    {} as never,
+    {} as never,
   );
   return { base, juegos, definicionesAntes };
 }
@@ -66,6 +72,9 @@ describe('buildWhatsAppTools (D6)', () => {
       'confirmarReserva',
       'cancelarReserva',
       'reprogramarReserva',
+      // 2026-11-11: ausencias de las estilistas.
+      'marcarAusencia',
+      'verAusencias',
     ]);
   });
 
@@ -75,11 +84,19 @@ describe('buildWhatsAppTools (D6)', () => {
     expect(n).not.toContain('confirmarReserva');
   });
 
+  it('el juego clienta no contiene marcarAusencia ni verAusencias', () => {
+    const n = nombres(montar().juegos.clienta);
+    expect(n).not.toContain('marcarAusencia');
+    expect(n).not.toContain('verAusencias');
+  });
+
   it('la web y MCP siguen con sus nueve, sin herramientas nuevas y sin tocar sus definiciones', () => {
     const { base, definicionesAntes } = montar();
     expect(base).toHaveLength(9);
     expect(nombres(base)).not.toContain('verAgenda');
     expect(nombres(base)).not.toContain('confirmarReserva');
+    expect(nombres(base)).not.toContain('marcarAusencia');
+    expect(nombres(base)).not.toContain('verAusencias');
     expect(JSON.stringify(base.map((t) => t.definition))).toBe(
       definicionesAntes,
     );
@@ -135,6 +152,10 @@ describe('buildWhatsAppTools (D6)', () => {
         {} as never,
         { comprobar: async () => undefined } as never,
         { comprobar: async () => undefined } as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
         {} as never,
       ),
     ).toThrow(/listarServicios/);
@@ -229,6 +250,10 @@ describe('buildWhatsAppTools: la hora que ella no dijo (prueba con móvil 2026-1
         { comprobar: async () => undefined } as never,
         { comprobar: async () => undefined } as never,
         { avisar: async () => 'enviado' } as never,
+        {} as never,
+        {} as never,
+        {} as never,
+        {} as never,
       );
       const tool = juegos.clienta.find((t) => t.name === nombre)!;
       const contexto = {

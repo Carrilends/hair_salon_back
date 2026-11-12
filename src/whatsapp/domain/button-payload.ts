@@ -31,6 +31,10 @@ export type ButtonPayload =
   // aún no existe.
   | { action: 'book_ok'; bookingId: string }
   | { action: 'book_no'; bookingId: string }
+  // Ausencias (2026-11-11): aplicar o descartar una PROPUESTA de ausencia de la
+  // dueña. El id es el de la propuesta, no el de una ausencia: aún no existe.
+  | { action: 'abs_ok'; proposalId: string }
+  | { action: 'abs_no'; proposalId: string }
   // Catálogo con fotos: el botón «Me interesa» de una tarjeta del carrusel. El
   // id es el del servicio; pulsarlo no escribe nada en la agenda.
   | { action: 'service'; serviceId: string }
@@ -55,6 +59,8 @@ const CODIGOS = {
   reservation: 'RESV',
   book_ok: 'BOOK_OK',
   book_no: 'BOOK_NO',
+  abs_ok: 'ABS_OK',
+  abs_no: 'ABS_NO',
   service: 'SERVICE',
   noop: 'NOOP',
 } as const;
@@ -85,6 +91,9 @@ export function encodeButtonPayload(payload: ButtonPayload): string {
     case 'book_ok':
     case 'book_no':
       return [codigo, payload.bookingId].join(SEPARADOR);
+    case 'abs_ok':
+    case 'abs_no':
+      return [codigo, payload.proposalId].join(SEPARADOR);
     case 'service':
       return [codigo, payload.serviceId].join(SEPARADOR);
     default:
@@ -118,6 +127,12 @@ export function parseButtonPayload(raw: unknown): ButtonPayload | null {
   if (accion === 'book_ok' || accion === 'book_no') {
     return partes.length === 2
       ? { action: accion, bookingId: reservationId }
+      : null;
+  }
+
+  if (accion === 'abs_ok' || accion === 'abs_no') {
+    return partes.length === 2
+      ? { action: accion, proposalId: reservationId }
       : null;
   }
 

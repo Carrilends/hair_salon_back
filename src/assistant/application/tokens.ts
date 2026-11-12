@@ -65,5 +65,8 @@ export const ASSISTANT_DAILY_LEDGER = Symbol('AssistantDailyTokenLedger');
 /** Propuestas de reserva de WhatsApp (`PendingBookingRepositoryPort`, plan 06, F4). */
 export const PENDING_BOOKINGS = Symbol('PendingBookingRepositoryPort');
 
+/** Propuestas de ausencia de WhatsApp (`PendingAbsenceRepositoryPort`, 2026-11-11). */
+export const PENDING_ABSENCES = Symbol('PendingAbsenceRepositoryPort');
+
 /** Aviso a la dueña cuando una clienta pide hablar con una persona (plan 06, F6). */
 export const OWNER_CONTACT = Symbol('ASSISTANT_OWNER_CONTACT');

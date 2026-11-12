@@ -104,6 +104,10 @@ import {
     GetReservationUseCase,
     // Plan 06, F3b: la agenda que la dueña consulta por WhatsApp (`verAgenda`).
     ListActiveReservationsUseCase,
+    // 2026-11-11: la dueña marca y consulta ausencias por WhatsApp.
+    PreviewAbsenceUseCase,
+    MarkAbsenceUseCase,
+    ListAbsencesUseCase,
   ],
 })
 export class ReservationsModule {}

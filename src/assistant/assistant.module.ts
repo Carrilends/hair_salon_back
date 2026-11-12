@@ -16,6 +16,8 @@ import { FindActionableReservationsUseCase } from 'src/reservations/application/
 import { ListActiveReservationsUseCase } from 'src/reservations/application/list-active-reservations.use-case';
 import { ConfirmReservationUseCase } from 'src/reservations/application/confirm-reservation.use-case';
 import { GetReservationUseCase } from 'src/reservations/application/get-reservation.use-case';
+import { PreviewAbsenceUseCase } from 'src/reservations/application/absences/preview-absence.use-case';
+import { ListAbsencesUseCase } from 'src/reservations/application/absences/list-absences.use-case';
 import { Service } from 'src/service/entities/service.entity';
 
 import { ConversationOrmEntity } from './infrastructure/persistence/conversation.orm-entity';
@@ -34,6 +36,9 @@ import { PendingBookingPurgeScheduler } from './infrastructure/scheduling/pendin
 import { PendingBookingOrmEntity } from './infrastructure/pending/pending-booking.orm-entity';
 import { TypeOrmPendingBookingRepository } from './infrastructure/pending/typeorm-pending-booking.repository';
 import { ConfirmPendingBookingUseCase } from './application/confirm-pending-booking.use-case';
+import { PendingAbsenceOrmEntity } from './infrastructure/pending/pending-absence.orm-entity';
+import { TypeOrmPendingAbsenceRepository } from './infrastructure/pending/typeorm-pending-absence.repository';
+import { ConfirmPendingAbsenceUseCase } from './application/confirm-pending-absence.use-case';
 import { SlidingWindowRateLimiter } from 'src/common/rate-limit/sliding-window-rate-limiter';
 import { enteroDeEntorno } from 'src/common/config/entero-de-entorno';
 
@@ -60,6 +65,7 @@ import {
   LLM,
   OWNER_CONTACT,
   PENDING_BOOKINGS,
+  PENDING_ABSENCES,
 } from './application/tokens';
 import { ajustesDeJuicioDeEntorno } from './application/judgment-settings';
 import { TelemetriaDeJuicios } from './application/judgment-telemetry';
@@ -121,6 +127,8 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
       Service,
       // Propuestas de reserva de WhatsApp (plan 06, F4).
       PendingBookingOrmEntity,
+      // Propuestas de ausencia de la dueña por WhatsApp (2026-11-11).
+      PendingAbsenceOrmEntity,
     ]),
     AuthModule, // estrategia JWT para el guard de auth opcional
     WorkersModule, // WorkersService (disponibilidad)
@@ -137,6 +145,9 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
     PendingBookingPurgeScheduler,
     ConfirmPendingBookingUseCase,
     { provide: PENDING_BOOKINGS, useClass: TypeOrmPendingBookingRepository },
+    // 2026-11-11: propuestas de ausencia de la dueña y su botón «Confirmar».
+    ConfirmPendingAbsenceUseCase,
+    { provide: PENDING_ABSENCES, useClass: TypeOrmPendingAbsenceRepository },
     SummarizeConversationUseCase,
     ServiceCatalogQueryAdapter,
     AvailabilityQueryAdapter,
@@ -298,6 +309,10 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
         CreateReservationUseCase,
         RescheduleReservationUseCase,
         OWNER_CONTACT,
+        PENDING_ABSENCES,
+        PreviewAbsenceUseCase,
+        ListAbsencesUseCase,
+        WorkersService,
       ],
     },
     {
@@ -317,11 +332,12 @@ const MIN_JUDGMENT_TIMEOUT_MS = 200;
   // 06 (F3a) para que el webhook de WhatsApp converse con el MISMO asistente
   // (F5); el presupuesto y la telemetria siguen siendo asunto de este modulo.
   // El botón «Confirmar» de las propuestas (F4) lo atiende el webhook, así que
-  // su caso de uso sale también.
+  // su caso de uso sale también, y lo mismo el de las ausencias (2026-11-11).
   exports: [
     ASSISTANT_TOOLS,
     SendMessageUseCase,
     ConfirmPendingBookingUseCase,
+    ConfirmPendingAbsenceUseCase,
     ServiceCatalogQueryAdapter,
   ],
 })

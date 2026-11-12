@@ -5,10 +5,14 @@ import {
   CONVERSATION_PHONE_REPOSITORY,
   CONVERSATION_REPOSITORY,
   OWNER_CONTACT,
+  PENDING_ABSENCES,
 } from './application/tokens';
 import { buildWhatsAppTools } from './build-whatsapp-tools';
 import { CreateReservationUseCase } from 'src/reservations/application/create-reservation.use-case';
 import { RescheduleReservationUseCase } from 'src/reservations/application/reschedule-reservation.use-case';
+import { PreviewAbsenceUseCase } from 'src/reservations/application/absences/preview-absence.use-case';
+import { ListAbsencesUseCase } from 'src/reservations/application/absences/list-absences.use-case';
+import { WorkersService } from 'src/workers/workers.service';
 
 /**
  * Plan 06, F3a (revisión). El puerto de teléfono se inyecta con `@Optional()`:
@@ -59,17 +63,33 @@ describe('cableado de AssistantModule · herramientas de WhatsApp (F3b)', () => 
     );
     // Justo antes del aviso a la dueña, como `buildWhatsAppTools`: crear y
     // mover, cada uno para comprobar su propuesta.
-    expect(juegos?.inject?.slice(-3, -1)).toEqual([
+    // Desde el 2026-11-11 las ausencias van detrás del aviso a la dueña.
+    expect(juegos?.inject?.slice(-7, -5)).toEqual([
       CreateReservationUseCase,
       RescheduleReservationUseCase,
     ]);
   });
 
-  it('provee el aviso a la dueña y lo pasa el último a los juegos (F6)', () => {
+  it('provee el aviso a la dueña y lo pasa a los juegos, antes de las ausencias (F6)', () => {
     expect(proveedores().some((p) => p.provide === OWNER_CONTACT)).toBe(true);
     const juegos = proveedores().find(
       (p) => p.provide === ASSISTANT_WHATSAPP_TOOLS,
     );
-    expect(juegos?.inject?.[juegos.inject.length - 1]).toBe(OWNER_CONTACT);
+    expect(juegos?.inject?.[juegos.inject.length - 5]).toBe(OWNER_CONTACT);
+  });
+
+  it('pasa a los juegos lo de las ausencias, al final y en el orden de la fábrica (2026-11-11)', () => {
+    expect(proveedores().some((p) => p.provide === PENDING_ABSENCES)).toBe(
+      true,
+    );
+    const juegos = proveedores().find(
+      (p) => p.provide === ASSISTANT_WHATSAPP_TOOLS,
+    );
+    expect(juegos?.inject?.slice(-4)).toEqual([
+      PENDING_ABSENCES,
+      PreviewAbsenceUseCase,
+      ListAbsencesUseCase,
+      WorkersService,
+    ]);
   });
 });

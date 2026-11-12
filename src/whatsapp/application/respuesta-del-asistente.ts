@@ -169,19 +169,22 @@ export function mensajesDeLaRespuesta(
 }
 
 /**
- * Solo la ÚLTIMA propuesta de reserva del turno: cada propuesta nueva anula las
- * anteriores del número (revisión de F4), así que los botones de una anterior
- * ya solo dirían «esa propuesta ya se usó». Cancelar y mover no guardan estado y
- * van todas.
+ * Solo la ÚLTIMA propuesta de reserva del turno, y solo la última de ausencia:
+ * cada propuesta nueva anula las anteriores del número (revisión de F4), así
+ * que los botones de una anterior ya solo dirían «esa propuesta ya se usó».
+ * Cancelar y mover no guardan estado y van todas.
  */
 function conBotones(
   presentaciones: AssistantPresentation[],
 ): AssistantPresentation[] {
-  const ultimaReserva = [...presentaciones]
-    .reverse()
-    .find((p) => p.tipo === 'confirmar-reserva');
+  const conEstado = ['confirmar-reserva', 'confirmar-ausencia'] as const;
+  const ultimas = new Set(
+    conEstado.map((tipo) =>
+      [...presentaciones].reverse().find((p) => p.tipo === tipo),
+    ),
+  );
   return presentaciones.filter(
-    (p) => p.tipo !== 'confirmar-reserva' || p === ultimaReserva,
+    (p) => !(conEstado as readonly string[]).includes(p.tipo) || ultimas.has(p),
   );
 }
 

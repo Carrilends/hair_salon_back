@@ -3,6 +3,7 @@ import {
   AssistantPresentation,
   CitaAConfirmar,
 } from 'src/assistant/application/tools/assistant-presentation';
+import { conPuntoFinal } from 'src/common/con-punto-final';
 import { encodeButtonPayload } from '../domain/button-payload';
 
 /**
@@ -11,7 +12,8 @@ import { encodeButtonPayload } from '../domain/button-payload';
  * dentro de la ventana de 24 h, así que no necesita plantilla.
  *
  * Cancelar y mover reutilizan los botones que ya existían (`CANCEL_OK`,
- * `RSAT`), con su manejador probado; reservar usa los nuevos `BOOK_OK`/`BOOK_NO`.
+ * `RSAT`), con su manejador probado; reservar usa los nuevos `BOOK_OK`/`BOOK_NO`,
+ * y la ausencia de una estilista, `ABS_OK`/`ABS_NO` (2026-11-11).
  * Lo que escribe en la agenda es siempre el botón, nunca el modelo.
  *
  * `null` para las presentaciones de la web, que no piden confirmación.
@@ -89,6 +91,36 @@ export function mensajeDeConfirmacion(
             title: 'Sí, cambiar',
           },
           { id: no, title: 'No, dejarla' },
+        ],
+      };
+
+    case 'confirmar-ausencia':
+      // 2026-11-11: aplicar la ausencia puede cancelar citas, así que nada se
+      // aplica sin «Confirmar», y solo desde el número de la dueña.
+      return {
+        kind: 'interactive-buttons',
+        to,
+        body: recortar(
+          `${conPuntoFinal(`Ausencia de ${presentacion.estilista}: ${presentacion.fecha}, ${presentacion.franja}`)}\n` +
+            `${conPuntoFinal(presentacion.resumen)}\n` +
+            presentacion.lineas.map((l) => `${l}\n`).join('') +
+            '\nNo se aplica hasta que pulses «Confirmar».',
+        ),
+        buttons: [
+          {
+            id: encodeButtonPayload({
+              action: 'abs_ok',
+              proposalId: presentacion.propuestaId,
+            }),
+            title: 'Confirmar',
+          },
+          {
+            id: encodeButtonPayload({
+              action: 'abs_no',
+              proposalId: presentacion.propuestaId,
+            }),
+            title: 'Descartar',
+          },
         ],
       };
 
