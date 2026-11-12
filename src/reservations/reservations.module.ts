@@ -6,6 +6,8 @@ import { NotificationsModule } from 'src/notifications/notifications.module';
 import { Service } from 'src/service/entities/service.entity';
 import { ImageManager } from 'src/images/images.entity';
 import { ReservationOrmEntity } from './infrastructure/persistence/reservation.orm-entity';
+import { WorkerAbsenceOrmEntity } from './infrastructure/persistence/worker-absence.orm-entity';
+import { TypeOrmWorkerAbsenceRepository } from './infrastructure/persistence/typeorm-worker-absence.repository';
 import { ReservationServiceOrmEntity } from './infrastructure/persistence/reservation-service.orm-entity';
 import { ReservationsController } from './infrastructure/http/reservations.controller';
 import { TypeOrmReservationRepository } from './infrastructure/persistence/typeorm-reservation.repository';
@@ -34,6 +36,7 @@ import {
   SERVICE_CATALOG,
   RESERVATION_NOTIFIER,
   SERVICE_IMAGES,
+  WORKER_ABSENCES,
 } from './application/tokens';
 
 @Module({
@@ -41,6 +44,7 @@ import {
     TypeOrmModule.forFeature([
       ReservationOrmEntity,
       ReservationServiceOrmEntity,
+      WorkerAbsenceOrmEntity,
       Service,
       // Solo lectura, para la foto del aviso «reserva creada» (plan 06, F1).
       ImageManager,
@@ -67,6 +71,7 @@ import {
     SettlePastReservationsUseCase,
     ReservationPurgeScheduler,
     { provide: RESERVATION_REPOSITORY, useClass: TypeOrmReservationRepository },
+    { provide: WORKER_ABSENCES, useClass: TypeOrmWorkerAbsenceRepository },
     { provide: WORKER_AVAILABILITY, useClass: WorkersAvailabilityAdapter },
     { provide: CLOCK, useClass: SystemClock },
     { provide: SERVICE_CATALOG, useClass: ServiceCatalogAdapter },

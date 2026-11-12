@@ -134,3 +134,34 @@ export class WorkerReassignmentNotAllowedError extends DomainError {
     this.name = 'WorkerReassignmentNotAllowedError';
   }
 }
+
+/** La ausencia pedida no es válida (franja mal formada, fuera de horario o ya pasada). */
+export class InvalidAbsenceError extends DomainError {
+  constructor(reason: string) {
+    super(`Ausencia no válida: ${reason}`);
+    this.name = 'InvalidAbsenceError';
+  }
+}
+
+/** La estilista ya tiene una ausencia que se cruza con esa franja. */
+export class AbsenceOverlapError extends DomainError {
+  constructor() {
+    super('La estilista ya tiene una ausencia que se cruza con esa franja');
+    this.name = 'AbsenceOverlapError';
+  }
+}
+
+/** La estilista por defecto (la que atiende sin preferencia) no puede ausentarse. */
+export class DefaultWorkerAbsenceError extends DomainError {
+  constructor() {
+    super('La estilista por defecto no puede marcarse como ausente');
+    this.name = 'DefaultWorkerAbsenceError';
+  }
+}
+
+export class AbsenceNotFoundError extends DomainError {
+  constructor(id: string) {
+    super(`No existe la ausencia ${id}`);
+    this.name = 'AbsenceNotFoundError';
+  }
+}
