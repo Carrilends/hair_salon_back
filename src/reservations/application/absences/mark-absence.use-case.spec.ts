@@ -15,6 +15,8 @@ function montar(
     fallaReasignar?: string;
     avisoCae?: boolean;
     planFalla?: boolean;
+    /** Citas que una reserva comprometió mientras se aplicaba (las ve la segunda consulta). */
+    tarde?: Reservation[];
   } = {},
 ) {
   const absences = repoAusencias();
@@ -22,8 +24,26 @@ function montar(
     ['a', cita('a', '10:00')],
     ['b', cita('b', '11:00')],
   ]);
+  for (const t of opts.tarde ?? []) citas.set(t.id!, t);
   const reservas = {
-    findById: jest.fn(async (id: string) => citas.get(id) ?? null),
+    findAffectedByAbsence: jest.fn(async () => opts.tarde ?? []),
+    // Como la base: cada lectura devuelve un objeto nuevo, y solo un guardado
+    // que no falla cambia lo «persistido».
+    findById: jest.fn(async (id: string) => {
+      const c = citas.get(id);
+      return c
+        ? Reservation.fromPersistence({
+            id: c.id,
+            scheduledAt: c.scheduledAt,
+            endedAt: c.endedAt,
+            workerId: c.workerId,
+            workerPinned: c.workerPinned,
+            status: c.status,
+            contact: c.contact,
+            lines: c.lines,
+          } as never)
+        : null;
+    }),
     save: jest.fn(async (r: any) => {
       if (r.id === opts.falla) throw new Error('exclusion');
       if (
@@ -33,6 +53,7 @@ function montar(
       ) {
         throw new Error('exclusion');
       }
+      citas.set(r.id, r);
       return r;
     }),
   };
@@ -218,6 +239,52 @@ describe('MarkAbsenceUseCase', () => {
       expect(reservas.save).toHaveBeenCalledTimes(1);
     },
   );
+
+  it('si falla guardar la reasignación y la clienta movió la cita entretanto, no se cancela (misma comprobación)', async () => {
+    const { uc, notifier, reservas } = montar({ fallaReasignar: 'a' });
+    reservas.findById
+      .mockImplementationOnce(async () => cita('a', '10:00'))
+      // La nueva lectura ya la trae con otra estilista.
+      .mockImplementationOnce(async () => cita('a', '10:00', 60, 'libre'));
+
+    const r = await uc.execute(CMD);
+
+    expect(r.sinResolver).toEqual([]);
+    expect(r.impacts.map((i) => i.reservationId)).toEqual(['b']);
+    expect(notifier.reservationCancelled).toHaveBeenCalledTimes(1);
+    expect(notifier.reservationRescheduled).not.toHaveBeenCalled();
+  });
+
+  it('si buscar el nombre de la nueva estilista falla tras guardar y avisar, la cita no va a sinResolver', async () => {
+    const { uc, notifier, citas } = montar();
+    (uc as any).workers.findWorker = jest.fn(async () => {
+      throw new Error('base caída');
+    });
+
+    const r = await uc.execute(CMD);
+
+    expect(r.sinResolver).toEqual([]);
+    expect(citas.get('a')!.workerId).toBe('libre');
+    expect(notifier.reservationRescheduled).toHaveBeenCalledTimes(1);
+    expect(r.impacts.find((i) => i.reservationId === 'a')).toMatchObject({
+      outcome: 'reasignada',
+      newWorkerId: 'libre',
+      // Cae al nombre del plan.
+      newWorkerName: 'Estilista B',
+    });
+  });
+
+  it('una reserva que se confirmó mientras se aplicaba se resuelve en una segunda pasada', async () => {
+    const tarde = cita('c', '14:00');
+    const { uc, notifier, citas } = montar({ tarde: [tarde] });
+
+    const r = await uc.execute(CMD);
+
+    expect(r.sinResolver).toEqual([]);
+    expect(r.impacts.map((i) => i.reservationId)).toEqual(['a', 'b', 'c']);
+    expect(citas.get('c')!.workerId).toBe('libre');
+    expect(notifier.reservationRescheduled).toHaveBeenCalledTimes(2);
+  });
 
   it('el resultado describe lo que pasó: nueva estilista de la reasignada', async () => {
     const { uc } = montar();

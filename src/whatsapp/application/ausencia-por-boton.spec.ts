@@ -213,7 +213,8 @@ describe('confirmar-ausencia en WhatsApp', () => {
     expect(m.body).toContain('Lucía Ejemplo');
     expect(m.body).toContain('de 8:00 a. m. a 12:00 p. m.');
     expect(m.body).toContain('1 cita pasa a otra estilista y 1 se cancela');
-    expect(m.body).toContain('10:00 a. m. · Clienta Dos · se cancela');
+    expect(m.body).toContain('La lista va arriba.');
+    expect(m.body).not.toContain('Clienta Dos');
     expect(m.body).toMatch(/No se aplica hasta que pulses «Confirmar»/);
     expect(m.buttons.map((b) => b.title)).toEqual(['Confirmar', 'Descartar']);
     expect(m.buttons.map((b) => parseButtonPayload(b.id))).toEqual([
@@ -239,5 +240,39 @@ describe('confirmar-ausencia en WhatsApp', () => {
       action: 'abs_ok',
       proposalId: PID,
     });
+  });
+
+  it('con muchas citas, la lista va en textos antes de los botones y ninguna se pierde', () => {
+    const lineas = Array.from(
+      { length: 25 },
+      (_, i) =>
+        `${i + 8}:00 a. m. · Clienta Número ${String(i).padStart(2, '0')} · se cancela y se avisa por su número`,
+    );
+    const mensajes = mensajesDeLaRespuesta(
+      { reply: 'Revisa.', presentaciones: [presentacion({ lineas })] },
+      DUENA,
+      null,
+    );
+
+    const todo = mensajes
+      .map((m) =>
+        m.kind === 'text'
+          ? m.body
+          : m.kind === 'interactive-buttons'
+            ? m.body
+            : '',
+      )
+      .join('\n');
+    for (let i = 0; i < 25; i++) {
+      expect(todo).toContain(`Clienta Número ${String(i).padStart(2, '0')}`);
+    }
+    const ultimo = mensajes[mensajes.length - 1];
+    if (ultimo.kind !== 'interactive-buttons') throw new Error('sin botones');
+    expect(ultimo.body).toMatch(/No se aplica hasta que pulses «Confirmar»/);
+    expect(ultimo.body).not.toContain('Clienta Número');
+    expect(ultimo.body.length).toBeLessThanOrEqual(1024);
+    expect(
+      mensajes.filter((m) => m.kind === 'interactive-buttons'),
+    ).toHaveLength(1);
   });
 });

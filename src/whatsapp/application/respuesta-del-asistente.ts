@@ -142,13 +142,12 @@ export function mensajesDeLaRespuesta(
     junto.length <= MAX_TEXTO
       ? partirTexto(junto)
       : [...partirTexto(reply), ...partirLineas([...lista, ...parcial])];
-  const botones = conBotones(respuesta.presentaciones)
-    .map((p) => mensajeDeConfirmacion(p, to))
-    .filter((m): m is WhatsAppMessage => m !== null);
+  const conBoton = conBotones(respuesta.presentaciones);
 
-  for (const parte of partes.length || botones.length
-    ? partes
-    : [SIN_RESPUESTA]) {
+  const hayBotones = conBoton.some(
+    (p) => mensajeDeConfirmacion(p, to) !== null,
+  );
+  for (const parte of partes.length || hayBotones ? partes : [SIN_RESPUESTA]) {
     mensajes.push({ kind: 'text', to, body: parte });
   }
 
@@ -164,7 +163,18 @@ export function mensajesDeLaRespuesta(
 
   mensajes.push(...mediosDelTurno(servicios, confirma, to, imagenPorDefecto));
 
-  mensajes.push(...botones);
+  for (const p of conBoton) {
+    const boton = mensajeDeConfirmacion(p, to);
+    if (!boton) continue;
+    // La vista previa de una ausencia lleva una línea por cita: no cabe en el
+    // cuerpo de los botones (1024), va en textos justo antes de ellos.
+    if (p.tipo === 'confirmar-ausencia') {
+      for (const parte of partirLineas(p.lineas)) {
+        mensajes.push({ kind: 'text', to, body: parte });
+      }
+    }
+    mensajes.push(boton);
+  }
   return mensajes;
 }
 

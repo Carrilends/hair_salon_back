@@ -82,4 +82,39 @@ describe('GetOccupancyUseCase', () => {
       BadRequestException,
     );
   });
+
+  describe('hoy', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      // 18:00 en Bogotá (UTC-5), martes 2030-03-12.
+      jest.setSystemTime(new Date('2030-03-12T23:00:00Z'));
+    });
+    afterEach(() => jest.useRealTimers());
+
+    const conAusenciaDeTodoElDia = {
+      minutesByWorkerAndDate: async () => [
+        { workerId: 'w-1', dateYmd: '2030-03-12', minutes: 720 },
+      ],
+      blocksForDate: async () => [
+        { workerId: 'w-1', startMin: 0, endMin: 1440 },
+      ],
+    } as unknown as WorkerAbsenceRepositoryPort;
+
+    it('una ausencia de todo el día solo resta lo que queda de hoy y no lo llena', async () => {
+      const cuatro = { ...workers, countParallelStylists: async () => 4 };
+      const uc = new GetOccupancyUseCase(
+        new FakeRepo([]) as any,
+        cuatro,
+        conAusenciaDeTodoElDia,
+      );
+
+      const r = await uc.execute('2030-03-12', '2030-03-12');
+
+      // Quedan 2 h (18:00–20:00) × 4 estilistas; la ausente ocupa 120 de 480.
+      expect(r.byDate['2030/03/12']).toEqual({
+        usedMinutes: 120,
+        capacityMinutes: 480,
+      });
+    });
+  });
 });

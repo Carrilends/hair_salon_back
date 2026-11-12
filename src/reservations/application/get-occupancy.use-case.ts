@@ -61,10 +61,31 @@ export class GetOccupancyUseCase {
     }
 
     // Las ausencias restan capacidad como una cita: suman a lo usado del día.
+    // Hoy la capacidad es solo lo que queda del día, así que cada ausencia se
+    // recorta a [ahora, cierre]; sin eso, una ausencia de todo el día dejaría
+    // hoy lleno aunque queden estilistas.
+    const hoyYmd = salonNow.ymd;
     const ausencias = await this.absences.minutesByWorkerAndDate(from, to, tz);
     for (const a of ausencias) {
+      if (a.dateYmd === hoyYmd) continue;
       const key = a.dateYmd.replace(/-/g, '/');
       usedByDate.set(key, (usedByDate.get(key) ?? 0) + a.minutes);
+    }
+    if (hoyYmd >= from && hoyYmd <= to) {
+      const hoy = getDayBounds(hoyYmd, tz, salonNow);
+      const bloques = await this.absences.blocksForDate(hoyYmd, tz);
+      let minutosHoy = 0;
+      for (const b of bloques) {
+        minutosHoy += Math.max(
+          0,
+          Math.min(b.endMin, hoy.closeMin) -
+            Math.max(b.startMin, hoy.effectiveStartMin),
+        );
+      }
+      usedByDate.set(
+        salonNow.qdateKey,
+        (usedByDate.get(salonNow.qdateKey) ?? 0) + minutosHoy,
+      );
     }
 
     const byDate: Record<

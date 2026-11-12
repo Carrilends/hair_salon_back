@@ -118,7 +118,62 @@ export class MarkAbsenceUseCase {
       }
     }
 
+    // Segunda pasada: una reserva pudo confirmarse entre el plan y el guardado
+    // de la ausencia (o mientras se aplicaba). Lo ya visto, resuelto o no, no
+    // se reintenta.
+    const vistas = new Set(plan.impacts.map((i) => i.reservationId));
+    try {
+      const tardias = await this.reservations.findAffectedByAbsence(
+        saved.workerId,
+        saved.startsAt,
+        saved.endsAt,
+        this.clock.now(),
+      );
+      for (const r of tardias) {
+        if (vistas.has(r.id!)) continue;
+        vistas.add(r.id!);
+        const candidata: AbsenceImpact = {
+          reservationId: r.id!,
+          scheduledAt: r.scheduledAt,
+          endedAt: r.endedAt,
+          customerName: r.contact?.name ?? 'Cliente registrado',
+          customerPhone: r.contact?.phone ?? null,
+          services: r.lines.map((l) => l.name),
+          outcome: 'cancelada',
+        };
+        try {
+          const hecho = await this.resolver(candidata, saved, absenceMeta);
+          if (hecho) impacts.push(hecho);
+        } catch (err) {
+          this.logger.error(
+            `Ausencia ${saved.id}: no se pudo resolver la reserva ${r.id}`,
+            err as Error,
+          );
+          sinResolver.push(r.id!);
+        }
+      }
+    } catch (err) {
+      this.logger.error(
+        `Ausencia ${saved.id}: falló la segunda búsqueda de citas afectadas`,
+        err as Error,
+      );
+    }
+
     return { ...plan, impacts, absenceId: saved.id!, sinResolver };
+  }
+
+  /** ¿La cita sigue siendo de la ausente, viva, futura y dentro de la ausencia? */
+  private sigueAfectada(
+    reservation: Reservation,
+    absence: WorkerAbsence,
+    now: Date,
+  ): boolean {
+    return (
+      canReschedule(reservation.status) &&
+      reservation.workerId === absence.workerId &&
+      absence.overlaps(reservation.scheduledAt, reservation.endedAt) &&
+      reservation.scheduledAt.getTime() >= now.getTime()
+    );
   }
 
   /** Devuelve lo que realmente pasó, o `null` si la cita ya no está afectada. */
@@ -131,13 +186,7 @@ export class MarkAbsenceUseCase {
     const reservation = await this.reservations.findById(
       candidata.reservationId,
     );
-    if (
-      !reservation ||
-      !canReschedule(reservation.status) ||
-      reservation.workerId !== absence.workerId ||
-      !absence.overlaps(reservation.scheduledAt, reservation.endedAt) ||
-      reservation.scheduledAt.getTime() < now.getTime()
-    ) {
+    if (!reservation || !this.sigueAfectada(reservation, absence, now)) {
       return null;
     }
 
@@ -181,11 +230,17 @@ export class MarkAbsenceUseCase {
             absence: meta,
           }),
         );
+        // La cita ya cambió y se avisó: un fallo al leer el nombre no puede
+        // mandarla a `sinResolver`.
+        const nombre = await this.workers
+          .findWorker(nuevaId)
+          .then((w) => w?.name)
+          .catch(() => undefined);
         return {
           ...candidata,
           outcome: 'reasignada',
           newWorkerId: nuevaId,
-          newWorkerName: (await this.workers.findWorker(nuevaId))?.name ?? '',
+          newWorkerName: nombre ?? candidata.newWorkerName ?? '',
         };
       }
     }
@@ -193,6 +248,8 @@ export class MarkAbsenceUseCase {
     const fresca =
       (await this.reservations.findById(candidata.reservationId)) ??
       reservation;
+    // Entre el intento fallido y esta lectura la clienta pudo mover la cita.
+    if (!this.sigueAfectada(fresca, absence, now)) return null;
     fresca.cancel({ byAdmin: true, now });
     const saved = await this.reservations.save(fresca);
     await this.avisar(candidata.reservationId, () =>

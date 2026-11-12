@@ -5,6 +5,7 @@ import { TypeOrmWorkerAbsenceRepository } from 'src/reservations/infrastructure/
 import { WorkerAbsence } from 'src/reservations/domain/worker-absence';
 import { TypeOrmReservationRepository } from 'src/reservations/infrastructure/persistence/typeorm-reservation.repository';
 import { ReservationOrmEntity } from 'src/reservations/infrastructure/persistence/reservation.orm-entity';
+import { WorkerAbsences1794355200000 } from 'src/database/migrations/1794355200000-WorkerAbsences';
 import { AbsenceOverlapError } from 'src/reservations/domain/errors';
 
 /**
@@ -219,9 +220,16 @@ describe('TypeOrmWorkerAbsenceRepository (integración, HairSalonE2E)', () => {
       );
     const antes = await leer();
     expect(antes).toHaveLength(1);
-    // Deshace y vuelve a aplicar la 16.ª migración (solo borra y crea sus tablas).
-    await ds.undoLastMigration();
-    await ds.runMigrations();
+    // Deshace y vuelve a aplicar solo esta migración (borra y crea sus tablas),
+    // sin tocar las posteriores como haría `undoLastMigration`.
+    const runner = ds.createQueryRunner();
+    try {
+      const migracion = new WorkerAbsences1794355200000();
+      await migracion.down(runner);
+      await migracion.up(runner);
+    } finally {
+      await runner.release();
+    }
     expect(await leer()).toEqual(antes);
   });
 });

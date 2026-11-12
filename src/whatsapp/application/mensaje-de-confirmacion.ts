@@ -103,7 +103,9 @@ export function mensajeDeConfirmacion(
         body: recortar(
           `${conPuntoFinal(`Ausencia de ${presentacion.estilista}: ${presentacion.fecha}, ${presentacion.franja}`)}\n` +
             `${conPuntoFinal(presentacion.resumen)}\n` +
-            presentacion.lineas.map((l) => `${l}\n`).join('') +
+            // Las líneas de las citas van en textos aparte, antes de este mensaje
+            // (cabrían solo ~14 en 1024 caracteres y se perdería el aviso).
+            (presentacion.lineas.length ? 'La lista va arriba.\n' : '') +
             '\nNo se aplica hasta que pulses «Confirmar».',
         ),
         buttons: [
