@@ -5,6 +5,7 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { useContainer } from 'class-validator';
 import cookieParser from 'cookie-parser';
 import { enteroDeEntorno } from './common/config/entero-de-entorno';
+import { middlewareIpDeNetlify } from './common/netlify-client-ip';
 
 async function bootstrap() {
   // `rawBody: true` conserva los bytes crudos de cada petición además del cuerpo
@@ -39,6 +40,19 @@ async function bootstrap() {
   if (process.env.NODE_ENV === 'production' && saltosDeProxy === 0) {
     new Logger('Bootstrap').warn(
       'TRUST_PROXY_HOPS efectivo = 0 en produccion: si hay un proxy delante, TODAS las peticiones compartiran el tope por origen del asistente. Mide el valor con GET /api/health.',
+    );
+  }
+
+  // Detrás del proxy de Netlify, contar saltos no basta: la IP de la clienta no
+  // llega en una posición fija de `X-Forwarded-For` (medido el 2026-11-17).
+  // Con el proxy firmado (`signed` en `netlify.toml`) y el mismo secreto aquí,
+  // `req.ip` pasa a ser la de `x-nf-client-connection-ip`; sin firma válida no
+  // cambia nada. Ver `src/common/netlify-client-ip.ts`.
+  const secretoProxyNetlify = process.env.NETLIFY_PROXY_SECRET?.trim();
+  app.use(middlewareIpDeNetlify(secretoProxyNetlify));
+  if (process.env.NODE_ENV === 'production' && !secretoProxyNetlify) {
+    new Logger('Bootstrap').warn(
+      'NETLIFY_PROXY_SECRET sin definir en produccion: las peticiones que llegan por el proxy de Netlify compartiran el tope por origen del asistente por nodo de Netlify.',
     );
   }
 
