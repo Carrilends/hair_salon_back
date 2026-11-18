@@ -100,9 +100,9 @@ export class ProviderEmailSenderAdapter implements EmailSenderPort {
       );
     }
 
-    // El id permite rastrear el envío en el panel de Resend (Logs).
-    this.logger.log(
-      `Correo enviado a ${message.to} (id ${data?.id ?? 'sin id'}).`,
-    );
+    // El id permite rastrear el envío en el panel de Resend (Logs). La
+    // destinataria no va al log: los logs del hosting no deben guardar datos
+    // de la clienta (punto 9 de `docs/despliegue/registro.md`).
+    this.logger.log(`Correo enviado (id ${data?.id ?? 'sin id'}).`);
   }
 }

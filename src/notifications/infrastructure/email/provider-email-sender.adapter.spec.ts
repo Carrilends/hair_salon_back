@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import {
   ProviderEmailSenderAdapter,
   ResendLikeClient,
@@ -72,6 +73,28 @@ describe('ProviderEmailSenderAdapter', () => {
       text: 'Abre este enlace: https://ejemplo.com/verificar?token=abc',
       html: '<p>Abre este enlace</p>',
     });
+  });
+
+  it('registra el id del envío, pero no el correo de la destinataria', async () => {
+    // Los logs del hosting no deben guardar datos de la clienta: el id basta
+    // para rastrear el envío en el panel de Resend (punto 9 del despliegue).
+    const log = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+    const adapter = new ProviderEmailSenderAdapter(() =>
+      fakeClient({}, { data: { id: 'msg_123' } }),
+    );
+
+    await adapter.send({
+      to: 'clienta@ejemplo.com',
+      subject: 'Verifica tu correo',
+      text: 'x',
+    });
+
+    const impreso = log.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(impreso).toContain('msg_123');
+    expect(impreso).not.toContain('clienta@ejemplo.com');
+    log.mockRestore();
   });
 
   it('convierte en excepción el `error` que el SDK devuelve sin lanzar', async () => {

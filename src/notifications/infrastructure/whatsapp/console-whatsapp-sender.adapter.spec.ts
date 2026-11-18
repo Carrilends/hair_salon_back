@@ -148,4 +148,74 @@ describe('ConsoleWhatsAppSender', () => {
     expect(impreso).toContain('[SERVICE|b] Me interesa');
     log.mockRestore();
   });
+
+  describe('sin detalle (producción con WhatsApp apagado)', () => {
+    // Con NODE_ENV=production y sin WHATSAPP_TOKEN este adaptador queda activo:
+    // los logs del hosting no deben guardar el teléfono de la clienta ni los
+    // datos del aviso (minimización, punto 9 del registro de despliegue).
+    it('no imprime el teléfono ni los parámetros, solo el tipo y la plantilla', async () => {
+      const log = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => undefined);
+
+      await new ConsoleWhatsAppSender({ detalle: false }).send({
+        kind: 'template',
+        to: '573001234567',
+        templateName: 'reserva_creada_cliente',
+        bodyParams: ['sábado', 'Ana', 'Corte'],
+        buttons: [{ index: 0, payload: 'CANCEL|r-1' }],
+      });
+
+      expect(log).toHaveBeenCalledTimes(1);
+      const impreso = String(log.mock.calls[0][0]);
+      expect(impreso).toContain('reserva_creada_cliente');
+      expect(impreso).not.toContain('573001234567');
+      expect(impreso).not.toContain('4567');
+      expect(impreso).not.toContain('Ana');
+      expect(impreso).not.toContain('CANCEL|r-1');
+      log.mockRestore();
+    });
+
+    it('en un mensaje libre tampoco imprime el texto', async () => {
+      const log = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => undefined);
+
+      await new ConsoleWhatsAppSender({ detalle: false }).send({
+        kind: 'text',
+        to: '573001234567',
+        body: 'Hola Ana, tu cita es el sábado',
+      });
+
+      const impreso = String(log.mock.calls[0][0]);
+      expect(impreso).toContain('text');
+      expect(impreso).not.toContain('573001234567');
+      expect(impreso).not.toContain('Ana');
+      log.mockRestore();
+    });
+
+    it('por defecto, en producción no da detalle y fuera de ella sí', async () => {
+      const log = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => undefined);
+      const original = process.env.NODE_ENV;
+      const mensaje = {
+        kind: 'text' as const,
+        to: '573001234567',
+        body: 'Hola',
+      };
+      try {
+        process.env.NODE_ENV = 'production';
+        await new ConsoleWhatsAppSender().send(mensaje);
+        process.env.NODE_ENV = 'development';
+        await new ConsoleWhatsAppSender().send(mensaje);
+      } finally {
+        process.env.NODE_ENV = original;
+      }
+
+      expect(String(log.mock.calls[0][0])).not.toContain('573001234567');
+      expect(String(log.mock.calls[1][0])).toContain('573001234567');
+      log.mockRestore();
+    });
+  });
 });
