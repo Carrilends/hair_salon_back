@@ -19,6 +19,7 @@ import { InboundMessage } from '../../domain/inbound-message';
 import { InboundMessageLogPort } from '../../domain/ports/inbound-message-log.port';
 import { INBOUND_MESSAGE_LOG, RATE_LIMITER } from '../../application/tokens';
 import { MetaSignatureGuard } from './meta-signature.guard';
+import { ocultarTelefono } from 'src/common/ocultar-dato';
 
 /**
  * El webhook de la Cloud API. Dos rutas: el apretón de manos con el que Meta
@@ -86,7 +87,7 @@ export class WhatsAppWebhookController {
     // 06, F2): sin este registro, un aviso que nunca llegó sería invisible.
     for (const fallo of parseFailedStatuses(req.body)) {
       this.logger.warn(
-        `Meta no entregó ${fallo.messageId} a ${fallo.recipient ?? 'destinatario desconocido'}: ` +
+        `Meta no entregó ${fallo.messageId} a ${fallo.recipient ? ocultarTelefono(fallo.recipient) : 'destinatario desconocido'}: ` +
           (fallo.errors.join('; ') || 'sin detalle'),
       );
     }
@@ -124,7 +125,9 @@ export class WhatsAppWebhookController {
     // 429 le parece un fallo y reintentaría, empeorando justo lo que se quería
     // contener.
     if (!this.limiter.allow(mensaje.from)) {
-      this.logger.warn(`Descartado por límite de tasa: ${mensaje.from}`);
+      this.logger.warn(
+        `Descartado por límite de tasa: ${ocultarTelefono(mensaje.from)}`,
+      );
       return;
     }
 

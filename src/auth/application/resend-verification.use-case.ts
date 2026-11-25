@@ -17,6 +17,7 @@ import {
   AUTH_CLOCK,
   FRONT_BASE_URL,
 } from './tokens';
+import { ocultarCorreo } from 'src/common/ocultar-dato';
 
 @Injectable()
 export class ResendVerificationUseCase {
@@ -79,7 +80,7 @@ export class ResendVerificationUseCase {
       );
     } catch (error) {
       this.logger.error(
-        `No se pudo reenviar la verificación a ${user.email.value}`,
+        `No se pudo reenviar la verificación a ${ocultarCorreo(user.email.value)}`,
         error as Error,
       );
     }

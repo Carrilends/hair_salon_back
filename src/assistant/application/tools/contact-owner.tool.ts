@@ -3,6 +3,7 @@ import { AssistantContext, AssistantTool } from './assistant-tool';
 import { LlmToolDefinition } from '../../domain/ports/llm.port';
 import { OwnerContactPort } from '../../domain/ports/owner-contact.port';
 import { EnfriamientoPorNumero } from '../enfriamiento-por-numero';
+import { ocultarTelefono } from 'src/common/ocultar-dato';
 
 /** Un aviso por número cada seis horas (D8). */
 export const ENFRIAMIENTO_CONTACTO_MS = 6 * 60 * 60 * 1000;
@@ -98,7 +99,7 @@ export class ContactOwnerTool implements AssistantTool {
       return { ok: true, avisada: true };
     } catch (error) {
       this.logger.error(
-        `No se pudo avisar a la dueña por ${numero}`,
+        `No se pudo avisar a la dueña por ${ocultarTelefono(numero)}`,
         error as Error,
       );
       return SIN_AVISO;

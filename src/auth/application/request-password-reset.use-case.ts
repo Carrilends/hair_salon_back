@@ -16,6 +16,7 @@ import {
   AUTH_CLOCK,
   FRONT_BASE_URL,
 } from './tokens';
+import { ocultarCorreo } from 'src/common/ocultar-dato';
 
 @Injectable()
 export class RequestPasswordResetUseCase {
@@ -76,7 +77,7 @@ export class RequestPasswordResetUseCase {
       );
     } catch (error) {
       this.logger.error(
-        `No se pudo enviar el restablecimiento a ${user.email.value}`,
+        `No se pudo enviar el restablecimiento a ${ocultarCorreo(user.email.value)}`,
         error as Error,
       );
     }

@@ -58,6 +58,7 @@ import { pideConfirmacion } from 'src/assistant/application/tools/servicios-del-
 import { PendingBookingActionsPort } from '../domain/ports/pending-booking-actions.port';
 import { PendingAbsenceActionsPort } from '../domain/ports/pending-absence-actions.port';
 import { horarioDelDia } from 'src/reservations/horario-en-palabras';
+import { ocultarTelefono } from 'src/common/ocultar-dato';
 
 export interface WhatsAppChannelConfig {
   /** Móvil de la peluquería. Un mensaje desde aquí actúa como administración. */
@@ -232,7 +233,7 @@ export class HandleInboundMessageUseCase {
       // Última red: si algo se escapó, se registra y se calla. Propagarlo haría
       // que Meta reintentara el mismo mensaje indefinidamente.
       this.logger.error(
-        `Fallo procesando el mensaje ${mensaje.messageId} de ${mensaje.from}`,
+        `Fallo procesando el mensaje ${mensaje.messageId} de ${ocultarTelefono(mensaje.from)}`,
         error as Error,
       );
     }
@@ -545,7 +546,7 @@ export class HandleInboundMessageUseCase {
         await this.enviar(m);
       } catch (error) {
         this.logger.error(
-          `No se pudo enviar un mensaje (${m.kind}) del asistente a ${from}`,
+          `No se pudo enviar un mensaje (${m.kind}) del asistente a ${ocultarTelefono(from)}`,
           error as Error,
         );
         // En un turno que pide confirmación no sale lista: el pie de la foto
@@ -556,7 +557,7 @@ export class HandleInboundMessageUseCase {
             await this.texto(from, m.caption);
           } catch (e) {
             this.logger.error(
-              `No se pudo enviar el pie de la foto a ${from}`,
+              `No se pudo enviar el pie de la foto a ${ocultarTelefono(from)}`,
               e as Error,
             );
           }
@@ -613,7 +614,7 @@ export class HandleInboundMessageUseCase {
       });
     } catch (error) {
       this.logger.error(
-        `No se pudo enviar el aviso legal a ${from}`,
+        `No se pudo enviar el aviso legal a ${ocultarTelefono(from)}`,
         error as Error,
       );
       return;
@@ -625,7 +626,7 @@ export class HandleInboundMessageUseCase {
       await this.avisos.recordSent({ phoneE164: from, ...enviado });
     } catch (error) {
       this.logger.error(
-        `No se pudo anotar el aviso legal enviado a ${from}`,
+        `No se pudo anotar el aviso legal enviado a ${ocultarTelefono(from)}`,
         error as Error,
       );
     }

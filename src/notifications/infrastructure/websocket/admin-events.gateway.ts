@@ -51,7 +51,7 @@ export class AdminEventsGateway implements OnGatewayConnection {
       }
 
       await client.join(ADMIN_ROOM);
-      this.logger.log(`Panel conectado (${user.email})`);
+      this.logger.log(`Panel conectado (usuario ${user.id})`);
     } catch (error) {
       // Desconexión silenciosa: no se le explica al cliente por qué falló.
       this.logger.warn(

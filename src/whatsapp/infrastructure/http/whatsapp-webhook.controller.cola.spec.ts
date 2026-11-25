@@ -148,9 +148,9 @@ describe('WhatsAppWebhookController · envíos fallidos (plan 06, F2)', () => {
 
     expect(r).toEqual({ ok: true });
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining(
-        'wamid.MAL a 573001112233: 131053 Media upload error',
-      ),
+      expect.stringContaining('wamid.MAL a …2233: 131053 Media upload error'),
     );
+    // El número completo de la clienta no queda en el registro (minimización).
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('573001112233');
   });
 });

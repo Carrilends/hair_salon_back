@@ -31,6 +31,7 @@ import {
   REFRESH_TOKEN_REPOSITORY,
   SESSION_CONFIG,
 } from './tokens';
+import { ocultarCorreo } from 'src/common/ocultar-dato';
 
 export interface RegisterUserCommand {
   email: string;
@@ -118,7 +119,7 @@ export class RegisterUserUseCase {
       // El registro ya está confirmado en base de datos: un fallo del proveedor
       // de correo no debe abortarlo. El usuario puede pedir el reenvío (RF47).
       this.logger.error(
-        `No se pudo enviar la verificación a ${user.email.value}`,
+        `No se pudo enviar la verificación a ${ocultarCorreo(user.email.value)}`,
         error as Error,
       );
     }

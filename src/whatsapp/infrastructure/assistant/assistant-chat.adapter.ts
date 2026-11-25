@@ -10,6 +10,7 @@ import {
   AssistantChatPort,
   AssistantChatResult,
 } from '../../domain/ports/assistant-chat.port';
+import { ocultarTelefono } from 'src/common/ocultar-dato';
 
 /**
  * Puente entre el canal y el bucle del asistente (plan 06, F5). Es el único
@@ -68,12 +69,12 @@ export class AssistantChatAdapter implements AssistantChatPort {
       }
       if (error instanceof LlmUnavailableError) {
         this.logger.error(
-          `El proveedor de IA no atendió a ${entrada.phoneE164}: ${error.causa.message}`,
+          `El proveedor de IA no atendió a ${ocultarTelefono(entrada.phoneE164)}: ${error.causa.message}`,
         );
         return { ok: false, motivo: 'no_disponible' };
       }
       this.logger.error(
-        `Fallo inesperado del asistente con ${entrada.phoneE164}`,
+        `Fallo inesperado del asistente con ${ocultarTelefono(entrada.phoneE164)}`,
         error as Error,
       );
       return { ok: false, motivo: 'error' };

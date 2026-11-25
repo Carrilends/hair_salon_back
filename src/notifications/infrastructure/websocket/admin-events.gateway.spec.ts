@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { AdminEventsGateway, ADMIN_ROOM } from './admin-events.gateway';
 
 type FakeSocket = {
@@ -79,5 +80,26 @@ describe('AdminEventsGateway.handleConnection', () => {
 
     expect(client.join).toHaveBeenCalledWith(ADMIN_ROOM);
     expect(client.disconnect).not.toHaveBeenCalled();
+  });
+
+  it('registra la conexión con el id, no con el correo del admin', async () => {
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const jwt = { verify: jest.fn(() => ({ id: 'u-1' })) };
+    const users = {
+      findOne: jest.fn(async () => ({
+        id: 'u-1',
+        isActive: true,
+        roles: ['admin'],
+        email: 'admin@salon.com',
+      })),
+    };
+    const gateway = new AdminEventsGateway(jwt as any, users as any);
+
+    await gateway.handleConnection(fakeSocket({ token: 'bueno' }) as any);
+
+    const escrito = log.mock.calls.map((c) => String(c[0])).join('\n');
+    expect(escrito).toContain('u-1');
+    expect(escrito).not.toContain('admin@salon.com');
+    log.mockRestore();
   });
 });
